@@ -10,7 +10,7 @@ with open(sys.argv[1],"rb") as f:
     bytemem = bytearray(f.read())
 f.close()
 
-(pc, acc, c, z) = (0, 0, 0, 0) # machine state
+(pc, acc, c ) = (0, 0, 0) # machine state
 opcode = 0
 operand_data = 0
 operand_adr = 0
@@ -29,20 +29,18 @@ while True:
             acc = ~acc & 0xFF
         else:
             acc = acc & operand_data & 0xFF
-        (c, z) = (0, 1 if acc==0 else 0)
+        c = 0
     elif opcode == op["add"] or opcode == op["add.i"] :
         res = (acc + operand_data + c ) & 0x1FF
         acc = res & 0xFF
         c = (res>>8) & 1
-        z = 1 if acc==0 else 0
     elif opcode == op["sub"] or opcode == op["sub.i"]:
         acc = (acc - operand_data - c ) & 0xFF
         acc = res & 0xFF
         c = (res>>8) & 1
-        z = 1 if acc==0 else 0
     elif opcode == op["lda.i"] or opcode==op["lda"]:
         acc = operand_data & 0xFF
-        (c, z) = (0, 1 if acc==0 else 0)
+        c = 0
     elif opcode == "sec":
         c = 1
     elif opcode == op["sta"]:
@@ -50,7 +48,7 @@ while True:
     elif opcode == op["jpc"]:
         pc = operand_adr if c else pc
     elif opcode == op["jpz"]:
-        pc = operand_adr if z else pc
+        pc = operand_adr if (acc==0) else pc
     elif opcode == op["jp"]:
         pc = operand_adr
     elif opcode == op["halt"]:
