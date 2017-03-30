@@ -82,7 +82,7 @@ module opccpu( data, address, rnw, clk, reset_b );
 
   always @ (posedge clk or negedge reset_b )
     if (!reset_b)
-      PC_q <= 11'b0;
+      PC_q <= 12'b0;
     else
       begin
         if ( FSM_q == `FETCH0 || FSM_q == `FETCH1 )
