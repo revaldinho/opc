@@ -10,13 +10,9 @@
 `define NOT  5'h14
 `define ADDI 5'h16
 `define ADD  5'h06
-`define SUBI 5'h18
-`define SUB  5'h08
 `define JPC  5'h0A
 `define JPZ  5'h0C
 `define JP   5'h0E
-`define SEC  5'h1A
-`define HALT 5'h1F
 
 module opccpu( data, address, rnw, clk, reset_b );
   inout[7:0] data;
@@ -29,12 +25,10 @@ module opccpu( data, address, rnw, clk, reset_b );
   reg [1:0]  FSM_q;
   reg [4:0]  IR_q;
   reg        C_q;
-  wire writeback_w ;
-
-  assign writeback_w = (FSM_q == `EXEC) && (IR_q == `STA);
+  wire writeback_w = (FSM_q == `EXEC) && (IR_q == `STA);
   assign data = (writeback_w)?ACC_q:8'bz ;
   assign address = (writeback_w || FSM_q == `RDMEM )? OR_q:PC_q;
-  assign rnw = (writeback_w)?0:1;
+  assign rnw = ~writeback_w;
 
   always @ (posedge clk or negedge reset_b )
     if (!reset_b)
@@ -58,8 +52,6 @@ module opccpu( data, address, rnw, clk, reset_b );
           `NOT	      : ACC_q <= ~ACC_q;
           `LDAI,`LDA  : ACC_q <= OR_q[7:0];
           `ADDI,`ADD  : {C_q,ACC_q} <= ACC_q + C_q + OR_q[7:0];
-          //`SUBI,`SUB  : {ACC_q} <= ACC_q + ~OR_q[7:0] + 1'b1;   // Temporarily dont use the carry in subtraction
-          //`SEC        : C_q <= 1'b1;
         endcase
     end
 

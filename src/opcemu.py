@@ -33,14 +33,8 @@ while True:
         res = (acc + operand_data + c ) & 0x1FF
         acc = res & 0xFF
         c = (res>>8) & 1
-    elif opcode == op["sub"] or opcode == op["sub.i"]:
-        acc = (acc - operand_data - c ) & 0xFF
-        acc = res & 0xFF
-        c = (res>>8) & 1
     elif opcode == op["lda.i"] or opcode==op["lda"]:
         acc = operand_data & 0xFF
-    elif opcode == "sec":
-        c = 1
     elif opcode == op["sta"]:
         bytemem[operand_adr] = acc
     elif opcode == op["jpc"]:
