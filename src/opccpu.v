@@ -57,7 +57,7 @@ module opccpu( inout[7:0] data, output[11:0] address, output rnw, input clk, inp
       begin
         if ( FSM_q == `FETCH0 || FSM_q == `FETCH1 )
           PC_q <= PC_q + 1;
-        else if ( FSM_q == `EXEC )
+        else
           case (IR_q)
             `JP    : PC_q <= OR_q;
             `JPC   : PC_q <= (C_q)?OR_q:PC_q;

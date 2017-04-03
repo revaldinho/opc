@@ -344,10 +344,9 @@ ul.auto-toc {
 <div class="section" id="opc-definition">
 <h1>OPC Definition</h1>
 <p>The OPC is an accumulator based computer with an 8 bit datapath and a 12 bit address space.
-The computer supports 3 addressing modes:</p>
+The computer supports 2 addressing modes:</p>
 <blockquote>
 <ul class="simple">
-<li>implied - where the operand byte is ignored</li>
 <li>immediate - where the operand byte holds an 8 immediate data value</li>
 <li>direct - where a combination of opcode and operand byte provides a 12 bit data address</li>
 </ul>
@@ -368,7 +367,7 @@ ____________   ________
  \   \     \     \_____   8 bit Operand
   \   \     \__________   3 bit unused
    \   \_______________   4 bit opcode
-    \__________________   1 bit address mode: 1 = Implied/Immediate
+    \__________________   1 bit address mode: 1 = Immediate
 </pre>
 </div>
 <div class="section" id="instruction-set-definition">
@@ -384,7 +383,7 @@ ____________   ________
 </colgroup>
 <tbody valign="top">
 <tr><td>&nbsp;</td>
-<td colspan="2">Implied/Imm. Mode</td>
+<td colspan="2">Immediate Mode</td>
 <td colspan="2">Direct Mode</td>
 <td>Flag</td>
 </tr>
@@ -522,8 +521,8 @@ ____________   ________
 <li>(operand) indicates contents of memory at address 'operand'</li>
 <li>PC is incremented by 2 bytes after each instruction unless explicitly indicated</li>
 <li>Flag operations shown as '-' preserve flag contents</li>
-<li>Mnemonics qualified with '.i' indicate implied/immediate addressing mode in the assembler</li>
-<li>Carry is set if a carry or borrow is generated in arithmetic operations</li>
+<li>Mnemonics qualified with '.i' indicate immediate addressing mode in the assembler</li>
+<li>Carry is set if a carry is generated in arithmetic operations</li>
 </ul>
 </blockquote>
 </div>

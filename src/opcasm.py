@@ -59,7 +59,7 @@ for line in text:
         for b in bytes:
             bytemem[nextmem] =  b
             nextmem += 1
-        print ("%04x  %-16s  %s" % ( start, ' '.join([("%02x" % i) for i in bytes]), line.rstrip()))
+        print ("%04x  %-16s  %s" % (start, ' '.join([("%02x" % i) for i in bytes]), line.rstrip()))
 
 print ("Symbol Table\n", symtab)
 

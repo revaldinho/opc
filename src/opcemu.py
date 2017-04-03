@@ -48,7 +48,8 @@ while True:
         print("Stopped on halt instruction at %04x" % (pc-2) )
         break
 
-    print ("%04x : %02x %02x : %02x      %03x    : %02x" % ( adr, bytemem[adr], bytemem[adr+1], opcode, operand_data if opcode & 0x10==1 else operand_adr, acc))
+    print ("%04x : %02x %02x : %02x      %03x    : %02x" % ( adr, bytemem[adr], bytemem[adr+1],
+                                opcode, operand_data if opcode & 0x10==1 else operand_adr, acc))
 
 if len(sys.argv) > 2:  # Dump memory for inspection if required
     with open(sys.argv[2],"wb" ) as f:
