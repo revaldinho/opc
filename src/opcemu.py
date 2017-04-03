@@ -2,9 +2,9 @@
 import sys
 
 op = { "and.i": 0x10, "and": 0x00, "lda.i": 0x12, "lda": 0x02,
-       "sta": 0x04, "not": 0x14, "add.i": 0x16, "add": 0x06,
-       "sub.i": 0x18, "sub":0x08, "jpc": 0x0A, "jpz": 0x0C,
-       "jp": 0x0E, "sec": 0x1A, "halt": 0x1F }
+       "sta": 0x04, "add.i": 0x16, "add": 0x06,
+       "not.i": 0x18, "not":0x08, "jpc": 0x0A, "jpz": 0x0C,
+       "jp": 0x0E, "halt": 0x1F }
 
 with open(sys.argv[1],"rb") as f:
     bytemem = bytearray(f.read())
@@ -20,15 +20,16 @@ while True:
     adr = pc
     opcode = (bytemem[pc] >> 3) & 0x1F
     operand_adr = (bytemem[pc] << 8 | bytemem[pc+1]) & 0x0FFF
-    operand_data = 0
     if (opcode & 0x10 == 0):
         operand_data = bytemem[operand_adr]
+    else:
+        operand_data = (bytemem[pc+1] & 0xFF)
     pc += 2
-    if opcode in ( op["not"], op["and"], op["and.i"]):
+    if opcode in ( op["and"], op["and.i"]):
         acc = acc & operand_data & 0xFF
         c = 0
-    elif opcode == op["not"]
-        acc = ~acc & 0xFF
+    elif opcode in ( op["not"], op["not.i"]):
+        acc = ~operand_data & 0xFF
     elif opcode == op["add"] or opcode == op["add.i"] :
         res = (acc + operand_data + c ) & 0x1FF
         acc = res & 0xFF

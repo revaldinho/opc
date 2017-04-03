@@ -1,6 +1,7 @@
 TOP   ORG     0x00
       lda.i   0x00
-      not
+      sta     RESULT
+      not     RESULT
       sta     RESULT
 
       and.i   0x33
