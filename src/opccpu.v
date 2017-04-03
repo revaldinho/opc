@@ -2,7 +2,6 @@
 `define FETCH1 2'b01
 `define RDMEM  2'b10
 `define EXEC   2'b11
-
 `define ANDI 5'h10
 `define AND  5'h00
 `define LDAI 5'h12
@@ -20,7 +19,6 @@
 `define HALT 5'h1F
 
 module opccpu( data, address, rnw, clk, reset_b );
-
   inout[7:0] data;
   output[11:0] address;
   output rnw;
@@ -31,7 +29,6 @@ module opccpu( data, address, rnw, clk, reset_b );
   reg [1:0]  FSM_q;
   reg [4:0]  IR_q;
   reg        C_q;
-
   wire writeback_w ;
 
   assign writeback_w = (FSM_q == `EXEC) && (IR_q == `STA);
@@ -52,31 +49,17 @@ module opccpu( data, address, rnw, clk, reset_b );
 
   always @ (posedge clk)
     begin
-      // IR_q LSB can only be set if the MSB is also set - ie an immediate or implied instruction
-      IR_q <= (FSM_q == `FETCH0)? { data[7:4], data[7] & data[3]} : IR_q;
+      IR_q <= (FSM_q == `FETCH0)? { data[7:4], data[7] & data[3]} : IR_q; // IR bit 0 always reset for DIRECT mode instr
       OR_q[11:8] <= (FSM_q == `FETCH0)? data[3:0]: OR_q[11:8];
       OR_q[7:0] <= (FSM_q == `FETCH1 || FSM_q==`RDMEM)? data: OR_q[7:0];
       if ( FSM_q == `EXEC )
         case(IR_q)
-          `ANDI, `AND :
-            begin
-              ACC_q <= ACC_q & OR_q[7:0];
-              C_q <= 1'b0;
-            end
-          `NOT	      :
-            begin
-              ACC_q <= ~ACC_q;
-              C_q <= 1'b0;
-            end
-          `LDAI,`LDA  :
-            begin
-              ACC_q <= OR_q[7:0];
-              C_q <= 1'b0;
-            end
+          `ANDI, `AND : {C_q, ACC_q}  <= {1'b0, ACC_q & OR_q[7:0]};
+          `NOT	      : ACC_q <= ~ACC_q;
+          `LDAI,`LDA  : ACC_q <= OR_q[7:0];
           `ADDI,`ADD  : {C_q,ACC_q} <= ACC_q + C_q + OR_q[7:0];
-          // Temporarily dont use the carry in subtraction
-          `SUBI,`SUB  : {ACC_q} <= ACC_q + ~OR_q[7:0] + 1'b1;
-          `SEC        : C_q <= 1'b1;
+          //`SUBI,`SUB  : {ACC_q} <= ACC_q + ~OR_q[7:0] + 1'b1;   // Temporarily dont use the carry in subtraction
+          //`SEC        : C_q <= 1'b1;
         endcase
     end
 

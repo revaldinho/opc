@@ -375,12 +375,12 @@ ____________   ________
 <h1>Instruction Set Definition</h1>
 <table border="1" class="docutils">
 <colgroup>
-<col width="11%" />
-<col width="14%" />
+<col width="10%" />
+<col width="13%" />
 <col width="19%" />
-<col width="14%" />
-<col width="34%" />
-<col width="8%" />
+<col width="13%" />
+<col width="37%" />
+<col width="7%" />
 </colgroup>
 <tbody valign="top">
 <tr><td>&nbsp;</td>
@@ -407,7 +407,10 @@ ____________   ________
 <td>A &lt;- operand</td>
 <td>0.001x</td>
 <td>A &lt;- (operand)</td>
-<td>0</td>
+<td><ul class="first last simple">
+<li></li>
+</ul>
+</td>
 </tr>
 <tr><td>STA</td>
 <td><ul class="first last simple">
@@ -436,7 +439,10 @@ ____________   ________
 <li></li>
 </ul>
 </td>
-<td>0</td>
+<td><ul class="first last simple">
+<li></li>
+</ul>
+</td>
 </tr>
 <tr><td>ADD[.i]</td>
 <td>1.0110</td>
@@ -478,7 +484,7 @@ ____________   ________
 </ul>
 </td>
 <td>0.110x</td>
-<td>PC &lt;-operand if Z==1 else PC+2</td>
+<td>PC &lt;-operand if (ACC==0) else PC+2</td>
 <td><ul class="first last simple">
 <li></li>
 </ul>

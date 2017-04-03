@@ -25,11 +25,10 @@ while True:
         operand_data = bytemem[operand_adr]
     pc += 2
     if opcode in ( op["not"], op["and"], op["and.i"]):
-        if opcode == op["not"]:
-            acc = ~acc & 0xFF
-        else:
-            acc = acc & operand_data & 0xFF
+        acc = acc & operand_data & 0xFF
         c = 0
+    elif opcode == op["not"]
+        acc = ~acc & 0xFF
     elif opcode == op["add"] or opcode == op["add.i"] :
         res = (acc + operand_data + c ) & 0x1FF
         acc = res & 0xFF
@@ -40,7 +39,6 @@ while True:
         c = (res>>8) & 1
     elif opcode == op["lda.i"] or opcode==op["lda"]:
         acc = operand_data & 0xFF
-        c = 0
     elif opcode == "sec":
         c = 1
     elif opcode == op["sta"]:
