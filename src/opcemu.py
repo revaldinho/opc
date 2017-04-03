@@ -1,10 +1,9 @@
 # python3 opcemu.py <filename.bin> [<filename.memdump>]
 import sys
 
-op = { "and.i": 0x10, "and": 0x00, "lda.i": 0x12, "lda": 0x02,
-       "sta": 0x04, "add.i": 0x16, "add": 0x06,
-       "not.i": 0x18, "not":0x08, "jpc": 0x0A, "jpz": 0x0C,
-       "jp": 0x0E, "halt": 0x1F }
+op = { "and.i": 0x10, "and": 0x00, "lda.i": 0x12, "lda": 0x02, "not.i": 0x14,
+       "not":0x04,  "add.i": 0x16, "add": 0x06, "sta": 0x08, "jpc": 0x0A,
+       "jpz": 0x0C, "jp": 0x0E, "halt": 0x1F }
 
 with open(sys.argv[1],"rb") as f:
     bytemem = bytearray(f.read())
