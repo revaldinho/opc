@@ -1,47 +1,45 @@
-`define FETCH0 2'b00
-`define FETCH1 2'b01
-`define RDMEM  2'b10
-`define EXEC   2'b11
-`define AND  5'h00  // ANDI = 5'h10
-`define LDA  5'h02  // LDAI = 5'h12
-`define NOT  5'h04  // NOTI = 5'h14
-`define ADD  5'h06  // ADDI = 5'h16
-`define STA  5'h08
-`define JPC  5'h0A
-`define JPZ  5'h0C
-`define JP   5'h0E
+`define AND  3'h0  // ANDI = 4'h8
+`define LDA  3'h1  // LDAI = 4'h9
+`define NOT  3'h2  // NOTI = 4'hA
+`define ADD  3'h3  // ADDI = 4'hB
+`define STA  4'hC
+`define JPC  4'hD
+`define JPZ  4'hE
+`define JP   4'hF
 
 module opccpu( inout[7:0] data, output[11:0] address, output rnw, input clk, input reset_b);
 
+  parameter FETCH0=0, FETCH1=1, RDMEM=2, EXEC=3 ;
+
   reg [11:0] OR_q, PC_q;
-  reg [8:0]  ACC_q;
+  reg [7:0]  ACC_q;
   reg [1:0]  FSM_q;
-  reg [4:0]  IR_q;
+  reg [3:0]  IR_q;
   reg        C_q;
 
-  wire writeback_w = (FSM_q == `EXEC) && (IR_q == `STA);
-  assign data = (writeback_w)?ACC_q:8'bz ;
-  assign address = (writeback_w || FSM_q == `RDMEM )? OR_q:PC_q;
+  wire   writeback_w = (FSM_q == EXEC) && (IR_q == `STA) ;
   assign rnw = ~writeback_w;
+  assign data = (writeback_w)?ACC_q:8'bz ;
+  assign address = ( writeback_w || FSM_q == RDMEM )? OR_q:PC_q;
 
   always @ (posedge clk or negedge reset_b )
     if (!reset_b)
-      FSM_q <= `FETCH0;
+      FSM_q <= FETCH0;
     else
       case(FSM_q)
-        `FETCH0 : FSM_q <= `FETCH1;
-        `FETCH1 : FSM_q <= (IR_q[4]==1 || IR_q[3]==1)?`EXEC:`RDMEM ;
-        `RDMEM  : FSM_q <= `EXEC;
-        `EXEC   : FSM_q <= `FETCH0;
+        FETCH0 : FSM_q <= FETCH1;
+        FETCH1 : FSM_q <= (IR_q[3])?EXEC:RDMEM ;
+        RDMEM  : FSM_q <= EXEC;
+        EXEC   : FSM_q <= FETCH0;
       endcase
 
   always @ (posedge clk)
     begin
-      IR_q <= (FSM_q == `FETCH0)? { data[7:4], data[7] & data[3]} : IR_q;
-      OR_q[11:8] <= (FSM_q == `FETCH0)? data[3:0]: OR_q[11:8];
-      OR_q[7:0] <= (FSM_q == `FETCH1 || FSM_q==`RDMEM)? data: OR_q[7:0];
-      if ( FSM_q == `EXEC )
-        case(IR_q[3:0])
+      IR_q <= (FSM_q == FETCH0)? data[7:4] : IR_q;
+      OR_q[11:8] <= (FSM_q == FETCH0)? data[3:0]: OR_q[11:8];
+      OR_q[7:0] <= (FSM_q == FETCH1 || FSM_q==RDMEM)? data: OR_q[7:0];
+      if ( FSM_q == EXEC )
+        case(IR_q[2:0])
           `AND    : {C_q, ACC_q}  <= {1'b0, ACC_q & OR_q[7:0]};
           `NOT	  : ACC_q <= ~OR_q[7:0];
           `LDA    : ACC_q <= OR_q[7:0];
@@ -54,13 +52,13 @@ module opccpu( inout[7:0] data, output[11:0] address, output rnw, input clk, inp
     if (!reset_b)
       PC_q <= 12'b0;
     else
-      if ( FSM_q == `FETCH0 || FSM_q == `FETCH1 )
+      if ( FSM_q == FETCH0 || FSM_q == FETCH1 )
         PC_q <= PC_q + 1;
       else
         case (IR_q)
           `JP    : PC_q <= OR_q;
           `JPC   : PC_q <= (C_q)?OR_q:PC_q;
-          `JPZ   : PC_q <= (|ACC_q)?OR_q:PC_q;
+          `JPZ   : PC_q <= ~(|ACC_q)?OR_q:PC_q;
           default: PC_q <= PC_q;
         endcase
 endmodule

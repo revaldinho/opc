@@ -1,9 +1,9 @@
 # python3 opcemu.py <filename.bin> [<filename.memdump>]
 import sys
 
-op = { "and.i": 0x10, "and": 0x00, "lda.i": 0x12, "lda": 0x02, "not.i": 0x14,
-       "not":0x04,  "add.i": 0x16, "add": 0x06, "sta": 0x08, "jpc": 0x0A,
-       "jpz": 0x0C, "jp": 0x0E, "halt": 0x1F }
+op = { "and.i": 0x8, "and": 0x0, "lda.i": 0x9, "lda": 0x01, "not.i": 0xA,
+       "not":0x2,  "add.i": 0xB, "add": 0x3, "sta": 0xC, "jpc": 0xD,
+       "jpz": 0xE, "jp": 0xF, "halt": 0x7 }
 
 with open(sys.argv[1],"rb") as f:
     bytemem = bytearray(f.read())
@@ -17,9 +17,9 @@ operand_adr = 0
 print ("PC   : Mem   : Opcode Operand : Acc " )
 while True:
     adr = pc
-    opcode = (bytemem[pc] >> 3) & 0x1F
+    opcode = (bytemem[pc] >> 4) & 0xF
     operand_adr = (bytemem[pc] << 8 | bytemem[pc+1]) & 0x0FFF
-    if (opcode & 0x10 == 0):
+    if (opcode & 0x8 == 0):
         operand_data = bytemem[operand_adr]
     else:
         operand_data = (bytemem[pc+1] & 0xFF)

@@ -1,10 +1,9 @@
 # python3 opcasm.py <filename.s> [<filename.bin>]
 import sys
 import re
-
-op = { "and.i": 0x10, "and": 0x00, "lda.i": 0x12, "lda": 0x02, "not.i": 0x14,
-       "not":0x04,  "add.i": 0x16, "add": 0x06, "sta": 0x08, "jpc": 0x0A,
-       "jpz": 0x0C, "jp": 0x0E, "halt": 0x1F }
+op = { "and.i": 0x8, "and": 0x0, "lda.i": 0x9, "lda": 0x01, "not.i": 0xA,
+       "not":0x2,  "add.i": 0xB, "add": 0x3, "sta": 0xC, "jpc": 0xD,
+       "jpz": 0xE, "jp": 0xF, "halt": 0x7 }
 
 symtab = dict();
 bytemem = bytearray(4096)
@@ -53,8 +52,7 @@ for line in text:
             nextmem = int(gr[2],0)
             bytes = []
         else:
-            bytes = [ (( op[gr[1]]  << 3 ) | ((operand & 0x0F00) >> 8)), operand & 0xFF ]
-
+            bytes = [ (( op[gr[1]]  << 4 ) | ((operand & 0x0F00) >> 8)), operand & 0xFF ]
         for b in bytes:
             bytemem[nextmem] =  b
             nextmem += 1

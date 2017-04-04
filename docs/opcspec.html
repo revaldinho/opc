@@ -347,7 +347,7 @@ ul.auto-toc {
 The computer supports 2 addressing modes:</p>
 <blockquote>
 <ul class="simple">
-<li>immediate - where the operand byte holds an 8 immediate data value</li>
+<li>immediate/implied - where the operand byte holds an 8 immediate data value or is ignored</li>
 <li>direct - where a combination of opcode and operand byte provides a 12 bit data address</li>
 </ul>
 </blockquote>
@@ -361,25 +361,25 @@ ____________   ________
 0  bbb  oooo   oooooooo
  \   \    \________\______  12 bit Operand
   \   \___________________   3 bit opcode
-   \______________________   1 bit address mode: 0 = Direct addressing
+   \______________________   1 bit 0
 
-1  bbbb  xxx   oooooooo
+1  bbb  xxxx   oooooooo
  \   \     \     \_____   8 bit Operand
-  \   \     \__________   3 bit unused
-   \   \_______________   4 bit opcode
-    \__________________   1 bit address mode: 1 = Immediate
+  \   \     \__________   4 bit unused
+   \   \_______________   3 bit opcode
+    \__________________   1 bit 1
 </pre>
 </div>
 <div class="section" id="instruction-set-definition">
 <h1>Instruction Set Definition</h1>
 <table border="1" class="docutils">
 <colgroup>
-<col width="10%" />
-<col width="13%" />
-<col width="19%" />
-<col width="13%" />
-<col width="37%" />
-<col width="7%" />
+<col width="11%" />
+<col width="9%" />
+<col width="21%" />
+<col width="9%" />
+<col width="41%" />
+<col width="8%" />
 </colgroup>
 <tbody valign="top">
 <tr><td>&nbsp;</td>
@@ -388,23 +388,23 @@ ____________   ________
 <td>Flag</td>
 </tr>
 <tr><td>Mnemonic</td>
-<td>Mode.Opcode</td>
+<td>Opcode</td>
 <td>Function</td>
-<td>Mode.Opcode</td>
+<td>Opcode</td>
 <td>Function</td>
 <td>C</td>
 </tr>
 <tr><td>AND[.i]</td>
-<td>1.0000</td>
+<td>1.000</td>
 <td>A &lt;- A &amp; operand</td>
-<td>0.000x</td>
+<td>0.000</td>
 <td>A &lt;- A &amp; (operand)</td>
 <td>0</td>
 </tr>
 <tr><td>LDA[.i]</td>
-<td>1.0010</td>
+<td>1.001</td>
 <td>A &lt;- operand</td>
-<td>0.001x</td>
+<td>0.001</td>
 <td>A &lt;- (operand)</td>
 <td><ul class="first last simple">
 <li></li>
@@ -412,9 +412,9 @@ ____________   ________
 </td>
 </tr>
 <tr><td>NOT[.I]</td>
-<td>1.0100</td>
+<td>1.010</td>
 <td>A &lt;- ~operand</td>
-<td>0.010x</td>
+<td>0.010</td>
 <td>A &lt;- ~(operand)</td>
 <td><ul class="first last simple">
 <li></li>
@@ -422,9 +422,9 @@ ____________   ________
 </td>
 </tr>
 <tr><td>ADD[.i]</td>
-<td>1.0110</td>
+<td>1.011</td>
 <td>A &lt;- A+operand+C</td>
-<td>0.011x</td>
+<td>0.011</td>
 <td>A &lt;- A+(operand)+C</td>
 <td>arith</td>
 </tr>
@@ -437,7 +437,7 @@ ____________   ________
 <li></li>
 </ul>
 </td>
-<td>0.100x</td>
+<td>1.100</td>
 <td>(operand) &lt;- A</td>
 <td><ul class="first last simple">
 <li></li>
@@ -453,7 +453,7 @@ ____________   ________
 <li></li>
 </ul>
 </td>
-<td>0.101x</td>
+<td>1.101</td>
 <td>PC &lt;-operand if C==1 else PC+2</td>
 <td><ul class="first last simple">
 <li></li>
@@ -469,7 +469,7 @@ ____________   ________
 <li></li>
 </ul>
 </td>
-<td>0.110x</td>
+<td>1.110</td>
 <td>PC &lt;-operand if (ACC==0) else PC+2</td>
 <td><ul class="first last simple">
 <li></li>
@@ -485,7 +485,7 @@ ____________   ________
 <li></li>
 </ul>
 </td>
-<td>0.111x</td>
+<td>1.111</td>
 <td>PC &lt;- operand</td>
 <td><ul class="first last simple">
 <li></li>
@@ -495,11 +495,8 @@ ____________   ________
 <tr><td colspan="6">Not implemented in hardware</td>
 </tr>
 <tr><td>HALT</td>
-<td>1.1111</td>
-<td><ul class="first last simple">
-<li></li>
-</ul>
-</td>
+<td>0.111</td>
+<td>Halt simulation</td>
 <td><ul class="first last simple">
 <li></li>
 </ul>
