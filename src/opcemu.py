@@ -1,9 +1,14 @@
 # python3 opcemu.py <filename.bin> [<filename.memdump>]
-import sys
+import sys, time
 
-op = { "and.i": 0x8, "and": 0x0, "lda.i": 0x9, "lda": 0x01, "not.i": 0xA,
-       "not":0x2,  "add.i": 0xB, "add": 0x3, "sta": 0xC, "jpc": 0xD,
-       "jpz": 0xE, "jp": 0xF, "halt": 0x7 }
+op=dict()
+dis=dict()
+instruction_count = 0
+for (mnemonic,opcode) in [ ("and.i",0x8),("and",0x0),("lda.i",0x9),
+    ("lda",0x1),("not.i",0xA),("not",0x2),("add.i",0xB),("add",0x3),
+    ("sta",0xC),("jpc",0xD),("jpz",0xE), ("jp",0xF),("halt",0x7) ]:
+        op[mnemonic]=opcode
+        dis[opcode]=mnemonic
 
 with open(sys.argv[1],"rb") as f:
     bytemem = bytearray(f.read())
@@ -13,12 +18,14 @@ f.close()
 opcode = 0
 operand_data = 0
 operand_adr = 0
+st = time.time()
 
-print ("PC   : Mem   : Opcode Operand : Acc " )
+print ("PC   : Mem   : ACC C : Mnemonic Operand\n%s" % ('-'*40))
 while True:
     adr = pc
     opcode = (bytemem[pc] >> 4) & 0xF
     operand_adr = (bytemem[pc] << 8 | bytemem[pc+1]) & 0x0FFF
+    instruction_count += 1
     if (opcode & 0x8 == 0):
         operand_data = bytemem[operand_adr]
     else:
@@ -46,10 +53,9 @@ while True:
     elif opcode == op["halt"]:
         print("Stopped on halt instruction at %04x" % (pc-2) )
         break
-
-    print ("%04x : %02x %02x : %02x      %03x    : %02x" % ( adr, bytemem[adr], bytemem[adr+1],
-                                opcode, operand_data if opcode & 0x10==1 else operand_adr, acc))
-
+    print ("%04x : %02x %02x : %02x  %d : %-8s %03x    " % ( adr, bytemem[adr], bytemem[adr+1],
+        acc, c,  dis[opcode], operand_data if opcode & 0x10==1 else operand_adr) )
+print ("%s\nExecuted %d instructions in %3.3f s" % ('-'*40,instruction_count, time.time()-st))
 if len(sys.argv) > 2:  # Dump memory for inspection if required
     with open(sys.argv[2],"wb" ) as f:
         f.write(bytemem)

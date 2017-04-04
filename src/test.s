@@ -3,8 +3,11 @@ TOP   ORG     0x00
       sta     RESULT
       not     RESULT
       sta     RESULT
-
-      and.i   0x33
+      lda.i   0x0F0
+LOOP  add.i   0x1
+      jpz     NEXT
+      jp      LOOP
+NEXT  and.i   0x33
       jp END
       add.i   0x01
 

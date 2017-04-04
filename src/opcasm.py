@@ -14,9 +14,8 @@ with open(sys.argv[1]) as f:
     text = [ re.sub("#.*","",l) for l in f.readlines() ]
 f.close()
 
-# Pass 1
 nextmem = 0
-for line in text:
+for line in text:  # Assembler Pass 1
     gr = line_re.match(line).groups()
     if gr[0]:
         symtab[gr[0]] = nextmem
@@ -31,9 +30,8 @@ for line in text:
             print("Error: unrecognized instruction ", line)
             sys.exit()
 
-# Pass 2
 nextmem = 0
-for line in text:
+for line in text: # Assembler Pass 2
     operand = 0
     gr = line_re.match( re.sub("#.*","",line) ).groups()
     if gr[2] :
@@ -60,7 +58,7 @@ for line in text:
 
 print ("Symbol Table\n", symtab)
 
-if len(sys.argv) > 2:  # Write Binary
+if len(sys.argv) > 2:  # Write Binary File
     with open(sys.argv[2],"wb" ) as f:
         f.write(bytemem)
     f.close()
