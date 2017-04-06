@@ -17,16 +17,17 @@ for iteration in range (0,2):     # Two pass assembly
             if gr[0]:
                 exec ("%s= %d" % (gr[0],nextmem), globals(), symtab )
             if gr[1] and gr[1] == "ORG" and gr[2]:
-                nextmem = int(gr[2],0)
+                nextmem = eval(gr[2],globals(),symtab)
             elif gr[1] and gr[1] in op:
                 bytes=[0]
-                if gr[2] and iteration==0:
-                    bytes = [0]*len(gr[2].split(","))
-                elif gr[2]:
-                    try:
-                        bytes = [eval( x ,globals(), symtab) for x in gr[2].split(",")]
-                    except (ValueError, NameError):
-                        sys.exit("Error evaluating expression %s" % gr[2] )
+                if gr[2]:
+                    if iteration==0:
+                        bytes = [0]*len(gr[2].split(","))
+                    else:
+                        try:
+                            bytes = [eval( x ,globals(), symtab) for x in gr[2].split(",")]
+                        except (ValueError, NameError):
+                            sys.exit("Error evaluating expression %s" % gr[2] )
                 if gr[1]=="BYTE":
                     bytes = [x & 0xFF for x in bytes]
                 else:
@@ -35,7 +36,7 @@ for iteration in range (0,2):     # Two pass assembly
                 sys.exit("Error: unrecognized instruction %s" % gr[1])
             if iteration > 0 :
                 bytemem[nextmem:nextmem] =  bytes
-                print ("%04x  %-16s  %s" % (nextmem, ' '.join([("%02x" % i) for i in bytes]), line.rstrip()))
+                print ("%04x  %-20s  %s" % (nextmem, ' '.join([("%02x" % i) for i in bytes]), line.rstrip()))
             nextmem += len(bytes)
 
 print ("\nSymbol Table:\n", symtab)
