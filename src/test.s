@@ -2,8 +2,8 @@ TOP     ORG     0x00
         lda.i   0x00
         sta     RESULT
         not     RESULT
-        sta     RESULT
-        lda.i   0x00
+        sta     RESULT+1
+        lda.i   10 * 2 + 9 <<7 & 0xFF
 LOOP    add.i   0x1
         jpz     NEXT
         jp      LOOP
