@@ -39,12 +39,13 @@ for line in text: # Assembler Pass 2
         elif gr[1] == "ORG" and gr[2]:
             nextmem = int(gr[2],0)
             bytes = []
-        elif gr[2] :
-            try:
-                print ( "EXPR: %s" % gr[2] )
-                operand = eval("%s" % gr[2], globals(), symtab)
-            except NameError:
-                print("Oh no - Error evaluation expression %s " % gr[2] )
+        else:
+            if gr[2]:
+                try:
+                    operand = eval("%s" % gr[2], globals(), symtab)
+                except NameError:
+                    print("Oh no - Error evaluation expression %s " % gr[2] )
+            bytes =  [ op[gr[1]]<<4 | (operand>>8) & 0xF, operand & 0xFF]
         for b in bytes:
             bytemem[nextmem] =  b
             nextmem += 1
