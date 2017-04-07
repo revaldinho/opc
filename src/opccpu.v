@@ -11,8 +11,8 @@ module opccpu( inout[7:0] data, output[11:0] address, output rnw, input clk, inp
   reg [3:0]  IR_q;
   reg        C_q;
 
-  wire   writeback_w = (FSM_q == EXEC) && (IR_q == STA) ;
-  assign rnw = ~writeback_w;
+  wire   writeback_w = ((FSM_q == EXEC) && (IR_q == STA)) & reset_b ;
+  assign rnw = ~writeback_w ;
   assign data = (writeback_w)?ACC_q:8'bz ;
   assign address = ( writeback_w || FSM_q == RDMEM )? OR_q:PC_q;
 
