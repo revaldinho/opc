@@ -4,6 +4,7 @@ TOP     ORG     0x00
         not     RESULT
         sta     RESULT+1
         lda.i   10 * 2 + 9 <<7 & 0xFF
+        and.i   0xFF # CLC
 LOOP    add.i   0x1
         jpz     NEXT
         jp      LOOP
