@@ -20,7 +20,7 @@ module opctb();
       clk = 0;
       reset_b = 0;
       #10005 reset_b = 1;
-      #150000 $finish;
+      #500000 $finish;
     end
 
   // Simple negedge synchronous memory to avoid messing with delays initially
@@ -31,4 +31,11 @@ module opctb();
   always
     #500 clk = !clk;
 
+  // Always stop simulation on encountering the halt pseudo instruction
+  always @ (negedge clk)
+    if (dut0_u.IR_q==4'h7)
+      begin
+        $display("Simulation terminated with halt instruction at time", $time);
+        $finish;
+      end
 endmodule
