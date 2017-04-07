@@ -25,20 +25,17 @@ while True:
         c = 0
     elif opcode in ( op["not"], op["not.i"]):
         acc = ~operand_data & 0xFF
-    elif opcode == op["add"] or opcode == op["add.i"] :
+    elif opcode in (op["add"], op["add.i"]) :
         res = (acc + operand_data + c ) & 0x1FF
         acc = res & 0xFF
         c = (res>>8) & 1
-    elif opcode == op["lda.i"] or opcode==op["lda"]:
+    elif opcode in (op["lda.i"], op["lda"]):
         acc = operand_data & 0xFF
     elif opcode == op["sta"]:
         bytemem[operand_adr] = acc
-    elif opcode == op["jpc"]:
-        pc = operand_adr if c else pc
-    elif opcode == op["jpz"]:
-        pc = operand_adr if (acc==0) else pc
-    elif opcode == op["jp"]:
-        pc = operand_adr
+    elif opcode in (op["jpc"], op["jpz"], op["jp"]):
+        condition = (c==1) if opcode==op["jpc"] else (acc==0) if opcode==op["jpz"] else True
+        pc = operand_adr if condition else pc
     elif opcode == op["halt"]:
         print("Stopped on halt instruction at %04x" % (pc-2) )
         break
