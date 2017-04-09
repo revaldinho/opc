@@ -36,7 +36,8 @@ for iteration in range (0,2):     # Two pass assembly
                 sys.exit("Error: unrecognized instruction %s" % gr[1])
             if iteration > 0 :
                 bytemem[nextmem:nextmem] =  bytes
-                print ("%04x  %-20s  %s" % (nextmem, ' '.join([("%02x" % i) for i in bytes]), line.rstrip()))
+                print("%04x  %-20s  %s" % (nextmem,
+                    ' '.join([("%02x" % i) for i in bytes]), line.rstrip()))
             nextmem += len(bytes)
 
 print ("\nSymbol Table:\n", symtab)
