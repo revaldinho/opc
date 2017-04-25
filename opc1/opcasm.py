@@ -1,4 +1,4 @@
-# python3 opcasm.py <filename.s> [<filename.bin>]
+# python3 opcasm.py <filename.s> [<filename.hex>]
 import sys, re
 op = { "and.i": 0x8, "and": 0x0, "lda.i": 0x9, "lda": 0x01, "not.i": 0xA,
        "not":0x2,  "add.i": 0xB, "add": 0x3, "sta": 0xC, "jpc": 0xD,
@@ -35,12 +35,15 @@ for iteration in range (0,2):     # Two pass assembly
             elif gr[1]:
                 sys.exit("Error: unrecognized instruction %s" % gr[1])
             if iteration > 0 :
-                bytemem[nextmem:nextmem] =  bytes
-                print ("%04x  %-20s  %s" % (nextmem, ' '.join([("%02x" % i) for i in bytes]), line.rstrip()))
+                for ptr in range(0,len(bytes)):
+                    bytemem[ptr+nextmem] =  bytes[ptr]
+                print("%04x  %-20s  %s" % (nextmem,
+                    ' '.join([("%02x" % i) for i in bytes]), line.rstrip()))
             nextmem += len(bytes)
 
 print ("\nSymbol Table:\n", symtab)
 
-if len(sys.argv) > 2:  # Write Binary File
-    with open(sys.argv[2],"wb" ) as f:
-        f.write(bytemem)
+if len(sys.argv) > 2:  # Write Hex File
+    with open(sys.argv[2],"w" ) as f:
+        for i in range(0, len(bytemem), 24):
+            f.write( '%s\n' %  ' '.join("%02x"%n for n in bytemem[i:i+24]))

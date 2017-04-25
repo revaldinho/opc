@@ -1,0 +1,64 @@
+<!DOCTYPE html><html>
+<head><title>OPC emulator</title>
+<script>
+var op = {"and.i":0x8,"and":0x0,"lda.i":0x9,"lda":0x1,"not.i":0xA,"not":0x2,"add.i":0xB,"add":0x3,
+          "sta":0xC,"jpc":0xD,"jpz":0xE,"jp":0xF,"halt":0x7}
+var bytemem = new Uint8Array(4096);
+
+function hexbits(n, w) {
+    return ((1 << w | n).toString(16).substr(-w/4));
+}
+
+function boot() {
+    var maxcycles = 66, cycle = 0, pc = 0, acc = 0, c = 0;
+    bytemem.set([0x90, 0x00, 0xc2, 0x00, 0x22, 0x00, 0xc2, 0x01, 0x90, 0x80, 0x80, 0xff,
+                 0x90, 0xf0, 0xb0, 0x01, 0xe0, 0x14, 0xf0, 0x0e, 0x80, 0x33, 0xf0, 0x1a,
+                 0xb0, 0x01, 0x70, 0x00]);
+    bytemem.set([0x00, 0x01, 0x02, 0x03, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x2b], 0x200);
+    while (cycle < maxcycles){
+        opcode = (bytemem[pc] >> 4) & 0xF;
+        operand_adr = (bytemem[pc] << 8 | bytemem[pc+1]) & 0x0FFF;
+        if ((opcode & 0x8) == 0) {
+            operand_data = bytemem[operand_adr];
+        } else {
+            operand_data = (bytemem[pc+1] & 0xFF);
+        }
+
+        document.getElementById("trace").innerHTML +=
+            ("     " + cycle).slice(-5) + " : " +
+            hexbits(pc, 12) + " : " +
+            hexbits(bytemem[pc], 8) + " " + hexbits(bytemem[pc+1], 8) + " : " +
+            hexbits(acc, 8) + "  " + c + " : " +
+            (Object.keys(op)[Object.values(op).indexOf(opcode)] + "       ").slice(0,9) +
+            (((opcode & 0x8) == 0) ? hexbits(operand_data, 8) : hexbits(operand_adr, 12)) + "\n";
+
+        pc += 2; cycle++;
+        if (opcode == op["and"] || opcode == op["and.i"]) {
+            acc = acc & operand_data & 0xFF;
+            c = 0;
+        } else if (opcode == op["not"] || opcode == op["not.i"]) {
+            acc = ~operand_data & 0xFF;
+        } else if (opcode == op["add"] || opcode == op["add.i"]) {
+            res = (acc + operand_data + c ) & 0x1FF;
+            acc = res & 0xFF;
+            c = (res>>8) & 1;
+        } else if (opcode == op["lda"] || opcode == op["lda.i"]) {
+            acc = operand_data & 0xFF;
+        } else if (opcode == op["sta"]) {
+            bytemem[operand_adr] = acc;
+        } else if (opcode==op["jp"] || (opcode==op["jpc"] && (c==1)) || (opcode==op["jpz"] && (acc==0))) {
+            pc = operand_adr;
+        } else if (opcode == op["halt"]) {
+            break;
+        }
+        // fall through if untaken branch or unknown opcode - treat as no-operation
+    }
+    document.getElementById("trace").innerHTML += "Done!\n";
+}
+</script></head>
+<body>Welcome to the <a href=".">OPC</a> in-browser Emulator
+<p><button type="button" onclick="boot()">Boot</button>
+<pre id=trace>
+Cycle : PC  : Mem   : ACC C : Mnemonic Operand
+-----------------------------------------------
+</pre></body></html>

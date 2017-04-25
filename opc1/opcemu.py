@@ -1,12 +1,12 @@
-# python3 opcemu.py <filename.bin> [<filename.memdump>]
+# python3 opcemu.py <filename.hex> [<filename.memdump>]
 import sys
 
 op = {"and.i":0x8,"and":0x0,"lda.i":0x9,"lda":0x1,"not.i":0xA,"not":0x2,"add.i":0xB,"add":0x3,
         "sta":0xC,"jpc":0xD,"jpz":0xE,"jp":0xF,"halt":0x7}
 dis = dict( [ (op[k],k) for k in op])
 
-with open(sys.argv[1],"rb") as f:
-    bytemem = bytearray(f.read())
+with open(sys.argv[1],"r") as f:
+    bytemem = bytearray( [ int(x,16) for x in f.read().split() ])
 
 (pc, acc, c) = (0,0,0) # initialise machine state
 print ("PC   : Mem   : ACC C : Mnemonic Operand\n%s" % ('-'*40))
@@ -41,5 +41,6 @@ while True:
         break
 
 if len(sys.argv) > 2:  # Dump memory for inspection if required
-    with open(sys.argv[2],"wb" ) as f:
-        f.write(bytemem)
+    with open(sys.argv[2],"w" ) as f:
+        for i in range(0, len(bytemem), 24):
+            f.write( '%s\n' %  ' '.join("%02x"%n for n in bytemem[i:i+24]))
