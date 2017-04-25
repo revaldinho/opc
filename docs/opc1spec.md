@@ -14,22 +14,20 @@ on the state of this flag and the state of the accumulator are available.
 
 All instructions are encoded in a fixed two byte format consisting of an opcode byte and an operand byte.
 
-The state of the MSB determines which addressing mode will be used for each instruction.
+The state of the MSB determines which addressing mode will be used for each instruction::
 
-::
+    byte 0       byte 1
+    ____________   ________
+    0  bbb  oooo   oooooooo
+     \   \    \________\______  12 bit Operand
+      \   \___________________   3 bit opcode
+       \______________________   1 bit 0
 
-     byte 0       byte 1
-  ____________   ________
-  0  bbb  oooo   oooooooo
-   \   \    \________\______  12 bit Operand
-    \   \___________________   3 bit opcode
-     \______________________   1 bit 0
-
-  1  bbb  xxxx   oooooooo
-   \   \     \     \_____   8 bit Operand
-    \   \     \__________   4 bit unused
-     \   \_______________   3 bit opcode
-      \__________________   1 bit 1
+    1  bbb  xxxx   oooooooo
+     \   \     \     \_____   8 bit Operand
+      \   \     \__________   4 bit unused
+       \   \_______________   3 bit opcode
+        \__________________   1 bit 1
 
 
 Instruction Set Definition
