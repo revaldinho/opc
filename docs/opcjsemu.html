@@ -1,21 +1,19 @@
 <!DOCTYPE html><html>
 <head><title>OPC emulator</title>
 <script>
-var op = { "and": 0x0, "lda": 0x01, "not":0x2, "add": 0x3,"and.i": 0x8,
-           "lda.i": 0x9, "not.i": 0xA,"add.i": 0xB, "rts":0xC, "halt": 0xE,
-          "lxa":0xD, "sta": 0x4, "jpc": 0x5, "jpz": 0x6, "jp": 0x7, "jsr":0xF }
-
+var op = { "and": 0x0, "lda": 0x01, "not":0x2, "add": 0x3,"and.i": 0x8, "lda.i": 0x9,
+           "not.i": 0xA,"add.i": 0xB, "rts":0xC, "halt": 0xE,"lxa":0xD, "sta": 0x4,
+           "jpc": 0x5, "jpz": 0x6, "jp": 0x7, "jsr":0xF }
 var bytemem = new Uint8Array(2048);
-
 function hexbits(n, w) {
     return ((1 << w | n).toString(16).substr(-w/4));
 }
-
 function boot() {
-    var maxcycles = 66, cycle = 0, pc = 0, acc = 0, c = 0;
+    var maxcycles = 66, cycle = 0, pc = 0, acc = 0, c = 0, link=0, tmp=0;
     bytemem.set([ 0x90, 0x00, 0x42, 0x00, 0x22, 0x00, 0x42, 0x01, 0x90, 0x80, 0x80, 0xff, 0x90,
-                  0xf0, 0xb0, 0x01, 0x60, 0x14, 0x70, 0x0e, 0x80, 0x33, 0x70, 0x1a, 0xb0, 0x01,
-                  0xe0 ]);
+      0xf0, 0xb0, 0x01, 0x60, 0x14, 0x70, 0x0e, 0x80, 0x33, 0x70, 0x1a, 0xb0, 0x01, 0xf0, 0x20,
+      0xe0, 0x00, 0x00, 0x00, 0x40, 0x1e, 0xd0, 0x00, 0x40, 0x1f, 0x10, 0x1f, 0xd0, 0x00, 0x10,
+      0x1e, 0xc0, 0x00, 0x00, 0x00 ]);
     bytemem.set([0x00, 0x01, 0x02, 0x03, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x2b], 0x200);
     while (cycle < maxcycles){
         opcode = (bytemem[pc] >> 4) & 0xF;
@@ -36,24 +34,26 @@ function boot() {
 
         pc += 2; cycle++;
         if (opcode == op["and"] || opcode == op["and.i"]) {
-            acc = acc & operand_data & 0xFF;
-            c = 0;
+            acc = acc & operand_data & 0xFF; c = 0;
         } else if (opcode == op["not"] || opcode == op["not.i"]) {
             acc = ~operand_data & 0xFF;
         } else if (opcode == op["add"] || opcode == op["add.i"]) {
-            res = (acc + operand_data + c ) & 0x1FF;
-            acc = res & 0xFF;
-            c = (res>>8) & 1;
+            res = (acc + operand_data + c ) & 0x1FF; acc = res & 0xFF; c = (res>>8) & 1;
         } else if (opcode == op["lda"] || opcode == op["lda.i"]) {
             acc = operand_data & 0xFF;
         } else if (opcode == op["sta"]) {
             bytemem[operand_adr] = acc;
         } else if (opcode==op["jp"] || (opcode==op["jpc"] && (c==1)) || (opcode==op["jpz"] && (acc==0))) {
             pc = operand_adr;
+        } else if (opcode == op["lxa"]) {
+            tmp = acc ; acc = link ; link = tmp & 0x07;
+        } else if (opcode == op["rts"]) {
+            pc = (link << 8) | acc
+        } else if (opcode == op["jsr"]) {
+            link = (pc >> 8) & 0x07 ; acc = pc & 0xFF; pc = operand_adr;
         } else if (opcode == op["halt"]) {
             break;
-        }
-        // fall through if untaken branch or unknown opcode - treat as no-operation
+        } // fall through if untaken branch or unknown opcode - treat as no-operation
     }
     document.getElementById("trace").innerHTML += "Done!\n";
 }

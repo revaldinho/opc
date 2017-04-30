@@ -15,7 +15,7 @@ with open(sys.argv[1],"r") as f:
 print ("PC   : Mem   : ACC C : Mnemonic Operand\n%s" % ('-'*40))
 while True:
     opcode = (bytemem[pc] >> 4) & 0xF
-    operand_adr = (bytemem[pc] << 8 | bytemem[pc+1]) & 0x07FF
+    operand_adr = ((bytemem[pc] << 8) | bytemem[pc+1]) & 0x07FF
     if (opcode & 0x8 == 0):
         operand_data = bytemem[operand_adr]
     else:
