@@ -1,11 +1,13 @@
 # python3 opcasm.py <filename.s> [<filename.hex>]
 import sys, re
-op = { "and.i": 0x8, "and": 0x0, "lda.i": 0x9, "lda": 0x01, "not.i": 0xA,
-       "not":0x2,  "add.i": 0xB, "add": 0x3, "sta": 0xC, "jpc": 0xD,
-       "jpz": 0xE, "jp": 0xF, "halt": 0x7, "BYTE":0x100 }
+op = { "and": 0x0, "lda": 0x01, "not":0x2, "add": 0x3,
+       "and.i": 0x8, "lda.i": 0x9, "not.i": 0xA,"add.i": 0xB,
+       "rts":0xC, "halt": 0xE, "lxa":0xD,
+       "sta": 0x4, "jpc": 0x5, "jpz": 0x6, "jp": 0x7, "jsr":0xF,
+       "BYTE":0x100 }
 
 symtab = dict();
-bytemem = bytearray(4096)
+bytemem = bytearray(2048)
 line_re = re.compile( '^(\w+)?\s*(\w+(?:\.i)?)?\s*(.*)' )
 
 for iteration in range (0,2):     # Two pass assembly

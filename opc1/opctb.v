@@ -1,10 +1,11 @@
 `timescale 1ns / 1ns
+`define HALT  4'hE
 
 module opctb();
-  reg [7:0] mem [ 4095:0 ];
+  reg [7:0] mem [ 2047:0 ];
   reg clk, reset_b;
 
-  wire [11:0] addr;
+  wire [10:0] addr;
   wire rnw ;
   wire ceb = 1'b0;
   wire oeb = !rnw;
@@ -33,7 +34,7 @@ module opctb();
 
   // Always stop simulation on encountering the halt pseudo instruction
   always @ (negedge clk)
-    if (dut0_u.IR_q==4'h7)
+    if (dut0_u.IR_q== `HALT)
       begin
         $display("Simulation terminated with halt instruction at time", $time);
         $finish;

@@ -9,4 +9,3 @@ Implementations
    * [OPC1 spec](/opc/opc1spec.html)
    * [OPC1 in-browser Emulator](/opc/opcjsemu.html)
    * [OPC1 source code](https://github.com/revaldinho/opc/tree/master/opc1).
-   
