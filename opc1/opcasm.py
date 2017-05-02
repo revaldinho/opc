@@ -6,7 +6,7 @@ op = { "and"  :0x00, "lda":0x01,"not"  :0x02,"add":0x03, "and.i":0x10, "lda.i":0
 
 symtab = dict();
 bytemem = bytearray(2048)
-line_re = re.compile( '^(\w+)?\s*(\w+(?:\.i)?)?\s*(.*)' )
+line_re = re.compile( '^(\w+)?:?\s*(\w+(?:\.i|\.p)?)?\s*(.*)' )
 
 for iteration in range (0,2):     # Two pass assembly
     with open(sys.argv[1]) as f:

@@ -18,12 +18,13 @@ while True:
         operand_data = bytemem[operand_adr] & 0xFF
     else:
         operand_data = bytemem[pc+1] & 0xFF
-    if (opcode  & 0x18 == 0x08):  # Second read for pointer operations
-        operand_adr = bytemem[operand_data] & 0xFF        
-        operand_data = (bytemem[operand_adr] & 0xFF)
-        
+    if (opcode  & 0x18 == 0x08):  # Second read for pointer operations        
+        operand_adr = operand_data & 0xFF
+        operand_data = bytemem[operand_adr] & 0xFF
     print ("%04x : %02x %02x : %02x  %d : %-8s %03x    " % ( pc, bytemem[pc], bytemem[pc+1],
         acc, c,  dis[opcode], operand_data if opcode & 0x10==1 else operand_adr) )
+
+
     pc += 2
     if opcode in ( op["and"], op["and.i"]):
         acc = acc & operand_data & 0xFF
