@@ -31,7 +31,7 @@ module opccpu( inout[7:0] data, output[10:0] address, output rnw, input clk, inp
   always @ (posedge clk)
     begin
       IR_q <= (FSM_q == FETCH0)? data[7:4] : IR_q;
-      OR_q[10:8] <= (FSM_q == FETCH0)? data[1:0]: OR_q[10:8];
+      OR_q[10:8] <= (FSM_q == FETCH0)? data[2:0]: OR_q[10:8];
       OR_q[7:0] <= (FSM_q == FETCH1 || FSM_q==RDMEM)? data: OR_q[7:0];
       if ( FSM_q == EXEC )
         casex (IR_q)
