@@ -1,5 +1,5 @@
 `timescale 1ns / 1ns
-`define HALT  4'hE
+`define HALT  5'h1F
 
 module opctb();
   reg [7:0] mem [ 2047:0 ];

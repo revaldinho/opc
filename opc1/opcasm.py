@@ -1,10 +1,8 @@
 # python3 opcasm.py <filename.s> [<filename.hex>]
 import sys, re
-op = { "and": 0x0, "lda": 0x01, "not":0x2, "add": 0x3,
-       "and.i": 0x8, "lda.i": 0x9, "not.i": 0xA,"add.i": 0xB,
-       "rts":0xC, "halt": 0xE, "lxa":0xD,
-       "sta": 0x4, "jpc": 0x5, "jpz": 0x6, "jp": 0x7, "jsr":0xF,
-       "BYTE":0x100 }
+op = { "and"  :0x00, "lda":0x01,"not"  :0x02,"add":0x03, "and.i":0x10, "lda.i":0x11, "not.i":0x12,
+       "add.i":0x13, "sec":0x15,"lda.p":0x09,"sta":0x18, "sta.p":0x08, "jpc"  :0x19, "jpz"  :0x1a, 
+       "jp"   :0x1b, "jsr":0x1c,"rts"  :0x1d,"lxa":0x1e, "halt" :0x1f, "BYTE":0x100 }
 
 symtab = dict();
 bytemem = bytearray(2048)
@@ -33,7 +31,7 @@ for iteration in range (0,2):     # Two pass assembly
                 if gr[1]=="BYTE":
                     bytes = [x & 0xFF for x in bytes]
                 else:
-                    bytes = [op[gr[1]]<<4 | (bytes[0]>>8) & 0xF, bytes[0] & 0xFF]
+                    bytes = [op[gr[1]]<<3 | (bytes[0]>>8) & 0xF, bytes[0] & 0xFF]
             elif gr[1]:
                 sys.exit("Error: unrecognized instruction %s" % gr[1])
             if iteration > 0 :
