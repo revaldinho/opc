@@ -1,7 +1,7 @@
 OPC1 Definition
 ---------------
 
-OPC1 is a minimal implementation of a One Page Computer which fits into a single Xilinx XC9572 CPLD.
+OPC1 is a minimal implementation of a [One Page Computer](.) which fits into a single Xilinx XC9572 CPLD.
 
 The OPC1 is an accumulator based computer with an 8 bit datapath and a 11 bit address space.
 The computer supports 3 addressing modes:
