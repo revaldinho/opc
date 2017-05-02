@@ -23,8 +23,8 @@ function boot() {
             operand_data = bytemem[pc+1];
         }
         if ((opcode & 0x18) == 0x08) { // Second read for pointer operations
-            operand_adr = bytemem[operand_data]
-            operand_data = bytemem[operand_adr]
+            operand_adr = operand_data;
+            operand_data = bytemem[operand_adr];
         }
         document.getElementById("trace").innerHTML += ("     " + cycle).slice(-5) + " : " +
             hexbits(pc, 12) + " : " + hexbits(bytemem[pc], 8) + " " + hexbits(bytemem[pc+1], 8) +
