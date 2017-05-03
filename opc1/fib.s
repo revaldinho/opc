@@ -72,13 +72,13 @@ END:    halt
 
 
 FIB:
-        sta.p RETSP
-        lxa
-        sta TMP
-        INCPTR(RETSP,1)
-        lda TMP
-        sta.p RETSP
-        INCPTR(RETSP,1)
+        sta.p RETSP         # store lower ret addr byte on stack
+        lxa                 # get upper ret addr byte into A
+        sta TMP             # save it because A and link will get zapped by next instr
+        INCPTR(RETSP,1)     # increment the stack ptr, zapping A and C (link)
+        lda TMP             # retrieve upper ret addr byte
+        sta.p RETSP         # save it on the stack
+        INCPTR(RETSP,1)     # update the stack pointer again
 
         ADD16( DATA, DATA+2, DATA+4)
         lda DATA+4
@@ -97,11 +97,11 @@ FIB:
         lda DATA+5
         sta DATA+3
 
-        DECPTR(RETSP,1)
-        lda.p RETSP
-        sta TMP
-        DECPTR(RETSP,1)
-        lda TMP
-        lxa
-        lda.p RETSP
-        rts
+        DECPTR(RETSP,1)    # pre-decrement the stack pointers
+        lda.p RETSP        # retrieve the upper ret addr byte
+        sta TMP            # save it
+        DECPTR(RETSP,1)    # pre-decrement the stack pointer again, zapping A and C (link)
+        lda TMP            # retrieve upper ret addr byte
+        lxa                # pop it in the link register
+        lda.p RETSP        # get the lower ret addr byte off the stack
+        rts                # ...and finally return!
