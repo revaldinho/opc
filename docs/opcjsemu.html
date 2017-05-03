@@ -7,7 +7,7 @@ op = { "and"  :0x00, "lda":0x01,"not"  :0x02,"add":0x03, "and.i":0x10, "lda.i":0
 var bytemem = new Uint8Array(2048);
 function hexbits(n, w) {return ((1 << w | n).toString(16).substr(-w/4));}
 function boot() {
-    var maxcycles = 999, cycle = 0, pc = 0x100, acc = 0, c = 0, link=0, tmp=0;
+    var maxcycles = 999, cycle = 0, pc = 0x100, acc = 0, link = 0, tmp = 0;
     bytemem.set(
         eval('['+location.search.replace(/.*d=/,'').replace(/([0-9a-f]{2})/ig,'0x$1,')+']'),
                0x100);
@@ -18,34 +18,34 @@ function boot() {
         } else {
             operand_data = bytemem[pc+1];
         }
+        document.getElementById("trace").innerHTML += ("     " + cycle).slice(-5) + " : " +
+            hexbits(pc, 12) + " : " + hexbits(bytemem[pc], 8) + " " + hexbits(bytemem[pc+1], 8) +
+            " : " + hexbits(acc, 8) + "  " + (link & 1) + " " + link + "    : " +
+            (Object.keys(op)[Object.values(op).indexOf(opcode)] + "       ").slice(0,9) +
+            hexbits(operand_adr, 12) + "\n";
         if ((opcode & 0x18) == 0x08) { // Second read for pointer operations
             operand_adr = operand_data;
             operand_data = bytemem[operand_adr];
         }
-        document.getElementById("trace").innerHTML += ("     " + cycle).slice(-5) + " : " +
-            hexbits(pc, 12) + " : " + hexbits(bytemem[pc], 8) + " " + hexbits(bytemem[pc+1], 8) +
-            " : " + hexbits(acc, 8) + "  " + c + " : " +
-            (Object.keys(op)[Object.values(op).indexOf(opcode)] + "       ").slice(0,9) +
-            (((opcode & 0x10) == 1) ? hexbits(operand_data, 12) : hexbits(operand_adr, 12)) + "\n";
         pc += 2; cycle++;
         if (opcode == op["and"] || opcode == op["and.i"]) {
-            acc = acc & operand_data & 0xFF; c = 0;
+            acc &= operand_data; link &= ~1;
         } else if (opcode == op["not"] || opcode == op["not.i"]) {
             acc = ~operand_data & 0xFF;
         } else if (opcode == op["add"] || opcode == op["add.i"]) {
-            res = (acc + operand_data + c ) & 0x1FF; acc = res & 0xFF; c = (res>>8) & 1;
+            res = acc + operand_data + (link&1); acc = res & 0xFF; link = link & ~1 | (res>>8);
         } else if (opcode == op["lda"] || opcode == op["lda.i"] || opcode == op["lda.p"]) {
-            acc = operand_data & 0xFF;
+            acc = operand_data;
         } else if (opcode == op["sta"] || opcode == op["sta.p"]) {
             bytemem[operand_adr] = acc;
-        } else if (opcode==op["jp"] || opcode==op["jpc"] && c==1 || opcode==op["jpz"] && acc==0) {
+        } else if (opcode==op["jp"] || opcode==op["jpc"] && link&1 || opcode==op["jpz"] && !acc) {
             pc = operand_adr;
         } else if (opcode == op["lxa"]) {
             tmp = acc ; acc = link ; link = tmp & 0x07;
         } else if (opcode == op["rts"]) {
             pc = (link << 8) | acc;
         } else if (opcode == op["sec"]) {
-            c = 1;
+            link |= 1;
         } else if (opcode == op["jsr"]) {
             link = (pc >> 8) & 0x07 ; acc = pc & 0xFF; pc = operand_adr;
         } else if (opcode == op["halt"]) {
@@ -56,6 +56,6 @@ function boot() {
 }
 </script></head><body>Welcome to the <a href=".">OPC</a> in-browser Emulator
 <p><button type="button" onclick="boot()">Boot</button><pre id=trace>
-Cycle : PC  : Mem   : ACC C : Mnemonic Operand
------------------------------------------------
+Cycle : PC  : Mem   : ACC C LINK : Mnemonic Operand
+---------------------------------------------------
 </pre></body></html>
