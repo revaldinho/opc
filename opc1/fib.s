@@ -76,7 +76,7 @@ FIB:
         lxa
         sta TMP
         INCPTR(RETSP,1)
-        lda tmp
+        lda TMP
         sta.p RETSP
         INCPTR(RETSP,1)
 
