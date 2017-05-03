@@ -10,9 +10,8 @@ macstart_re = re.compile("MACRO\s*(\w*)\s*?\((.*)\)", re.IGNORECASE)
 macend_re   = re.compile("ENDMACRO.*", re.IGNORECASE)
 macinst_re  = re.compile("^(?:(\w*):?)?\s*(\w+)\s*?\((.*)\)")
 
-# Pass 0 - macro expansion
 (macro, macroname, newtext)  = ( dict(), None, [])
-for line in open(sys.argv[1], "r").readlines():
+for line in open(sys.argv[1], "r").readlines(): # Pass 0 - macro expansion
     if macstart_re.match(line) :
         (macroname,paramstr) = (macstart_re.match(line)).groups()
         macro[macroname] = ([x.strip() for x in paramstr.split(",")], [])
@@ -35,10 +34,13 @@ for line in open(sys.argv[1], "r").readlines():
                         newline = newline.replace(s,r)
                 newtext.append(newline)
             newtext.append("\n")
+        else:
+            sys.exit("Reference to undefined macro %s" % instname )
+
     else:
         newtext.append(line)
 
-for iteration in range (0,2):     # Two pass assembly
+for iteration in range (0,2): # Two pass assembly
     nextmem = 0
     for line in newtext:
         bytes = []
