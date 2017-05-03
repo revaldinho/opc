@@ -33,7 +33,7 @@ while True:
     elif opcode in (op["add"], op["add.i"]) :
         res = (acc + operand_data + (link&1) ) & 0x1FF
         acc = res & 0xFF
-        c = (link & 0b110) | ((res>>8) & 1)
+        link = (link & 0b110) | ((res>>8) & 1)
     elif opcode in (op["lda.i"], op["lda"], op["lda.p"]):
         acc = operand_data & 0xFF
     elif opcode in (op["sta"], op["sta.p"]):
