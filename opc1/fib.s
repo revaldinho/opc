@@ -26,6 +26,7 @@ ENDMACRO
 DATA:   BYTE 0, 0
         BYTE 0, 0
         BYTE 0, 0
+TMP:    BYTE 0
 
 # Loop counter variable
 LPCTR:  BYTE 0
@@ -72,8 +73,10 @@ END:    halt
 
 FIB:
         sta.p RETSP
-        INCPTR(RETSP,1)
         lxa
+        sta TMP
+        INCPTR(RETSP,1)
+        lda tmp
         sta.p RETSP
         INCPTR(RETSP,1)
 
@@ -96,7 +99,9 @@ FIB:
 
         DECPTR(RETSP,1)
         lda.p RETSP
-        lxa
+        sta TMP
         DECPTR(RETSP,1)
+        lda TMP
+        lxa
         lda.p RETSP
         rts
