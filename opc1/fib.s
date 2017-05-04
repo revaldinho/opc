@@ -3,6 +3,11 @@ MACRO CLC ()
         and.i 0xFF
 ENDMACRO
 
+MACRO SEC()
+        lda.i 0x01
+        lxa
+ENDMACRO
+
 MACRO INCPTR ( _p_ , _v_ )
         lda _p_
         CLC()
@@ -11,8 +16,8 @@ MACRO INCPTR ( _p_ , _v_ )
 ENDMACRO
 
 MACRO DECPTR ( _p_ , _v_ )
+        SEC()
         lda _p_
-        sec
         add.i ~_v_
         sta _p_
 ENDMACRO

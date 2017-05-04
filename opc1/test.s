@@ -10,7 +10,7 @@ RESULT: BYTE  0x00
         BYTE 5,6,7,8,9,10
         # Next BYTE must be truncated to fit
         BYTE 555
-        
+
         # CPU execution starts at 0x100 following a reset
 TOP:    ORG     0x100
         lda.i   0x00
@@ -33,12 +33,13 @@ END:    jsr     SUB1
 
 SUB1:   sta MEM1
         lxa
-        sta MEM2        
-        sec
+        sta MEM2
+        lda.i 0x1
+        lxa     
         lda.i 0xff
 SUBLP:  add.i 0x00
         jpc SUBEXT
-        jp SUBLP        
+        jp SUBLP
 SUBEXT: lda MEM2
         lxa
         lda MEM1

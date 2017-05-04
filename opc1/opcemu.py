@@ -1,7 +1,7 @@
 # python3 opcemu.py <filename.hex> [<filename.memdump>]
 import sys
 op = { "and"  :0x00, "lda":0x01,"not"  :0x02,"add":0x03, "and.i":0x10, "lda.i":0x11, "not.i":0x12,
-       "add.i":0x13, "sec":0x15,"lda.p":0x09,"sta":0x18, "sta.p":0x08, "jpc"  :0x19, "jpz"  :0x1a,
+       "add.i":0x13, "lda.p":0x09,"sta":0x18, "sta.p":0x08, "jpc"  :0x19, "jpz"  :0x1a,
        "jp"   :0x1b, "jsr":0x1c,"rts"  :0x1d,"lxa":0x1e, "halt" :0x1f, "BYTE":0x100 }
 
 dis = dict( [ (op[k],k) for k in op])
@@ -47,8 +47,6 @@ while True:
         link = tmp & 0x07
     elif opcode == op["rts"]:
         pc = (link << 8) | acc
-    elif opcode == op["sec"]:
-        link |= 1
     elif opcode == op["jsr"]:
         link = (pc >> 8) & 0x07
         acc = pc & 0xFF

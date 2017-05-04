@@ -20,8 +20,8 @@ module opctb();
       $readmemh("test.hex", mem); // Problems with readmemb - use readmemh for now
       clk = 0;
       reset_b = 0;
-      #10005 reset_b = 1;
-      #500000 $finish;
+      #1005 reset_b = 1;
+      #180000000 $finish;
     end
 
   // Simple negedge synchronous memory to avoid messing with delays initially
@@ -30,7 +30,10 @@ module opctb();
       mem[addr] <= data;
 
   always
-    #500 clk = !clk;
+    begin
+      #500 clk = !clk;
+      //$display("%4x %2x %x", dut0_u.PC_q, dut0_u.ACC_q, dut0_u.LINK_q);
+    end
 
   // Always stop simulation on encountering the halt pseudo instruction
   always @ (negedge clk)

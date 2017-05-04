@@ -1,7 +1,7 @@
 import sys, re
-op = { "and"  :0x00, "lda":0x01,"not"  :0x02,"add":0x03, "and.i":0x10, "lda.i":0x11, "not.i":0x12,
-       "add.i":0x13, "sec":0x15,"lda.p":0x09,"sta":0x18, "sta.p":0x08, "jpc"  :0x19, "jpz"  :0x1a,
-       "jp"   :0x1b, "jsr":0x1c,"rts"  :0x1d,"lxa":0x1e, "halt" :0x1f, "BYTE":0x100 }
+op = { "and"  :0x00, "lda":0x01,  "not":0x02,"add":0x03, "and.i":0x10, "lda.i":0x11, "not.i":0x12,
+       "add.i":0x13, "lda.p":0x09,"sta":0x18, "sta.p":0x08, "jpc"  :0x19, "jpz"  :0x1a,
+       "jp"   :0x1b, "jsr":0x1c,  "rts":0x1d,"lxa":0x1e, "halt" :0x1f, "BYTE":0x100 }
 
 def expand_macro(line, macro):  # recursively expand macros, passing on instances not (yet) defined
     (text,mobj)=([line],re.match("^(?:(?P<label>\w*):?)?\s*(?P<macroname>\w+)\s*?\((.*)\)",line))
