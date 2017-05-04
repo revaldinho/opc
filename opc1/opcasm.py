@@ -2,6 +2,7 @@ import sys, re
 op = { "and"  :0x00, "lda":0x01,"not"  :0x02,"add":0x03, "and.i":0x10, "lda.i":0x11, "not.i":0x12,
        "add.i":0x13, "sec":0x15,"lda.p":0x09,"sta":0x18, "sta.p":0x08, "jpc"  :0x19, "jpz"  :0x1a,
        "jp"   :0x1b, "jsr":0x1c,"rts"  :0x1d,"lxa":0x1e, "halt" :0x1f, "BYTE":0x100 }
+
 def expand_macro(line, macro):  # recursively expand macros, passing on instances not (yet) defined
     (text,mobj)=([line],re.match("^(?:(?P<label>\w*):?)?\s*(?P<macroname>\w+)\s*?\((.*)\)",line))
     if mobj and mobj.groupdict()["macroname"] in macro:
@@ -13,9 +14,8 @@ def expand_macro(line, macro):  # recursively expand macros, passing on instance
                 newline = newline.replace(s,r) if s else newline
             text.extend(expand_macro(newline, macro))
     return(text)
-(symtab, bytemem) = (dict(), bytearray(2048))
-line_re = re.compile( '^(\w+)?:?\s*(\w+(?:\.i|\.p)?)?\s*(.*)' )
-(macro, macroname, newtext)  = ( dict(), None, [])
+
+(symtab, bytemem, macro, macroname, newtext) = (dict(), bytearray(2048),dict(),None,[])
 for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
     mobj =  re.match("MACRO\s*(?P<macroname>\w*)\s*?\((.*)\)", line, re.IGNORECASE)
     if mobj:
@@ -30,11 +30,11 @@ for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
         newtext.append("# %s" % line)
     else:
         newtext.extend(expand_macro(line, macro))
+
 for iteration in range (0,2): # Two pass assembly
     nextmem = 0
     for line in newtext:
-        bytes = []
-        gr = line_re.match( re.sub("#.*","",line) ).groups()
+        (bytes,gr)=([],re.match('^(\w+)?:?\s*(\w+(?:\.i|\.p)?)?\s*(.*)',re.sub("#.*","",line)).groups())
         if gr[0]:
             exec ("%s= %d" % (gr[0],nextmem), globals(), symtab )
         if gr[1] and gr[1] == "ORG" and gr[2]:
@@ -57,9 +57,9 @@ for iteration in range (0,2): # Two pass assembly
         if iteration > 0 :
             for ptr in range(0,len(bytes)):
                 bytemem[ptr+nextmem] =  bytes[ptr]
-            print("%04x  %-20s  %s" % (nextmem,
-                ' '.join([("%02x" % i) for i in bytes]), line.rstrip()))
+            print("%04x  %-20s  %s"%(nextmem,' '.join([("%02x" % i) for i in bytes]),line.rstrip()))
         nextmem += len(bytes)
+
 print ("\nSymbol Table:\n", symtab)
 with open(sys.argv[2],"w" ) as f:
     for i in range(0, len(bytemem), 24):
