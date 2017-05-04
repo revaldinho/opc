@@ -1,6 +1,11 @@
+
+MACRO CLC ()
+        and.i 0xFF
+ENDMACRO
+
 MACRO INCPTR ( _p_ , _v_ )
         lda _p_
-        and.i 0xFF # Clear carry
+        CLC()
         add.i _v_
         sta _p_
 ENDMACRO
@@ -14,7 +19,7 @@ ENDMACRO
 
 MACRO ADD16 ( _data0_, _data1_, _result_)
         lda _data0_
-        and.i 0xff   # CLC
+        CLC()
         add _data1_
         sta _result_
         lda _data0_+1
@@ -97,7 +102,7 @@ FIB:
         lda DATA+5
         sta DATA+3
 
-        DECPTR(RETSP,1)    
+        DECPTR(RETSP,1)
         lda.p RETSP        # retrieve the upper ret addr byte
         sta TMP            # save it
         DECPTR(RETSP,1)
