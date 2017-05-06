@@ -4,9 +4,9 @@ op = { "and"  :0x00, "lda":0x01,  "not":0x02,"add":0x03, "and.i":0x10, "lda.i":0
        "jp"   :0x1b, "jsr":0x1c,  "rts":0x1d,"lxa":0x1e, "halt" :0x1f, "BYTE":0x100 }
 
 def expand_macro(line, macro):  # recursively expand macros, passing on instances not (yet) defined
-    (text,mobj)=([line],re.match("^(?:(?P<label>\w*):?)?\s*(?P<macroname>\w+)\s*?\((.*)\)",line))
-    if mobj and mobj.groupdict()["macroname"] in macro:
-        (label, instname, paramstr) = mobj.groups()
+    (text,mobj)=([line],re.match("^(?:(?P<label>\w*):?)?\s*(?P<name>\w+)\s*?\((?P<params>.*)\)",line))
+    if mobj and mobj.groupdict()["name"] in macro:
+        (label,instname,paramstr) = (mobj.groupdict()["label"],mobj.groupdict()["name"],mobj.groupdict()["params"])
         instparams = [x.strip() for x in paramstr.split(",")]
         text = ["#%s" % line,"%s%s"% (label, ":" if label != "" else "")]
         for newline in macro[instname][1]:
@@ -17,10 +17,9 @@ def expand_macro(line, macro):  # recursively expand macros, passing on instance
 
 (symtab, bytemem, macro, macroname, newtext) = (dict(), bytearray(2048),dict(),None,[])
 for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
-    mobj =  re.match("MACRO\s*(?P<macroname>\w*)\s*?\((.*)\)", line, re.IGNORECASE)
+    mobj =  re.match("MACRO\s*(?P<name>\w*)\s*?\((?P<params>.*)\)", line, re.IGNORECASE)
     if mobj:
-        (macroname,paramstr) = mobj.groups()
-        macro[macroname] = ([x.strip() for x in paramstr.split(",")], [])
+        (macroname,macro[macroname])=(mobj.groupdict()["name"],([x.strip() for x in (mobj.groupdict()["params"]).split(",")],[]))
         newtext.append("# %s" % line)
     elif re.match("ENDMACRO.*", line, re.IGNORECASE):
         macroname = None
@@ -34,24 +33,24 @@ for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
 for iteration in range (0,2): # Two pass assembly
     nextmem = 0
     for line in newtext:
-        (bytes,gr)=([],re.match('^(\w+)?:?\s*(\w+(?:\.i|\.p)?)?\s*(.*)',re.sub("#.*","",line)).groups())
+        (bytes,operandbytes,gr)=([],[],re.match('^(\w+)?:?\s*(\w+(?:\.i|\.p)?)?\s*(.*)',re.sub("#.*","",line)).groups())
         if gr[0]:
             exec ("%s= %d" % (gr[0],nextmem), globals(), symtab )
         if gr[1] and gr[1] == "ORG" and gr[2]:
             nextmem = eval(gr[2],globals(),symtab)
         elif gr[1] and gr[1] in op:
-            bytes=[0]
+            operandbytes=[0]
             if gr[2] and iteration==0:
-                bytes = [0]*len(gr[2].split(","))
+                operandbytes = [0]*len(gr[2].split(","))
             elif gr[2]:
                 try:
-                    bytes = [eval( x ,globals(), symtab) for x in gr[2].split(",")]
+                    operandbytes = [eval( x ,globals(), symtab) for x in gr[2].split(",")]
                 except (ValueError, NameError):
                     sys.exit("Error evaluating expression %s" % gr[2] )
             if gr[1]=="BYTE":
-                bytes = [x & 0xFF for x in bytes]
+                bytes = [x & 0xFF for x in operandbytes]
             else:
-                bytes = [op[gr[1]]<<3 | (bytes[0]>>8) & 0xF, bytes[0] & 0xFF]
+                bytes = [op[gr[1]]<<3 | (operandbytes[0]>>8) & 0xF, operandbytes[0] & 0xFF]
         elif gr[1]:
             sys.exit("Error: unrecognized instruction %s" % gr[1])
         if iteration > 0 :
