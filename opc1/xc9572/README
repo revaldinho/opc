@@ -10,6 +10,7 @@ set target = "xc9572-10-PC44"
 #set target = "xc95108-15-PC84"
 #set target = "xc95144-15-tq100"
 
+
 # Clean up so only primary data remains
 \rm -rf *~ xst .#*
 set tmpfiles = `ls -1 | egrep -v '(prj|xst$|README)'`

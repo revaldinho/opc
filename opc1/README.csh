@@ -1,4 +1,6 @@
 #!/bin/tcsh
+rm *hex *dump *sim *trace *vcd
+
 foreach test (test ptrtest fib )
     # Assemble the test
     python3 opcasm.py ${test}.s ${test}.hex | tee ${test}.lst
