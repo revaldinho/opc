@@ -36,6 +36,7 @@ OPC2 Instructions
 | sta.p | ((n)) <- a                |  2     | 1010xnnn nnnnnnnn |
 | lda.p | a <- ((n))                |  2     | 1100xnnn nnnnnnnn |
 | sta   | (n) <- a                  |  2     | 0110xnnn nnnnnnnn |
+| halt  | simulation only           |  2     | 11111111 xxxxxxxx |
 |-------|---------------------------|--------|-------------------|
 | jpc   | pc <- n if c else pc      |  2     | 0100nnnn nnnnnnnn |
 | jpz   | pc <- n if (a==0) else pc |  2     | 0101nnnn nnnnnnnn |
