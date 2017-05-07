@@ -17,11 +17,11 @@ def expand_macro(line, macro):  # recursively expand macros, passing on instance
 
 (symtab, bytemem, macro, macroname, newtext) = (dict(), bytearray(2048),dict(),None,[])
 for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
-    mobj =  re.match("MACRO\s*(?P<name>\w*)\s*?\((?P<params>.*)\)", line, re.IGNORECASE)
+    mobj =  re.match("\s*?MACRO\s*(?P<name>\w*)\s*?\((?P<params>.*)\)", line, re.IGNORECASE)
     if mobj:
         (macroname,macro[macroname])=(mobj.groupdict()["name"],([x.strip() for x in (mobj.groupdict()["params"]).split(",")],[]))
         newtext.append("# %s" % line)
-    elif re.match("ENDMACRO.*", line, re.IGNORECASE):
+    elif re.match("\s*?ENDMACRO.*", line, re.IGNORECASE):
         macroname = None
         newtext.append("# %s" % line)
     elif macroname:
