@@ -7,7 +7,7 @@ op = { "and"  :0x00, "lda":0x01,"not"  :0x02,"add":0x03, "and.i":0x10, "lda.i":0
 var bytemem = new Uint8Array(2048);
 function hexbits(n, w) {return ((1 << w | n).toString(16).substr(-w/4));}
 function boot() {
-    var maxcycles = 999, cycle = 0, pc = 0x100, acc = 0, link = 0, tmp = 0;
+    var maxcycles = 9999, cycle = 0, pc = 0x100, acc = 0, link = 0, tmp = 0;
     bytemem.set(
         eval('['+location.search.replace(/.*d=/,'').replace(/([0-9a-f]{2})/ig,'0x$1,')+']'),
                0x100);
