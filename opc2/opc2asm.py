@@ -48,8 +48,10 @@ for iteration in range (0,2): # Two pass assembly
                     sys.exit("Error evaluating expression %s" % gr[2] )
             if gr[1]=="BYTE":
                 bytes = [x & 0xFF for x in operandbytes]
-            else:
+            elif op[gr[1]] & 0b1100 > 0 :  # Two byte instructions
                 bytes = [op[gr[1]]<<4 | (operandbytes[0]>>8) & 0xF, operandbytes[0] & 0xFF]
+            else: # One byte instruction
+                bytes = [op[gr[1]]<<4 ]                
         elif gr[1]:
             sys.exit("Error: unrecognized instruction %s" % gr[1])
         if iteration > 0 :

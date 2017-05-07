@@ -16,5 +16,5 @@ RESLOC    BYTE 0
           sta.p RESPTR
           lda.p RESPTR
 
-
+          
           halt
