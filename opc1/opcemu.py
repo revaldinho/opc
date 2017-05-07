@@ -20,7 +20,7 @@ while True:
         operand_data = bytemem[pc+1] & 0xFF
     print ("%04x : %02x %02x : %02x  %d  %1x   : %-8s %03x    " % ( pc, bytemem[pc], bytemem[pc+1],
         acc, link&1,  link, dis[opcode], operand_adr)  )
-    if (opcode  & 0x18 == 0x08):  # Second read for pointer operations
+    if (opcode in (op["lda.p"], op["sta.p"])):  # Second read for pointer operations
         operand_adr = operand_data
         operand_data = bytemem[operand_adr] & 0xFF
 
@@ -42,15 +42,11 @@ while True:
         condition = ((link&1)==1) if opcode==op["jpc"] else (acc==0) if opcode==op["jpz"] else True
         pc = operand_adr if condition else pc
     elif opcode == op["lxa"]:
-        tmp = acc
-        acc = link
-        link = tmp & 0x07
+        (link, acc) = (acc & 0x07, link)
     elif opcode == op["rts"]:
         pc = (link << 8) | acc
     elif opcode == op["jsr"]:
-        link = (pc >> 8) & 0x07
-        acc = pc & 0xFF
-        pc = operand_adr
+        ( pc, acc, link) = (operand_adr, pc&0xFF, (pc >> 8) & 0x07)
     elif opcode == op["halt"]:
         print("Stopped on halt instruction at %04x" % (pc-2) )
         break

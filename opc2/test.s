@@ -1,3 +1,10 @@
+MACRO   JSR (_n_)
+        lda.i _n_ >>8
+        axb
+        lda.i _n_ &0xFF
+        jal        
+ENDMACRO
+
 TMP:    BYTE 0x0
         ORG 0x100
         lda.i 0x10
@@ -6,11 +13,7 @@ TMP:    BYTE 0x0
         adc
         not
         sta TMP
-        
-        lda.i SUB>>8
-        axb
-        lda.i SUB&0xFF
-        jal
+        JSR(SUB)
         
         halt
 
