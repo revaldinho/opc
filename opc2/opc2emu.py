@@ -11,15 +11,17 @@ with open(sys.argv[1],"r") as f:
 print ("PC   : Mem   : ACC B Carry : Mnemonic Operand\n%s" % ('-'*40))
 while True:
     (opcode, pc_inc) = ((bytemem[pc] >> 4) & 0xF, 1)
-    operand_adr = ((bytemem[pc] << 8) | bytemem[pc+1]) & 0x07FF
+    operand_str = ""
     if (opcode & 0xC > 0 ) : # Second fetch for two byte instructions
+        operand_adr = ((bytemem[pc] << 8) | bytemem[pc+1]) & 0x07FF
         if (opcode in (op["lda.p"], op["lda"],op["sta.p"])):
             operand_data = bytemem[operand_adr] & 0xFF
         else:
             operand_data = bytemem[pc+1] & 0xFF
         pc_inc = 2
-    print ("%04x : %02x %02x : %02x  %02x   %1x  : %-8s %03x    " % ( pc, bytemem[pc], bytemem[pc+1],
-        acc, b, c, dis[opcode], operand_adr)  )
+        operand_str = ("%03x" % operand_adr)
+    print ("%04x : %02x %02x : %02x  %02x   %1x  : %-8s %s    " % ( pc, bytemem[pc], bytemem[pc+1],
+        acc, b, c, dis[opcode], operand_str  ))
 
     pc += pc_inc
     if (opcode in ("lda.p","sta.p")):  # Second read for pointer operations
