@@ -6,8 +6,8 @@
 
 # code project name here temporarily
 set project_name = "opccpu"
-set target = "xc9572-10-PC44"
-#set target = "xc95108-15-PC84"
+#set target = "xc9572-10-PC44"
+set target = "xc95108-15-PC84"
 #set target = "xc95144-15-tq100"
 
 
@@ -44,8 +44,8 @@ cpldfit -p $target \
 	-loc on \
 	-slew fast \
 	-init low \
-	-inputs 18 \
-	-pterms 18 \
+	-inputs 15 \
+	-pterms 15 \
 	-power std \
 	-localfbk \
 	-pinfbk \
