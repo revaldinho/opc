@@ -21,10 +21,10 @@ while True:
         pc_inc = 2
         operand_str = ("%03x" % operand_adr)
     print ("%04x : %02x %02x : %02x  %02x   %1x  : %-8s %s    " % ( pc, bytemem[pc], bytemem[pc+1],
-        acc, b, c, dis[opcode], operand_str  ))
+        acc, b, c, dis[opcode], operand_str))
 
     pc += pc_inc
-    if (opcode in ("lda.p","sta.p")):  # Second read for pointer operations
+    if (opcode in (op["lda.p"],op["sta.p"])):  # Second read for pointer operations
         operand_adr = operand_data
         operand_data = bytemem[operand_adr] & 0xFF
 
