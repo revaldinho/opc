@@ -43,7 +43,7 @@ cpldfit -p $target \
 	-loc on \
 	-slew fast \
 	-init low \
-	-inputs 18 \
+	-inputs 16 \
 	-pterms 18 \
 	-power std \
 	-localfbk \
