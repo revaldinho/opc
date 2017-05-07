@@ -18,7 +18,8 @@ The OPC2 datapath has two 8 bit registers which are used in all logical and arit
    * B - a secondary operand source
 
 On using the JAL instruction the PC is swapped with the values in A and B, with B providing and
-receiving the high PC byte (actually just a nybble) and A the low byte. 
+receiving the high PC byte (actually just a nybble) and A the low byte. This provides a base for
+indirect jumps, computed jumps, calling subroutines and returning from them.
 
 The OPC has just one flag register: the carry (C) flag. Branching instructions dependent on the
 state of this flag and the state of the accumulator are available.
