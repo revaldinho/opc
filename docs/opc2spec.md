@@ -18,9 +18,9 @@ The OPC2 datapath has two 8 bit registers which are used in all logical and arit
    * B - a secondary operand source
 
 On using the JAL instruction the PC is swapped with the values in A and B, with B providing and
-receiving the high PC byte (actually just a nybble) and A the low byte.
+receiving the high PC byte (actually just a nybble) and A the low byte. 
 
-The OPC has just flag register: the carry (C) flag. Branching instructions dependent on the
+The OPC has just one flag register: the carry (C) flag. Branching instructions dependent on the
 state of this flag and the state of the accumulator are available.
 
 On reset the CPU starts execution at address 0x100 to leave page zero free for variables which can
@@ -49,9 +49,6 @@ OPC2 Instructions
 Notes
 -----
 
-  * Variable length instruction format
-    - 1 byte format: 8 bit opcode                  [0ooo oooo] 
-    - 2 byte format: 4 bit opcode 12 bit operand   [1ooo nnnn][nnnn nnnn]
-  * JAL is a two byte instruction where the operand byte is ignored due to minimizing the
-    decoding to fit into a 9572 CPLD
+JAL is a two byte instruction although the operand is not needed and is ignored. Lack of
+space in the XC9572 means that decoding has had to be simplified here.
     
