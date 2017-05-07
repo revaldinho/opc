@@ -1,7 +1,7 @@
-OPC minisite
-============
+OPC - One Page CPU
+==================
 
-Welcome to the OPC minisite
+Welcome to the OPC series of CPUs, where everything fits on one page!
 
 Implementations
 
@@ -11,6 +11,6 @@ Implementations
    * [OPC1 source code](https://github.com/revaldinho/opc/tree/master/opc1).
 
   2. OPC-2 - a load/store based OPC to fit a XC9572 CPLD
-   * [OPC1 spec](/opc/opc2spec.html)
-   * [OPC1 source code](https://github.com/revaldinho/opc/tree/master/opc2).
+   * [OPC2 spec](/opc/opc2spec.html)
+   * [OPC2 source code](https://github.com/revaldinho/opc/tree/master/opc2).
 
