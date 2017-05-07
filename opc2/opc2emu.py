@@ -11,8 +11,8 @@ with open(sys.argv[1],"r") as f:
 print ("PC   : Mem   : ACC B Carry : Mnemonic Operand\n%s" % ('-'*40))
 while True:
     (opcode, pc_inc) = ((bytemem[pc] >> 4) & 0xF, 1)
+    operand_adr = ((bytemem[pc] << 8) | bytemem[pc+1]) & 0x07FF
     if (opcode & 0xC > 0 ) : # Second fetch for two byte instructions
-        operand_adr = ((bytemem[pc] << 8) | bytemem[pc+1]) & 0x07FF
         if (opcode in (op["lda.p"], op["lda"],op["sta.p"])):
             operand_data = bytemem[operand_adr] & 0xFF
         else:
