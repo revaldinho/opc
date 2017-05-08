@@ -5,7 +5,7 @@ module opc2tb();
   reg [7:0] mem [ 2047:0 ];
   reg clk, reset_b;
 
-  wire [10:0] addr;
+  wire [9:0] addr;
   wire rnw ;
   wire ceb = 1'b0;
   wire oeb = !rnw;

@@ -1,6 +1,6 @@
 import sys, re
-op = { "lda.i":0x8, "lda":0x9, "sta.p":0xA, "lda.p":0xC, "sta":0x6, "halt":0xF, "BYTE":0x100,
-       "jpc": 0x4, "jpz":0x5, "jal":0x7, "adc":0x0, "not":0x1, "and":0x2, "axb":0x3}
+op = { "ldb.i":0x8, "ldb":0x9, "sta.p":0xA, "ldb.p":0xC, "sta":0x6, "halt":0xF, "BYTE":0x100,
+       "jpc": 0x4, "jal":0x7, "adc":0x0, "not":0x1, "and":0x2, "axb":0x3}
 
 def expand_macro(line, macro):  # recursively expand macros, passing on instances not (yet) defined
     (text,mobj)=([line],re.match("^(?:(?P<label>\w*):?)?\s*(?P<name>\w+)\s*?\((?P<params>.*)\)",line))
@@ -51,7 +51,7 @@ for iteration in range (0,2): # Two pass assembly
             elif op[gr[1]] & 0b1100 > 0 :  # Two byte instructions
                 bytes = [op[gr[1]]<<4 | (operandbytes[0]>>8) & 0xF, operandbytes[0] & 0xFF]
             else: # One byte instruction
-                bytes = [op[gr[1]]<<4 ]                
+                bytes = [op[gr[1]]<<4 ]
         elif gr[1]:
             sys.exit("Error: unrecognized instruction %s" % gr[1])
         if iteration > 0 :

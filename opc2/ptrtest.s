@@ -4,17 +4,22 @@ RESPTR    BYTE 0
 RESLOC    BYTE 0
 
           ORG 0x100
-          lda.i RESLOC
+          ldb.i RESLOC
+          axb
           sta   RESPTR
 
-          lda.i 0xF0
+          ldb.i 0xF0
+          axb
           sta.p RESPTR
-          lda.p RESPTR
-          lda.i RESLOC+1
+          ldb.p RESPTR
+          axb
+          ldb.i RESLOC+1
+          axb
           sta   RESPTR
-          lda.i 0xF1
+          ldb.i 0xF1
+          axb
           sta.p RESPTR
-          lda.p RESPTR
+          ldb.p RESPTR
 
-          
+
           halt

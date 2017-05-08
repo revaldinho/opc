@@ -3,12 +3,12 @@ OPC2 Definition
 
 OPC2 is a second minimal implementation of a [One Page Computer](.) which fits into a single Xilinx XC9572 CPLD.
 
-OPC2 is a load/store based machine with an 8 bit datapath and an 11 bit address space. Like the OPC1 it
+OPC2 is a load/store based machine with an 8 bit datapath and an 10 bit address space. Like the OPC1 it
 supports 3 addressing modes:
 
    * immediate - where the operand byte holds an 8 immediate data value or is ignored
-   * direct - where a combination of opcode and operand byte provides an 11 bit data address
-   * indirect (pointer) - loads and stores only, where the 11 bit operand is used to get an
+   * direct - where a combination of opcode and operand byte provides an 10 bit data address
+   * indirect (pointer) - loads and stores only, where the 10 bit operand is used to get an
      8 bit value from memory which is subsequently used as the address to/from which
      to store/read data.
 
@@ -32,21 +32,20 @@ OPC2 Instructions
 
 | Instr | Function                  | #bytes |  Opcode/Operand   |
 |-------|---------------------------|--------|-------------------|
-| lda.i | a <- n                    |  2     | 1000xxxx nnnnnnnn |
-| lda   | a <- (n)                  |  2     | 1001xnnn nnnnnnnn |
-| sta.p | ((n)) <- a                |  2     | 1010xnnn nnnnnnnn |
-| lda.p | a <- ((n))                |  2     | 1100xnnn nnnnnnnn |
-| sta   | (n) <- a                  |  2     | 0110xnnn nnnnnnnn |
+| ldb.i | b <- n                    |  2     | 1000xxxx nnnnnnnn |
+| ldb   | b <- (n)                  |  2     | 1001xxnn nnnnnnnn |
+| sta.p | ((n)) <- a                |  2     | 1010xxnn nnnnnnnn |
+| ldb.p | b <- ((n))                |  2     | 1100xxnn nnnnnnnn |
+| sta   | (n) <- a                  |  2     | 0110xxnn nnnnnnnn |
 | halt  | simulation only           |  2     | 11111111 xxxxxxxx |
 |-------|---------------------------|--------|-------------------|
-| jpc   | pc <- n if c else pc      |  2     | 0100nnnn nnnnnnnn |
-| jpz   | pc <- n if (a==0) else pc |  2     | 0101nnnn nnnnnnnn |
+| jpc   | pc <- n if c else pc      |  2     | 0100xxnn nnnnnnnn |
 | jal   | pc <- {b,a}; {b,a} <- pc  |  2     | 0111xxxx xxxxxxxx |
 |-------|---------------------------|--------|-------------------|
-| adc   | {c,a} <- a + b + c        |  1     | 0000xxxx	 	 |
-| not   | a <- ~a                   |  1     | 0001xxxx    	 |
-| and   | a <- a & b ; c <- 0       |  1     | 0010xxxx     	 |
-| axb   | a <- b ; b <- a           |  1     | 0011xxxx    	 |
+| adc   | {c,a} <- a + b + c        |  1     | 0000xxxx	      	 |
+| not   | a <- ~a                   |  1     | 0001xxxx    	     |
+| and   | a <- a & b ; c <- 0       |  1     | 0010xxxx     	   |
+| axb   | a <- b ; b <- a           |  1     | 0011xxxx    	     |
 
 Notes
 -----

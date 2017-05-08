@@ -1,26 +1,25 @@
 MACRO   JSR (_n_)
-        lda.i _n_ >>8
+        ldb.i _n_ &0xFF
         axb
-        lda.i _n_ &0xFF
+        ldb.i _n_ >>8
         jal
 ENDMACRO
 
 MACRO   CLC ()
-        axb
-        lda.i 0xFF
+        ldb.i 0xFF
         and
-        axb
 ENDMACRO
 
 
 
 TMP:    BYTE 0x0
         ORG 0x100
-        lda.i 0x00
-        CLC()
-        lda.i 0x10
+        ldb.i 0x00
         axb
-        lda.i 0x11
+        CLC()
+        ldb.i 0x10
+        axb
+        ldb.i 0x11
         adc
         not
         sta TMP
