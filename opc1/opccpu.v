@@ -31,8 +31,8 @@ module opccpu( inout[7:0] data, output[10:0] address, output rnw, input clk, inp
      begin
         IR_q <= (FSM_q == FETCH0)? data[7:3] : IR_q;
         // OR_q[10:8] is upper part nybble for address - needs to be zeroed for both pointer READ and WRITE operations once ptr val is read
-        OR_q[10:8] <= (FSM_q == FETCH0)? data[2:0]: (FSM_q==RDMEM)?3'b0:OR_q[10:8];   
-        OR_q[7:0] <= (FSM_q == FETCH1 || FSM_q==RDMEM || FSM_q==RDMEM2)? data: OR_q[7:0];
+        OR_q[10:8] <= (FSM_q == FETCH0)? data[2:0]: (FSM_q==RDMEM)?3'b0:OR_q[10:8];
+        OR_q[7:0] <= data; //Lowest byte of OR is dont care in FETCH0 and at end of EXEC
         if ( FSM_q == EXEC )
           casex (IR_q)
             JSR    : {LINK_q,ACC_q} <= PC_q ;
