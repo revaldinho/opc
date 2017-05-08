@@ -3,7 +3,7 @@ OPC2 Definition
 
 OPC2 is a second minimal implementation of a [One Page Computer](.) which fits into a single Xilinx XC9572 CPLD.
 
-OPC2 is a load/store based machine with an 8 bit datapath and an 10 bit address space. Like the OPC1 it
+OPC2 is a load/store based machine with an 8 bit datapath and a 10 bit address space. Like the OPC1 it
 supports 3 addressing modes:
 
    * immediate - where the operand byte holds an 8 immediate data value or is ignored
@@ -14,7 +14,7 @@ supports 3 addressing modes:
 
 The OPC2 datapath has two 8 bit registers which are used in all logical and arithmetic operations:
 
-   * A - the accumulator, used as both an operand source and the only available desination
+   * A - the accumulator, used as both an operand source and the only available destination
    * B - a secondary operand source
 
 On using the JAL instruction the PC is swapped with the values in A and B, with B providing and
@@ -52,4 +52,3 @@ Notes
 
 JAL is a two byte instruction although the operand is not needed and is ignored. Lack of
 space in the XC9572 means that decoding has had to be simplified here.
-    
