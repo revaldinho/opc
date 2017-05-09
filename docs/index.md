@@ -20,8 +20,8 @@ Implementations:-
 
       *   [OPC2 spec](/opc/opc2spec.html)
 
-      *   [OPC2 in-browser Emulator](/opc/opc2jsemu.html?d=80103080110010600080013080127000f0007000)
+      *   [OPC2 in-browser Emulator](/opc/opc2jsemu.html?d=80003080ff2080103080110010600080183080017000f0007000)
 
-          *    [...running a pointer test program ptrtest.s](/opc/opc2jsemu.html?d=8020601080f0a010c0108021601080f1a010c010f0)
+          *    [...running a pointer test program ptrtest.s](/opc/opc2jsemu.html?d=802030601080f030a010c01030802130601080f130a010c010f000)
 
       *   [OPC2 source code](https://github.com/revaldinho/opc/tree/master/opc2)
