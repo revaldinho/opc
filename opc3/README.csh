@@ -1,7 +1,7 @@
 #!/bin/tcsh
 rm *hex *dump *sim *trace *vcd
 
-foreach test (ptrtest test )
+foreach test (ptrtest test fib )
     # Assemble the test
     python3 opc3asm.py ${test}.s ${test}.hex | tee ${test}.lst
     # Run the emulator

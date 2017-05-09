@@ -50,5 +50,5 @@ while True:
 
 if len(sys.argv) > 2:  # Dump memory for inspection if required
     with open(sys.argv[2],"w" ) as f:
-        for i in range(0, len(wordmem), 24):
-            f.write( '%s\n' %  ' '.join("%04x"%n for n in wordmem[i:i+24]))
+        for i in range(0, len(wordmem), 16):
+            f.write( '%s\n' %  ' '.join("%04x"%n for n in wordmem[i:i+16]))
