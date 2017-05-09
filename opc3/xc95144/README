@@ -1,0 +1,65 @@
+#!/bin/tcsh
+#
+# Basic commands to synthesize and fit verilog into a CPLD without using the ISE.
+#
+# Clean up first
+
+# code project name here temporarily
+set project_name = "opc3cpu"
+#set target = "xc9572-10-PC44"
+#set target = "xc95108-15-PC84"
+set target = "xc95144-15-tq100"
+
+
+# Clean up so only primary data remains
+\rm -rf *~ xst .#*
+set tmpfiles = `ls -1 | egrep -v '(prj|xst$|README)'`
+foreach f ( $tmpfiles[*] )
+	\rm -rf $f
+end
+
+# Create new work directories
+mkdir tmp
+mkdir xst
+# Make some simple files
+
+echo "work" > $project_name.lso
+
+
+# Synthesis
+xst -ifn "./${project_name}.xst" \
+    -intstyle xflow \
+    -ofn "./${project_name}.syr"
+#
+ngdbuild    -dd _ngo  \
+	    -p  $target \
+	    -uc ../${project_name}.ucf \
+	    ${project_name}.ngc \
+	    ${project_name}.ngd
+
+# Fit the selected device and generate reports
+cpldfit -p $target \
+	-ofmt vhdl \
+	-optimize density \
+	-loc on \
+	-slew fast \
+	-init low \
+	-inputs 15 \
+	-pterms 15 \
+	-power std \
+	-localfbk \
+	-pinfbk \
+	-exhaust ${project_name}.ngd
+
+#	-inputs 36 -pterms 25 \
+
+# Run the TA engine and generate reports
+tsim  ${project_name} ${project_name}.nga
+taengine -f ${project_name} -detail
+
+# Generate the JEDEC file for programming
+hprep6  -s IEEE1149 -n ${project_name} -i ${project_name}
+
+
+# dump a verilog netlist - something like this,..
+# netgen -w -ofmt verilog  -aka ${project_name}_${target}.ncd
