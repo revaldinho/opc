@@ -8,10 +8,11 @@ The OPC3 is an accumulator based computer with both a 16 bit datapath and a 16b 
 
 All instructions are encoded in a fixed two word format consisting of an opcode and an operand ::
 
-   bbbbb xxxxxxxxxxx : oooooooo_oooooooo    
+    bbbbb xxxxxxxxxxx : oooooooo_oooooooo    
      \        \               \________\_ 16 bit operand
       \        \_________________________ 11 bit unused field in opcode word
        \_________________________________  5 bit opcode
+       
 
 The computer supports 3 addressing modes:
 
