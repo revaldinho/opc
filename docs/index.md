@@ -6,9 +6,9 @@ Welcome to the OPC series of CPUs, where everything fits on one page!
 Implementations:-
 
   1.  OPC-1 - a minimal accumulator based OPC to fit a XC9572 CPLD
-  
+
       *   [OPC1 spec](/opc/opc1spec.html)
-      
+
       *   [OPC1 in-browser Emulator](/opc/opc1jsemu.html?d=88eda800f800)
 
           *    [...running the test program test.s](/opc/opc1jsemu.html?d=8800c0021002c003888080ff88f09801d114d90e8033d91a9801e11ef800c000f000c0018801f00088ff9800c930d92a0801f0000800e800)
@@ -25,3 +25,8 @@ Implementations:-
           *    [...running a pointer test program ptrtest.s](/opc/opc2jsemu.html?d=8020601080f0a010c0108021601080f1a010c010f0)
 
       *   [OPC2 source code](https://github.com/revaldinho/opc/tree/master/opc2)
+  3.  OPC-3 - a direct translation of OPC-1 using 16bit datapath and address bus.
+
+          *   [OPC3 spec](/opc/opc3spec.html)
+
+          *   [OPC3 source code](https://github.com/revaldinho/opc/tree/master/opc3)
