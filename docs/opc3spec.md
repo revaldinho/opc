@@ -2,7 +2,7 @@ OPC3 Definition
 ---------------
 
 OPC3 is a [One Page Computer](.) which fits into a single Xilinx XC95144 CPLD. This is a direct
-and decidedly non-optimal conversion of the original OPC1 into 1 16b word based computer.
+and decidedly non-optimal conversion of the original OPC1 into a 16b word based computer.
 
 The OPC3 is an accumulator based computer with both a 16 bit datapath and a 16b address space.
 
@@ -17,13 +17,12 @@ All instructions are encoded in a fixed two word format consisting of an opcode 
 The computer supports 3 addressing modes:
 
    * immediate/implied - where the operand word holds an 16 immediate data value or is ignored
-   * direct - where a combination of opcode and operand word provides a 16 bit data address
+   * direct - where the operand word provides a 16 bit data address
    * indirect (pointer) - loads and stores only, where the 16 bit operand is used to get another
-     16 bit value from memory which is subsequently used as the address to/from which
-     to store/read data.
+     16 bit value from memory which is then used as the effective address.
 
-The OPC has just one flag register: the carry (C) flag. Branching instructions dependent on the
-state of this flag and the state of the accumulator are available.
+The OPC has just one flag register: the carry (C) flag. There is a branch on carry and also a
+branch on zero.
 
 On reset the CPU starts execution at address 0x0000.
 
