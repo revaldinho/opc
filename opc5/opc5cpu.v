@@ -31,7 +31,7 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
        case (FSM_q)
          FETCH0 : FSM_q <= FETCH1; // opc5 always uses 2 word instructions
          FETCH1 : FSM_q <= EA_ED;
-         EA_ED  : FSM_q <= (!((IR_q[PRED_C]| C_q)|(IR_q[PRED_Z]|Z_q)))? FETCH0 :(IR_q[FSM_MAP1]) ? RDMEM : EXEC;
+         EA_ED  : FSM_q <= (!((IR_q[PRED_C]| C_q)&(IR_q[PRED_Z]|Z_q)))? FETCH0 :(IR_q[FSM_MAP1]) ? RDMEM : EXEC;
          RDMEM  : FSM_q <= EXEC;
          default: FSM_q <= FETCH0;
        endcase
