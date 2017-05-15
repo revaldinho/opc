@@ -38,7 +38,7 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
 
    always @(posedge clk)
      case(FSM_q)
-       FETCH0        : OR_q <= 16'b0; // In fixed two word machine ok to leave OR_q=x in FETCH0, optimized machine requires OR_q=0 in FETCH0
+       FETCH0        : OR_q <= 16'bx; // In fixed two word machine ok to leave OR_q=x in FETCH0, optimized machine requires OR_q=0 in FETCH0
        RDMEM, FETCH1 : OR_q <= data;
        EA_ED         : OR_q <= grf_dout + OR_q ;
        default       : OR_q <= 16'bx;
@@ -49,7 +49,7 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
        PC_q <= 16'b0;
      else if ( FSM_q == FETCH0 || FSM_q == FETCH1)
        PC_q <= PC_q + 1;
-     else if ( FSM_q == EXEC && IR_q[12:10]!=STO && IR_q[3:0]==4'h1)
+     else if ( FSM_q == EXEC && IR_q[12:10]!=STO && IR_q[3:0]==4'hF)
        PC_q <= result;
 
    always @ (posedge clk)
