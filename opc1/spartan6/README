@@ -31,20 +31,21 @@ ngdbuild    -dd _ngo  \
 
 # map then place and route the selected device
 map -p $target \
+    -ol high \
     -ir off -pr off -c 100 \
     -o ${project_name}_map.ncd \
     ${project_name}.ngd \
     ${project_name}.pcf
 par -w \
-    -ol std \
-    -t 1 \
+    -ol high \
+    -t 10 \
     ${project_name}_map.ncd \
     ${project_name}.ncd \
     ${project_name}.pcf
 
 # Run the TA engine and generate reports
 trce -v 3 \
-     -s 5 \
+     -s 3 \
      -fastpaths \
      -xml ${project_name}.twx ${project_name}.ncd \
      -o ${project_name}.twr ${project_name}.pcf
