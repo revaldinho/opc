@@ -19,3 +19,7 @@ Implementations:-
   3.  OPC-3 - a direct translation of OPC-1 using 16bit datapath and address bus.
       *   [OPC3 spec](/opc/opc3spec.html)
       *   [OPC3 source code](https://github.com/revaldinho/opc/tree/master/opc3)
+  4   OPC-4  - this spot reserved for a reworking of OPC-3 without any hardware restrictions
+  5.  OPC-5 - a new 16b OPC implementing a 2 operand machine with 16b data and address busses and minimal instruction set
+      *   [OPC5 spec](/opc/opc5spec.html)
+      *   [OPC5 source code](https://github.com/revaldinho/opc/tree/master/opc5)
