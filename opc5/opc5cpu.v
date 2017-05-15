@@ -1,5 +1,5 @@
 module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, input reset_b);
-   parameter FETCH0=3'h0, FETCH1=3'h1, EA_ED=3'h2, RDMEM=3'h3, EXEC=3'h4, PRED_C=15, PRED_Z=14, FSM_MAP0=13, FSM_MAP1=12;
+   parameter FETCH0=3'h0, FETCH1=3'h1, EA_ED=3'h2, RDMEM=3'h3, EXEC=3'h4, PRED_C=14, PRED_Z=15, FSM_MAP0=13, FSM_MAP1=12;
    parameter LD=2'b00, STO=2'b11, ADD=2'b01, NAND=2'b10;
    reg [15:0] OR_q, IR_q, PC_q, result;
    (* RAM_STYLE="DISTRIBUTED" *)
