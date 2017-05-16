@@ -4,11 +4,11 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
    parameter LD=2'b00, STO=2'b11, ADD=2'b01, NAND=2'b10;
 
    reg [15:0] OR_q, IR_q, PC_q, result;
-   (* RAM_STYLE="DISTRIBUTED" *)
+   (* RAM_STYLE="DISTRIBUTED" *) 
    reg [15:0] GRF_q[15:0];  
    reg [2:0]  FSM_q;
    reg        C_q, Z_q, carry;
-   wire [3:0]  grf_radr=(FSM_q==EXEC || FSM_q==WRMEM)?IR_q[3:0]:IR_q[7:4];           // use dest reg adr in EXEC otherwise src reg adr (in EA_ED)
+   wire [3:0]  grf_radr=(FSM_q==EXEC || FSM_q==WRMEM)?IR_q[3:0]:IR_q[7:4]; 
    wire [15:0] grf_dout= (grf_radr==4'hF) ? PC_q: {16{(grf_radr!=4'h0)}} & GRF_q[grf_radr];
 
    assign      rnw= ! (FSM_q==WRMEM) ;
@@ -40,7 +40,7 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
    always @(posedge clk)
      case(FSM_q)
        RDMEM, FETCH1 : OR_q <= data;
-       EA_ED         : OR_q <= grf_dout + OR_q ;  // GRF is written with PC in EA_ED so bypass this to output if PC is register source 
+       EA_ED         : OR_q <= grf_dout + OR_q ;  
        default       : OR_q <= 16'bx; // In fixed two word machine ok to leave OR_q=x in FETCH0, optimized machine requires OR_q=0 in FETCH0
      endcase
 
