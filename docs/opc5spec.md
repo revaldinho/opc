@@ -57,7 +57,6 @@ Instruction Table
   |ld.i    r1, r2, n       |r1 <- r2 + n                   |2        |4         |10_00xx |
   |ld      r1, r2, n       |r1 <- mem(r2 + n)              |2        |5         |11_00xx |
   |sto     r1, r2, n       |mem(r2+n) <- r1                |2        |4         |10_11xx |
-  |sto.p   r1, r2, n       |mem(mem(r2+n)) <- r1           |2        |5         |11_11xx |
   |add.i   r1, r2, n       |r1 <- r1 + r2 + n              |2        |4         |10_01xx |
   |add     r1, r2, n       |r1 <- r1 + mem(r2 + n)         |2        |5         |11_01xx |
   |nand.i  r1, r2, n       |r1 <- !(r1 &(r2 + n))          |2        |4         |10_10xx |
