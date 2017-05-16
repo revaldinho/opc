@@ -6,7 +6,9 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
    reg [15:0] GRF_q[15:0];  
    reg [2:0]  FSM_q;
    reg        C_q, Z_q, carry;
-
+   reg [3:0]  GRF_WADR_q;
+   
+   
    assign rnw= ! (FSM_q==WRMEM) ;
    assign data=(FSM_q==WRMEM)?grf_dout:16'bz ;                   // data only written in EXEC
    assign address=( FSM_q==WRMEM || FSM_q == RDMEM)? OR_q:PC_q; 
@@ -51,15 +53,20 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
      else if ( FSM_q == EXEC && IR_q[3:0]==4'hF)
        PC_q <= result;
 
+   always @ (posedge clk )
+     if (FSM_q == FETCH0 || FSM_q == FETCH1)
+       GRF_WADR_q = 4'h4;
+     else
+       GRF_WADR_q = IR_q[3:0];
+   
    always @ (posedge clk)
      if ( FSM_q == FETCH0 )
        IR_q <= data;
-     else if ( FSM_q == EXEC )
+     else if ( FSM_q == EXEC)
        begin
-          { Z_q, GRF_q[IR_q[3:0]]}  <= {!(|result), result};
+          { Z_q, GRF_q[GRF_WADR_q]}  <= {!(|result), result};
           C_q <= (IR_q[12:10]==ADD) ? carry: C_q;
        end
      else if ( FSM_q == EA_ED )
-       GRF_q[4'hF] <= PC_q;    // Keep PC up to date on EA_ED cycle so it can be read directly
-   
+       GRF_q[GRF_WADR_q] <= PC_q;    // Keep PC up to date on EA_ED cycle so it can be read directly
 endmodule
