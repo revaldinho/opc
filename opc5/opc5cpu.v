@@ -31,11 +31,8 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
      else
        case (FSM_q)
          FETCH0 : FSM_q <= FETCH1; // opc5 always uses 2 word instructions
-         FETCH1 : FSM_q <= EA_ED;
-         EA_ED  : FSM_q <= (! ((IR_q[PRED_C]| C_q)&(IR_q[PRED_NZ]| !Z_q)))? FETCH0:  // Skip to next instruction if predicates are not satisfied
-                           (IR_q[FSM_MAP1]) ? RDMEM :
-                           (IR_q[12:10]==STO ) ? WRMEM :
-                           EXEC;
+         FETCH1 : FSM_q <= (! ((IR_q[PRED_C]| C_q)&(IR_q[PRED_NZ]| !Z_q)))? FETCH0: EA_ED ; // Skip to next instruction if predicates are not satisfied;
+         EA_ED  : FSM_q <= (IR_q[FSM_MAP1]) ? RDMEM : (IR_q[12:10]==STO ) ? WRMEM : EXEC;
          RDMEM  : FSM_q <= EXEC;
          default: FSM_q <= FETCH0;
        endcase
@@ -44,7 +41,7 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
      case(FSM_q)
        RDMEM, FETCH1 : OR_q <= data;
        EA_ED         : OR_q <= grf_dout + OR_q ;
-       default       : OR_q <= 16'bx; // In fixed two word machine ok to leave OR_q=x in FETCH0, optimized machine requires OR_q=0 in FETCH0
+       default       : OR_q <= OR_q;
      endcase
 
    always @(posedge clk or negedge reset_b)
