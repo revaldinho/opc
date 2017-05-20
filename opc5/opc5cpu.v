@@ -41,7 +41,7 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
      case(FSM_q)
        RDMEM, FETCH1 : OR_q <= data;
        EA_ED         : OR_q <= grf_dout + OR_q ;
-       default       : OR_q <= OR_q;
+       default       : OR_q <= 16'bx;
      endcase
 
    always @(posedge clk or negedge reset_b)
