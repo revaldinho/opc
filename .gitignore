@@ -1,5 +1,6 @@
 *~
 *.lst
+*.lis
 *.log
 *.hex
 *.dump
