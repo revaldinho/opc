@@ -14,15 +14,15 @@ NEXT:   nand.i  r1,r0,0x33
         add.i   r1,r1,0x01
 
 
-END:    ld.i    r14,r15,2   # get return address in r14
-        ld.i    r15,r0,SUB1
+END:    ld.i    r14,pc,2   # get return address in r14
+        ld.i    pc,r0,SUB1
         halt    r0,r0,0x999
 
 SUB1:   ld.i  r2,r0,0xFFFF
 SUBLP:  add.i r2,r0,0x01
         c.ld.i r15,r0,SUBEXT
         ld.i  r15,r0,SUBLP
-SUBEXT: ld.i  r15,r14,0     # retrieve return address and return!
+SUBEXT: ld.i  pc,r14,0     # retrieve return address and return!
 
 DATA:   ORG 0x30
 
