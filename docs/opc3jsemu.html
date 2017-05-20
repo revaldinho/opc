@@ -1,0 +1,66 @@
+<!DOCTYPE html><html><head><title>OPC3 emulator</title>
+<script>
+var op = {"and":0x00, "and.i":0x10, "not":0x02, "not.i":0x12, "add":0x03, "add.i":0x13,
+          "lda":0x01, "lda.i":0x11, "lda.p":0x09, "sta":0x18, "sta.p":0x08,
+          "jpc":0x19, "jpz":0x1a, "jp":0x1b, "jsr":0x1c, "rts":0x1d, "bsw":0x1e, "halt":0x1f};
+
+var mem = new Uint16Array(2048);
+function hexbits(n, w) {return ((1 << w | n).toString(16).substr(-w/4));}
+function init(){
+    mem.set(eval('['+location.search.replace(/.d=/,'').replace(/([0-9a-f]{4})/ig,'0x$1,')+']'));
+    document.getElementById("RAM").innerHTML=[].slice.call(mem.slice(0x0,0x100)).
+        map(function(x){return hexbits(x,16)});
+}
+function load(){
+    mem.set(eval("[0x" + document.getElementById("RAM").value.replace(/,/g,",0x")+"]"));
+}
+function boot() {
+    var maxcycles = 999, cycle = 0, pc = 0, acc = 0, c = 0;
+
+    while (cycle < maxcycles){
+        opcode = (mem[pc]>>11) & 0x1F; operand_adr = mem[pc+1];
+        if ((opcode & 0x10) == 0x00) {
+            operand_data = mem[operand_adr];
+        } else {
+            operand_data = mem[pc+1];
+        }
+        document.getElementById("log").innerHTML += [("     " + cycle).slice(-5),":",hexbits(pc,16),
+            ":",hexbits(mem[pc], 16),hexbits(mem[pc+1], 16),":",hexbits(acc, 16),c,":",
+            (Object.keys(op)[Object.values(op).indexOf(opcode)] + "       ").slice(0,9),
+            hexbits(operand_adr, 16),"\n"].join(" ");
+        if ([op["lda.p"], op["sta.p"]].indexOf(opcode)>=0) { // Second read for pointer operations
+            operand_adr = operand_data;
+            operand_data = mem[operand_adr];
+        }
+        pc += 2; cycle++;
+        if (opcode == op["and"] || opcode == op["and.i"]) {
+            acc &= operand_data; c = 0;
+        } else if (opcode == op["not"] || opcode == op["not.i"]) {
+            acc = ~operand_data & 0xFFFF;
+        } else if (opcode == op["add"] || opcode == op["add.i"]) {
+            res = acc + operand_data + c; acc = res & 0xFFFF; c = res>>16;
+        } else if (opcode == op["lda"] || opcode == op["lda.i"] || opcode == op["lda.p"]) {
+            acc = operand_data;
+        } else if (opcode == op["sta"] || opcode == op["sta.p"]) {
+            mem[operand_adr] = acc;
+        } else if (opcode==op["jp"] || opcode==op["jpc"] && c || opcode==op["jpz"] && !acc) {
+            pc = operand_adr;
+        } else if (opcode == op["bsw"]) { // swap upper and lower bytes
+            acc = ((acc>>8) & 0x00FF) | ((acc & 0xFF)<<8);
+        } else if (opcode == op["rts"]) {
+            pc = acc;
+        } else if (opcode == op["jsr"]) {
+            acc = pc; pc = operand_adr;
+        } else if (opcode == op["halt"]) {
+            break;
+        } // fall through if untaken branch or unknown opcode - treat as no-operation
+    }
+    document.getElementById("log").innerHTML += "Done!\n";
+}
+</script></head><body onload="init()">Welcome to the <a href=".">OPC</a> in-browser Emulator
+<p>Memory: <button type="button" onclick="load()">Load RAM</button>
+<p><textarea rows="4" cols="80" id=RAM>JavaScript disabled!</textarea>
+<p><button type="button" onclick="boot()">Boot</button><pre id=log>
+Cycle : PC   : Mem       : ACC  C : Mnemonic Operand
+----------------------------------------------------
+</pre></body></html>
