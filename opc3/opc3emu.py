@@ -39,7 +39,7 @@ while True:
         condition = (c==1) if opcode==op["jpc"] else (acc==0) if opcode==op["jpz"] else True
         pc = operand_adr if condition else pc
     elif opcode == op["bsw"]: # swap upper and lower bytes
-        cc = ((acc>>8) & 0x00FF) | ((acc<<8) & 0xFF00)
+        acc = ((acc>>8) & 0x00FF) | ((acc<<8) & 0xFF00)
     elif opcode == op["rts"]:
         pc = acc
     elif opcode == op["jsr"]:
