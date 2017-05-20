@@ -1,0 +1,7 @@
+*~
+*.lst
+*.log
+*.hex
+*.dump
+*.trace
+*.vcd
