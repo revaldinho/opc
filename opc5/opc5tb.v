@@ -1,5 +1,5 @@
 `timescale 1ns / 1ns
-`define HALT 16'h0000
+`define HALT 16'hC000
 
 module opc5tb();
   reg [15:0] mem [ 65535:0 ];
