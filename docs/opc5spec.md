@@ -2,14 +2,15 @@ OPC5 Definition
 ----------------
 
 OPC-5 is a pure 16 bit [One Page Computer](.) with a 16 entry register file and predicated instruction
-execution. All memory accesses are 16 bits wide and instructions are encoded in a fixed two word format ::
+execution. All memory accesses are 16 bits wide and instructions are encoded in either one or two words ::
 
-    pp 1o_ooxx ssss dddd  nnnnnnnnnnnnnnnn
-     \    \      \    \           \_______ 16b operand word
-      \    \      \    \__________________  4b source/destination register
-       \    \      \______________________  4b source register
-        \    \____________________________  6b opcode (only 3 bits used)
-         \________________________________  2b predicate bits                         
+    pp l o_ooxx ssss dddd  nnnnnnnnnnnnnnnn
+     \  \   \      \    \           \_______ 16b optional operand word
+      \  \   \      \    \__________________  4b source/destination register
+       \  \   \      \______________________  4b source register
+        \  \   \____________________________  5b opcode (only 3 bits used)
+         \  \_______________________________  1b instruction length
+         \__________________________________  2b predicate bits                         
 
 On reset the processor will start executing instructions from location 0.
 
@@ -52,12 +53,14 @@ All instructions support all addressing modes.
 Instruction Table
 -----------------
 
-  |Assembler Code          |Function                       |#Words   |#States   |Opcode  |
-  |------------------------|-------------------------------|---------|----------|--------|
-  |ld.i    r1, r2, n       |r1 <- r2 + n                   |2        |4         |10_00xx |
-  |ld      r1, r2, n       |r1 <- mem(r2 + n)              |2        |5         |11_00xx |
-  |sto     r1, r2, n       |mem(r2+n) <- r1                |2        |4         |10_11xx |
-  |add.i   r1, r2, n       |r1 <- r1 + r2 + n              |2        |4         |10_01xx |
-  |add     r1, r2, n       |r1 <- r1 + mem(r2 + n)         |2        |5         |11_01xx |
-  |nand.i  r1, r2, n       |r1 <- !(r1 &(r2 + n))          |2        |4         |10_10xx |
-  |nand    r1, r2, n       |r1 <- !(r1 &(mem(r2 + n)))     |2        |5         |11_10xx |
+  |Assembler Code          |Function                       |#Words   |#States   |Opcode |
+  |------------------------|-------------------------------|---------|----------|-------|
+  |ld.i    r1, r2, n       |r1 <- r2 + n                   |2        |4         |0_00xx |
+  |ld      r1, r2, n       |r1 <- mem(r2 + n)              |2        |5         |1_00xx |
+  |sto     r1, r2, n       |mem(r2+n) <- r1                |2        |4         |0_11xx |
+  |add.i   r1, r2, n       |r1 <- r1 + r2 + n              |2        |4         |0_01xx |
+  |add     r1, r2, n       |r1 <- r1 + mem(r2 + n)         |2        |5         |1_01xx |
+  |nand.i  r1, r2, n       |r1 <- !(r1 &(r2 + n))          |2        |4         |0_10xx |
+  |nand    r1, r2, n       |r1 <- !(r1 &(mem(r2 + n)))     |2        |5         |1_10xx |
+
+  If n==0 the operand field can be omitted and the number of instruction words and states is reduced by 1.
