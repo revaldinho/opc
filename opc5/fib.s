@@ -4,36 +4,37 @@
 
         ld.i  r10,r0,RSLTS      # initialise the results pointer
         ld.i  r13,r0,RETSTK     # initialise the return address stack
-        ld.i  r5,r0,0           # Seed fibonacci numbers in r5,r6
+        ld.i  r5,r0             # Seed fibonacci numbers in r5,r6
         ld.i  r6,r0,1
+        ld.i  r1,r0,1           # Use R1 as a constant 1 register
 
-        sto   r5,r10,0          # save r5 and r6 as first resultson results stack
-        add.i r10,r0,1
-        sto   r6,r10,0
-        add.i r10,r0,1
+        sto   r5,r10            # save r5 and r6 as first resultson results stack
+        add.i r10,r1
+        sto   r6,r10
+        add.i r10,r1
 
         ld.i  r4,r0,-23         # set up a counter in R4
         ld.i  r14,pc,2          # return address in r14
 LOOP:   ld.i  pc,r0,FIB         # JSR FIB
-        add.i r4,r0,1           # inc loop counter
+        add.i r4,r1             # inc loop counter
         nz.ld.i pc,r0,LOOP      # another iteration if not zero
 
 END:    halt    r0,r0,0x999     # Finish simulation
 
 
-FIB:    sto    r14,r13,0        # Push return address on stack
-        add.i  r13,r0,1         # incrementing stack pointer
+FIB:    sto    r14,r13        # Push return address on stack
+        add.i  r13,r1         # incrementing stack pointer
 
-        ld.i   r1,r5,0          # Fibonacci computation
-        add.i  r1,r6,0
-        sto    r1,r10,0         # Push result in results stack
-        add.i  r10,r0,1         # incrementing stack pointer
+        ld.i   r2,r5          # Fibonacci computation
+        add.i  r2,r6
+        sto    r2,r10         # Push result in results stack
+        add.i  r10,r1         # incrementing stack pointer
 
-        ld.i   r5,r6,0          # Prepare r5,r6 for next iteration
-        ld.i   r6,r1,0
+        ld.i   r5,r6          # Prepare r5,r6 for next iteration
+        ld.i   r6,r2
 
         add.i   r13,r0,-1       # Pop return address of stack
-        ld      pc,r13,0        # and return
+        ld      pc,r13        # and return
 
         ORG 0x100
 
