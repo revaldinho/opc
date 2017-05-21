@@ -1,7 +1,7 @@
 #!/bin/tcsh
 rm *hex *dump *sim *trace *vcd
 
-foreach test (ptrtest test fib )
+foreach test (ptrtest fib test)
     # Assemble the test
     python3 opc3asm.py ${test}.s ${test}.hex | tee ${test}.lst
     # Run the emulator
@@ -15,4 +15,6 @@ foreach test (ptrtest test fib )
     # Save the results
     mv dump.vcd ${test}.vcd
     mv test.vdump ${test}.vdump
+
+    python3 ../utils/mdumpcheck.py ${test}.dump  ${test}.vdump
 end
