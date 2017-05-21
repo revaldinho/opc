@@ -40,6 +40,7 @@ module opc3tb();
     if (dut0_u.IR_q== `HALT)
       begin
         $display("Simulation terminated with halt instruction at time", $time);
+        $writememh("test.vdump",mem);
         $finish;
       end
 endmodule
