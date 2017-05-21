@@ -1,5 +1,5 @@
 #!/bin/tcsh
-#rm *hex *dump *sim *trace *vcd
+rm *hex *dump *sim *trace *vcd
 
 foreach test ( test fib )
     # Assemble the test

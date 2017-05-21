@@ -14,4 +14,5 @@ foreach test (test ptrtest )
     ./a.out | tee ${test}.sim
     # Save the results
     mv dump.vcd ${test}.vcd
+    mv test.vdump ${test}.vdump
 end
