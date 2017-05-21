@@ -13,7 +13,7 @@ def expand_macro(line, macro):  # recursively expand macros, passing on instonce
                 newline = newline.replace(s,r) if s else newline
             text.extend(expand_macro(newline, macro))
     return(text)
-    
+
 (wordmem, macro, macroname, newtext) = ( [0x0000]*64*1024,dict(),None,[])
 for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
     mobj =  re.match("\s*?MACRO\s*(?P<name>\w*)\s*?\((?P<params>.*)\)", line, re.IGNORECASE)
@@ -50,8 +50,8 @@ for iteration in range (0,2): # Two pass assembly
                 sys.exit("Error illegal register name or expression in: %s" % line )
             if instr in op:
                 (dst,src,val) = (words+[0])[:3]
-                words = [((val!=0)<<13)|predicates[pred]|(op[instr]<<8)|(src<<4)|dst,val][:len(words)-(val==0)]
-                wordmem[nextmem:nextmem+len(words)] = words
+                words = [((len(words)==3)<<13)|predicates[pred]|(op[instr]<<8)|(src<<4)|dst,val][:len(words)-(len(words)==2)]
+            wordmem[nextmem:nextmem+len(words)] = words
             nextmem += len(words)
         elif instr == "ORG":
             nextmem = eval(operands,globals(),symtab)

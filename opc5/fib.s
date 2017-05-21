@@ -1,7 +1,6 @@
 # Simple Fibonacci number program ported from earlier machines
 
         ORG 0x0000
-
         ld.i  r10,r0,RSLTS      # initialise the results pointer
         ld.i  r13,r0,RETSTK     # initialise the return address stack
         ld.i  r5,r0             # Seed fibonacci numbers in r5,r6
@@ -13,12 +12,12 @@
         sto   r6,r10
         add.i r10,r1
 
-        ld.i  r4,r0,-23        # set up a counter in R4
+        ld.i  r4,r0,-23         # set up a counter in R4
         ld.i  r14,r0,CONT       # return address in r14
         ld.i  r8,r0,FIB         # Store labels in registers to minimize loop instructions
-LOOP:   ld.i  pc,r8            # JSR FIB
+LOOP:   ld.i  pc,r8             # JSR FIB
 CONT:   add.i r4,r1             # inc loop counter
-        nz.ld.i pc,r8         # another iteration if not zero
+        nz.ld.i pc,r8           # another iteration if not zero
 
 END:    halt    r0,r0,0x999     # Finish simulation
 
