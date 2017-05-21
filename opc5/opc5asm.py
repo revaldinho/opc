@@ -1,5 +1,5 @@
 import sys, re
-op = { "nand"  :0x38, "ld":0x30,  "add":0x34, "nand.i":0x28, "ld.i":0x20, "add.i":0x24, "sto":0x2C, "halt" :0x00 }
+op = { "nand"  :0x18, "ld":0x10,  "add":0x14, "nand.i":0x08, "ld.i":0x00, "add.i":0x04, "sto":0x0C, "halt" :0x00 }
 symtab = dict( [ ("r%d"%d,d) for d in range(0,16)])
 predicates = {"c":0x4000, "nz":0x8000, "cnz":0x0000, "":0xC000}
 def expand_macro(line, macro):  # recursively expand macros, passing on instonces not (yet) defined
@@ -13,6 +13,7 @@ def expand_macro(line, macro):  # recursively expand macros, passing on instonce
                 newline = newline.replace(s,r) if s else newline
             text.extend(expand_macro(newline, macro))
     return(text)
+    
 (wordmem, macro, macroname, newtext) = ( [0x0000]*64*1024,dict(),None,[])
 for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
     mobj =  re.match("\s*?MACRO\s*(?P<name>\w*)\s*?\((?P<params>.*)\)", line, re.IGNORECASE)
@@ -27,6 +28,7 @@ for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
         newtext.append("# %s" % line)
     else:
         newtext.extend(expand_macro(line, macro))
+
 for iteration in range (0,2): # Two pass assembly
     nextmem = 0
     symtab["pc"]=15  # Add Alias for pc = r15
@@ -47,12 +49,9 @@ for iteration in range (0,2): # Two pass assembly
             except (ValueError, NameError, TypeError,SyntaxError):
                 sys.exit("Error illegal register name or expression in: %s" % line )
             if instr in op:
-                (dest,source,operandval) = (words+[0])[:3]
-                if len(words)>2:
-                    words = [ (predicates[pred]|(op[instr]<<8)|(source<<4)|dest),operandval]
-                else:
-                    words = [ 0xDFFF & (predicates[pred]|(op[instr]<<8)|(source<<4)|dest)]
-            wordmem[nextmem:nextmem+len(words)] = words[0:len(words)]
+                (dst,src,val) = (words+[0])[:3]
+                words = [((val!=0)<<13)|predicates[pred]|(op[instr]<<8)|(src<<4)|dst,val][:len(words)-(val==0)]
+                wordmem[nextmem:nextmem+len(words)] = words
             nextmem += len(words)
         elif instr == "ORG":
             nextmem = eval(operands,globals(),symtab)
@@ -60,6 +59,7 @@ for iteration in range (0,2): # Two pass assembly
             sys.exit("Error: unrecognized instruction %s" % instr)
         if iteration > 0 :
             print("%04x  %-20s  %s"%(memptr,' '.join([("%04x" % i) for i in words]),line.rstrip()))
+
 print ("\nSymbol Table:\n", dict([(x, symtab[x]) for x in symtab if not re.match("r\d*|pc",x)]))
 with open(sys.argv[2],"w" ) as f:
     for i in range(0, len(wordmem), 24):
