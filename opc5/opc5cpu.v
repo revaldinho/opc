@@ -33,7 +33,8 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
        case (FSM_q)
          FETCH0 : FSM_q <= (data[FSM_MAP0])? FETCH1 : (! ((IR_q[PRED_C]| C_q)&(IR_q[PRED_NZ]| !Z_q)))? FETCH0: EA_ED;  // Skip to next instruction if single word and predicates are not satisfied;
          FETCH1 : FSM_q <= (! ((IR_q[PRED_C]| C_q)&(IR_q[PRED_NZ]| !Z_q)))? FETCH0: EA_ED ; // Skip to next instruction if predicates are not satisfied;
-         EA_ED  : FSM_q <= (IR_q[FSM_MAP1]) ? RDMEM : (IR_q[11:10]==STO ) ? WRMEM : EXEC;
+         // FIXME - should not need to check predicate again in EA_ED for 1 word instructions predicating on Zero (.e.g nz.ld.i pc,r8)
+         EA_ED  : FSM_q <= (! ((IR_q[PRED_C]| C_q)&(IR_q[PRED_NZ]| !Z_q)))? FETCH0: (IR_q[FSM_MAP1]) ? RDMEM : (IR_q[11:10]==STO ) ? WRMEM : EXEC;
          RDMEM  : FSM_q <= EXEC;
          default: FSM_q <= FETCH0;
        endcase
