@@ -14,10 +14,11 @@
         add.i r10,r1
 
         ld.i  r4,r0,-23         # set up a counter in R4
-        ld.i  r14,pc,2          # return address in r14
-LOOP:   ld.i  pc,r0,FIB         # JSR FIB
-        add.i r4,r1             # inc loop counter
-        nz.ld.i pc,r0,LOOP      # another iteration if not zero
+        ld.i  r14,r0,CONT       # return address in r14
+        ld.i  r8,r0,FIB         # Store labels in registers to minimize loop instructions
+LOOP:   ld.i  pc,r8            # JSR FIB
+CONT:   add.i r4,r1             # inc loop counter
+        nz.ld.i pc,r0,LOOP         # another iteration if not zero
 
 END:    halt    r0,r0,0x999     # Finish simulation
 
