@@ -1,0 +1,74 @@
+<!DOCTYPE html><html><head><title>OPC5 emulator</title>
+<script>
+var op = {"nand":0x18,"ld":0x10,"add":0x14,"nand.i":8,"ld.i":0,"add.i":4,"sto":0xC,"halt":0}
+var pred = {0:"cnz.", 1:"c.", 2:"nz.", 3:""}
+
+var mem = new Uint16Array(2048), pad="                             ";
+function hex(n) {return ((1 << 16 | n).toString(16).substr(-4));}
+function init(){
+    mem.set(eval('['+location.search.replace(/.d=/,'').replace(/([0-9a-f]{4})/ig,'0x$1,')+']'));
+    document.getElementById("RAM").innerHTML=[].slice.call(mem.slice(0x0,0x100)).
+        map(function(x){return hex(x)});
+}
+function load(){
+    mem.set(eval("[0x" + document.getElementById("RAM").value.replace(/,/g,",0x")+"]"));
+}
+function boot() {
+    var maxcycles = 999, cycle = 0, pc=0, regfile = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], c=0, z=0;
+
+    while (cycle < maxcycles){
+        regfile[0] = 0;    // always zero even if we wrote to it!
+        pc = regfile[15];
+        iword = mem[pc] &  0xFFFF;
+        pcarry = (iword & 0x8000) >> 15;
+        pnzero = (iword & 0x4000) >> 14;
+        ilen   = (iword & 0x2000) ? 2 : 1;
+        rdmem  = (iword & 0x1000);
+        opcode = (iword & 0x1F00) >> 8;
+        source = (iword & 0xF0) >> 4;
+        dest   = iword & 0xF;
+        operand = (ilen==2) ? mem[pc+1] : 0;
+
+        istr = {0:"cnz.", 1:"c.", 2:"nz.", 3:""}[(pcarry << 1) | pnzero];
+        if (opcode==op["halt"] && dest==0 && source==0){
+            istr += "halt r"+dest+",r"+source;
+        } else {
+            istr += Object.keys(op)[Object.values(op).indexOf(opcode)]+" r"+dest+",r"+source;
+        }
+        istr += (ilen==2) ? ",0x" + hex(operand) : "";
+
+        document.getElementById("log").innerHTML += [(pad+cycle).slice(-5),":",hex(pc),":",
+            hex(mem[pc]),(ilen==2)?hex(mem[pc+1]):"    ",":",c,z,":",
+            (istr + pad).slice(0,24),":",regfile.map(function(x){return hex(x)}).join(" "),
+            "\n"].join(" ");
+
+        regfile[15] += ilen; cycle++;
+        ea_ed = regfile[source] + operand;    // EA_ED must be computed after PC is updated
+        if (rdmem) { ea_ed = mem[ea_ed]; }
+
+        if ( (pcarry || c) && (pnzero || !z) ){
+
+            if (opcode == op["halt"] && source==0 && dest==0){
+                break;
+            } else if ( opcode==op["nand.i"] || opcode==op["nand"] ){
+                c = 0; regfile[dest] = ~(regfile[dest] & ea_ed) & 0xFFFF;
+            } else if ( opcode==op["add.i"] || opcode==op["add"] ){
+                res = (regfile[dest] + ea_ed) & 0x1FFFF;
+                regfile[dest] = res & 0xFFFF; c = (res>>16)
+            } else if ( opcode==op["ld.i"] || opcode==op["ld"] ){
+                regfile[dest] = ea_ed;
+            } else if ( opcode == op["sto"] ){
+                mem[ea_ed] = regfile[dest];
+            }
+            if ( opcode != op["sto"] ){ z = (regfile[dest]==0) ? 1 : 0; }
+        }
+    }
+    document.getElementById("log").innerHTML += "Done!\n";
+}
+</script></head><body onload="init()">Welcome to the <a href=".">OPC</a> in-browser Emulator
+<p>Memory: <button type="button" onclick="load()">Load RAM</button>
+<p><textarea rows="4" cols="80" id=RAM>JavaScript disabled!</textarea>
+<p><button type="button" onclick="boot()">Boot</button><pre id=log>
+Cycle : PC   : Mem       : C Z : Instruction              : Registers
+-------------------------------------------------------------------------------------
+</pre></body></html>
