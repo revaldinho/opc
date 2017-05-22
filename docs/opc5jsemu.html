@@ -2,7 +2,6 @@
 <script>
 var op = {"nand":0x18,"ld":0x10,"add":0x14,"nand.i":8,"ld.i":0,"add.i":4,"sto":0xC,"halt":0}
 var pred = {0:"cnz.", 1:"c.", 2:"nz.", 3:""}
-
 var mem = new Uint16Array(2048), pad="                             ";
 function hex(n) {return ((1 << 16 | n).toString(16).substr(-4));}
 function init(){
@@ -15,18 +14,13 @@ function load(){
 }
 function boot() {
     var maxcycles = 999, cycle = 0, pc=0, regfile = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], c=0, z=0;
-
     while (cycle < maxcycles){
-        regfile[0] = 0;    // always zero even if we wrote to it!
-        pc = regfile[15];
+        pc = regfile[15]; regfile[0] = 0; // fixup special registers
+
         iword = mem[pc] &  0xFFFF;
-        pcarry = (iword & 0x8000) >> 15;
-        pnzero = (iword & 0x4000) >> 14;
-        ilen   = (iword & 0x2000) ? 2 : 1;
-        rdmem  = (iword & 0x1000);
-        opcode = (iword & 0x1F00) >> 8;
-        source = (iword & 0xF0) >> 4;
-        dest   = iword & 0xF;
+        [pcarry,pnzero] = [(iword & 0x8000) >> 15, (iword & 0x4000) >> 14];
+        [opcode,ilen]   = [(iword & 0x1F00) >> 8,  (iword & 0x2000) ? 2 : 1];
+        [source,dest]   = [(iword & 0xF0) >> 4,    iword & 0xF];
         operand = (ilen==2) ? mem[pc+1] : 0;
 
         istr = {0:"cnz.", 1:"c.", 2:"nz.", 3:""}[(pcarry << 1) | pnzero];
@@ -44,10 +38,8 @@ function boot() {
 
         regfile[15] += ilen; cycle++;
         ea_ed = regfile[source] + operand;    // EA_ED must be computed after PC is updated
-        if (rdmem) { ea_ed = mem[ea_ed]; }
-
+        if (iword & 0x1000) { ea_ed = mem[ea_ed]; }
         if ( (pcarry || c) && (pnzero || !z) ){
-
             if (opcode == op["halt"] && source==0 && dest==0){
                 break;
             } else if ( opcode==op["nand.i"] || opcode==op["nand"] ){
