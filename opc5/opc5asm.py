@@ -60,7 +60,6 @@ for iteration in range (0,2): # Two pass assembly
             sys.exit("Error: unrecognized instruction %s" % instr)
         if iteration > 0 :
             print("%04x  %-20s  %s"%(memptr,' '.join([("%04x" % i) for i in words]),line.rstrip()))
-
 print ("\nSymbol Table:\n", dict([(x, symtab[x]) for x in symtab if not re.match("r\d*|pc",x)]))
 with open(sys.argv[2],"w" ) as f:
     for i in range(0, len(wordmem), 24):

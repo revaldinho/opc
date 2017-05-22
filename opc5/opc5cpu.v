@@ -11,7 +11,6 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
    wire [3:0]  grf_radr=((FSM_q==EXEC)||(FSM_q==WRMEM))?IR_q[3:0]:IR_q[7:4];
    wire [15:0] grf_out_w = GRF_q[grf_radr];
    wire [15:0] grf_dout= (grf_radr==4'hF) ? PC_q: {16{(grf_radr!=4'h0)}} & grf_out_w;
-
    assign      rnw= ! (FSM_q==WRMEM) ;
    assign      data=(FSM_q==WRMEM)?grf_dout:16'bz ;
    assign      address=( FSM_q==WRMEM || FSM_q == RDMEM)? OR_q : PC_q;
@@ -63,5 +62,4 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
        IR_q <= data;
      else if ( FSM_q == EXEC)
        { C_q, Z_q, GRF_q[IR_q[3:0]]}  <= { carry, !(|result), result};
-
 endmodule
