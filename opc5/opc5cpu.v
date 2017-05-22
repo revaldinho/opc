@@ -23,8 +23,7 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
           ADD, SUB : {carry, result}=grf_dout + (OR_q ^ {16{(IR_q[11:9]==SUB)}}) + (IR_q[11:9]==SUB);
           AND : result=(grf_dout & OR_q);
           OR  : result=(grf_dout | OR_q);
-          XOR : result=(grf_dout | OR_q);
-          //SUB : {carry, result}=grf_dout + ~OR_q + 1;
+          XOR : result=(grf_dout ^ OR_q);
           ROR : {result,carry} = { OR_q[0], OR_q } ;
         endcase // case ( IR_q )
      end

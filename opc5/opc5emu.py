@@ -3,7 +3,6 @@ import sys, re
 op = {"ld.i":0, "add.i":0x1, "and.i":0x2, "or.i":0x3, "xor.i":0x4, "ror.i":0x5, "sub.i":0x6, "ld":0x8, "sto":0x7,
     "add":0x9, "and":0xA, "or":0xB, "xor": 0xC, "ror":0xD, "sub":0xE, "halt" :0x0 }
 dis = dict( [ (op[k],k) for k in [ x for x in op if x != "halt" ]])
-pred = {0:"cnz.", 1:"c.", 2:"nz.", 3:""}
 
 with open(sys.argv[1],"r") as f:
     wordmem = [ (int(x,16) & 0xFFFF) for x in f.read().split() ]
@@ -18,7 +17,7 @@ while True:
     (opcode, source, dest) = ((instr_word & 0x1E00) >> 9, (instr_word & 0xF0) >>4, instr_word & 0xF)
     operand = wordmem[regfile[pcreg]+1] if (instr_len==2) else 0
 
-    instr_str = "%s%s r%d,r%d" % (pred[pcarry <<1 | pnzero],dis[opcode],dest,source)
+    instr_str = "%s%s r%d,r%d" % ({0:"cnz.", 1:"c.", 2:"nz.", 3:""}[pcarry <<1 | pnzero],dis[opcode],dest,source)
     if dis[opcode] == "ld.i" and (dest==source==0):
         instr_str = re.sub("ld.i","halt",instr_str)
     instr_str += (",0x%04x" % operand) if instr_len==2 else ''
