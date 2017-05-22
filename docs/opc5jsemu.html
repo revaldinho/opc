@@ -1,7 +1,7 @@
 <!DOCTYPE html><html><head><title>OPC5 emulator</title>
 <script>
-var op = {"nand":0x18,"ld":0x10,"add":0x14,"nand.i":8,"ld.i":0,"add.i":4,"sto":0xC,"halt":0}
-var pred = {0:"cnz.", 1:"c.", 2:"nz.", 3:""}
+var op = {"ld":0x8,  "ld.i":0,  "add":0x9, "add.i":1, "and":0xA, "and.i":2, "or":0xB,  "or.i":0x3,
+          "xor":0xC, "xor.i":4, "ror":0xD, "ror.i":5, "sub":0xE, "sub.i":6, "sto":0x7, "halt" :0x0 }
 var mem = new Uint16Array(2048), pad="                             ";
 function hex(n) {return ((1 << 16 | n).toString(16).substr(-4));}
 function init(){
@@ -13,23 +13,19 @@ function load(){
     mem.set(eval("[0x" + document.getElementById("RAM").value.replace(/,/g,",0x")+"]"));
 }
 function boot() {
-    var maxcycles = 999, cycle = 0, pc=0, regfile = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], c=0, z=0;
+    var maxcycles=999, cycle=0, pcreg=15, regfile=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], c=0, z=0;
     while (cycle < maxcycles){
-        pc = regfile[15]; regfile[0] = 0; // fixup special registers
-
-        iword = mem[pc] &  0xFFFF;
+        pc=regfile[pcreg]; regfile[0] = 0; // fixup special registers
+        iword = mem[pc];
         [pcarry,pnzero] = [(iword & 0x8000) >> 15, (iword & 0x4000) >> 14];
-        [opcode,ilen]   = [(iword & 0x1F00) >> 8,  (iword & 0x2000) ? 2 : 1];
+        [opcode,ilen]   = [(iword & 0x1E00) >> 9,  (iword & 0x2000) ? 2 : 1];
         [source,dest]   = [(iword & 0xF0) >> 4,    iword & 0xF];
         operand = (ilen==2) ? mem[pc+1] : 0;
 
         istr = {0:"cnz.", 1:"c.", 2:"nz.", 3:""}[(pcarry << 1) | pnzero];
-        if (opcode==op["halt"] && dest==0 && source==0){
-            istr += "halt r"+dest+",r"+source;
-        } else {
-            istr += Object.keys(op)[Object.values(op).indexOf(opcode)]+" r"+dest+",r"+source;
-        }
+        istr += Object.keys(op)[Object.values(op).indexOf(opcode)]+" r"+dest+",r"+source;
         istr += (ilen==2) ? ",0x" + hex(operand) : "";
+        if (opcode==op["ld.i"] && dest==0 && source==0){ istr=istr.replace("ld.i","halt"); }
 
         document.getElementById("log").innerHTML += [(pad+cycle).slice(-5),":",hex(pc),":",
             hex(mem[pc]),(ilen==2)?hex(mem[pc+1]):"    ",":",c,z,":",
@@ -37,16 +33,20 @@ function boot() {
             "\n"].join(" ");
 
         regfile[15] += ilen; cycle++;
-        ea_ed = regfile[source] + operand;    // EA_ED must be computed after PC is updated
-        if (iword & 0x1000) { ea_ed = mem[ea_ed]; }
+        ea_ed = regfile[source] + operand; if (iword & 0x1000) { ea_ed = mem[ea_ed]; }
         if ( (pcarry || c) && (pnzero || !z) ){
-            if (opcode == op["halt"] && source==0 && dest==0){
-                break;
-            } else if ( opcode==op["nand.i"] || opcode==op["nand"] ){
-                c = 0; regfile[dest] = ~(regfile[dest] & ea_ed) & 0xFFFF;
-            } else if ( opcode==op["add.i"] || opcode==op["add"] ){
-                res = (regfile[dest] + ea_ed) & 0x1FFFF;
-                regfile[dest] = res & 0xFFFF; c = (res>>16)
+            if ( opcode==op["halt"] && source==0 && dest==0){ break; }
+            if ( opcode==op["and.i"] || opcode==op["and"] ){
+                regfile[dest] = regfile[dest] & ea_ed;
+            } else if ( opcode==op["or.i"] || opcode==op["or"] ){
+                regfile[dest] = regfile[dest] | ea_ed;
+            } else if ( opcode==op["xor.i"] || opcode==op["xor"] ){
+                regfile[dest] = regfile[dest] ^ ea_ed;
+            } else if ( opcode==op["ror.i"] || opcode==op["ror"] ){
+                c = 1 & ea_ed; regfile[dest] = (c<<15) | (ea_ed>>1);
+            } else if ( [op["add.i"], op["add"], op["sub.i"], op["sub"]].indexOf(opcode)>=0 ){
+                res = regfile[dest] + ((opcode==op["add.i"] || opcode==op["add"]) ? ea_ed : -ea_ed);
+                regfile[dest] = res & 0xFFFF; c = (res>>16) & 1;
             } else if ( opcode==op["ld.i"] || opcode==op["ld"] ){
                 regfile[dest] = ea_ed;
             } else if ( opcode == op["sto"] ){
