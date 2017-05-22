@@ -33,7 +33,7 @@ FIB:    sto    r14,r13        # Push return address on stack
         ld.i   r5,r6          # Prepare r5,r6 for next iteration
         ld.i   r6,r2
 
-        add.i   r13,r0,-1       # Pop return address of stack
+        sub.i   r13,r1        # Pop return address of stack
         ld      pc,r13        # and return
 
         ORG 0x100

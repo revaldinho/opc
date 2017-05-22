@@ -2,16 +2,26 @@
 TOP:    ORG     0x0000
         ld.i    r1,r0,0x00
         sto     r1,r0,RESULT                 # Comments ignored but preserved in listing
-        nand.i  r1,r1,0x00                   # invert r1
+        and.i  r1,r1,0x00                   # invert r1
         sto     r1,r0,RESULT+1
         ld.i    r1,r0, (10*2+9) << 7 & 0xFF  # Demo of Python expression parsing
         ld.i    r1,r0,-10
 LOOP:   add.i   r1,r0,0x01
         nz.ld.i r15,r0,LOOP                  # r15 is PC
-NEXT:   nand.i  r1,r0,0x33
-        nand.i  r1,r1,0
+NEXT:   or.i  r1,r0,0x33
+        xor.i  r1,r1,0
+        ld.i    r1, r0,0x1234
+        ror.i   r1,r1,0x00
+        ror.i   r1,r1,0x00
+        ror.i   r1,r1,0x00
+        ror.i   r1,r1,0x00
+        ror.i   r1,r1,0x00
+        ror.i   r1,r1,0x00
+        ror.i   r1,r1,0x00
+        ror.i   r1,r1,0x00
+
+
         ld.i    r15,r0,END
-        add.i   r1,r1,0x01
 
 
 END:    ld.i    r14,pc,2   # get return address in r14
@@ -24,7 +34,7 @@ SUBLP:  add.i r2,r0,0x01
         ld.i  r15,r0,SUBLP
 SUBEXT: ld.i  pc,r14,0     # retrieve return address and return!
 
-DATA:   ORG 0x30
+DATA:   ORG 0x40
 
 
 MEM1:   WORD 0x00
