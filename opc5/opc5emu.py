@@ -52,7 +52,6 @@ while True:
         if opcode != op["sto"]:
             z = 1 if (regfile[dest]==0) else 0
 
-
 if len(sys.argv) > 2:  # Dump memory for inspection if required
     with open(sys.argv[2],"w" ) as f:
         for i in range(0, len(wordmem), 16):
