@@ -1,5 +1,6 @@
 import sys, re
-op = { "nand"  :0x18, "ld":0x10,  "add":0x14, "nand.i":0x08, "ld.i":0x00, "add.i":0x04, "sto":0x0C, "halt" :0x00 }
+op = {"ld.i":0, "add.i":0x1, "and.i":0x2, "or.i":0x3, "xor.i":0x4, "ror.i":0x5, "sub.i":0x6, "ld":0x8, "sto":0x7,
+    "add":0x9, "and":0xA, "or":0xB, "xor": 0xC, "ror":0xD, "sub":0xE, "halt" :0x0 }
 symtab = dict( [ ("r%d"%d,d) for d in range(0,16)])
 predicates = {"c":0x4000, "nz":0x8000, "cnz":0x0000, "":0xC000}
 def expand_macro(line, macro):  # recursively expand macros, passing on instonces not (yet) defined
@@ -50,7 +51,7 @@ for iteration in range (0,2): # Two pass assembly
                 sys.exit("Error illegal register name or expression in: %s" % line )
             if instr in op:
                 (dst,src,val) = (words+[0])[:3]
-                words = [((len(words)==3)<<13)|predicates[pred]|(op[instr]<<8)|(src<<4)|dst,val][:len(words)-(len(words)==2)]
+                words = [((len(words)==3)<<13)|predicates[pred]|(op[instr]<<9)|(src<<4)|dst,val][:len(words)-(len(words)==2)]
             wordmem[nextmem:nextmem+len(words)] = words
             nextmem += len(words)
         elif instr == "ORG":
@@ -59,7 +60,6 @@ for iteration in range (0,2): # Two pass assembly
             sys.exit("Error: unrecognized instruction %s" % instr)
         if iteration > 0 :
             print("%04x  %-20s  %s"%(memptr,' '.join([("%04x" % i) for i in words]),line.rstrip()))
-
 print ("\nSymbol Table:\n", dict([(x, symtab[x]) for x in symtab if not re.match("r\d*|pc",x)]))
 with open(sys.argv[2],"w" ) as f:
     for i in range(0, len(wordmem), 24):
