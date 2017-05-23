@@ -46,8 +46,10 @@ XORTEST: xor.i r8, r8, 1
         ld.i  pc, r13
 
 ADDTEST: ld  r1, r8
-         add r1, r8, 1
-         adc r1, r8, 2
+         ld  r2, r8, 1
+         add.i r1, r2
+         ld  r2, r8, 2
+         adc r1, r2
          sto r1, r10, 0
          add.i r10, r0, 1
          ld.i  pc, r13
