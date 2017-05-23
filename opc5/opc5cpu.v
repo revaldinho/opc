@@ -7,7 +7,7 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
    (* RAM_STYLE="DISTRIBUTED" *)
    reg [15:0] GRF_q[15:0];
    reg [2:0]  FSM_q;
-   reg        C_q, Z_q, carry;
+   reg        C_q, Z_q, carry, ADC_C_q;
    wire [3:0]  grf_radr=((FSM_q==EXEC)||(FSM_q==WRMEM))?IR_q[3:0]:IR_q[7:4];
    wire [15:0] grf_out_w = GRF_q[grf_radr];
    wire [15:0] grf_dout= (grf_radr==4'hF) ? PC_q: {16{(grf_radr!=4'h0)}} & grf_out_w;
@@ -20,7 +20,7 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
         {carry, result} = { C_q, 16'bx} ;
         case (IR_q[11:9])
           LD : result=OR_q ;
-          ADD, ADC : {carry, result}=grf_dout + OR_q + ((IR_q[11:9]==ADC)?C_q:0) ;
+          ADD, ADC : {carry, result}=grf_dout + OR_q + ((IR_q[11:9]==ADC)?C_q:0) ; 
           AND : result=(grf_dout & OR_q);
           OR  : result=(grf_dout | OR_q);
           XOR : result=(grf_dout ^ OR_q);

@@ -1,7 +1,7 @@
 #!/bin/tcsh
 rm *hex *dump *sim *trace *vcd
 
-foreach test ( test fib )
+foreach test ( fib test1)
     # Assemble the test
     python3 opc5asm.py ${test}.s ${test}.hex | tee ${test}.lst
     # Run the emulator
@@ -15,5 +15,11 @@ foreach test ( test fib )
     # Save the results
     mv dump.vcd ${test}.vcd
     mv test.vdump ${test}.vdump
+end
+echo ""
+echo "Comparing memory dumps between emulation and simulation"
+echo "-------------------------------------------------------"
+foreach test ( test1 fib )
+    printf "%12s :" $test
     python3 ../utils/mdumpcheck.py ${test}.dump  ${test}.vdump
 end
