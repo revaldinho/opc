@@ -55,8 +55,8 @@ Instruction Table
 | ld[.i] r1, r2, n   | 0000   | r1 <- r2 + n             | 1000   |  r1 <- mem(r2+n)             |   -   |
 | sto r1, r2, n      | -      | -                        | 0111   |  mem(r2+n) <- r1             |   -   |
 | add[.i] r1, r2, n  | 0001   | r1 <- r1 + r2 + n        | 1001   |  r1 <- r1 + mem(r2+n)        | arith |
-| and[.i] r1, r2, n  | 0010   | r1 <- (r1 \& (r2 + n))    | 1010   |  r1 <- (r1 \& mem(r2+n))      |   -   |
-| or[.i] r1, r2, n   | 0011   | r1 <- (r1 \| (r2 + n))    | 1011   |  r1 <- (r1 \| mem(r2+n))      |   -   |
-| xor[.i] r1, r2, n  | 0100   | r1 <- (r1 \^ (r2 + n))    | 1100   |  r1 <- (r1 \^ mem(r2+n))      |   -   |
+| and[.i] r1, r2, n  | 0010   | r1 <- r1 & (r2 + n)      | 1010   |  r1 <- r1 & mem(r2+n)        |   -   |
+| or[.i] r1, r2, n   | 0011   | r1 <- r1 \| (r2 + n)     | 1011   |  r1 <- r1 \| mem(r2+n)       |   -   |
+| xor[.i] r1, r2, n  | 0100   | r1 <- r1 ^ (r2 + n)      | 1100   |  r1 <- r1 ^ mem(r2+n)        |   -   |
 | ror[.i] r1, r2, n  | 0101   | r1 <- ROR(r2+n)          | 1101   |  r1 <- ROR(mem(r2+n)         |  LSB  |
 | sub[.i] r1, r2, n  | 0110   | r1 <- r1 - (r2 + n)      | 1110   |  r1 <- r1 - mem(r2+n)        | arith |
