@@ -40,7 +40,7 @@ while True:
         elif opcode in ( op["ror"], op["ror.i"]):
             (c, regfile[dest]) = (ea_ed & 0x1, (c<<15) | ((ea_ed&0xFFFF) >> 1))
         elif opcode in (op["add"], op["add.i"], op["adc"], op["adc.i"]) :
-            res = (regfile[dest] + ea_ed + (1 if opcode in ( op["adc"], op["adc.i"]) else 0)) & 0x1FFFF
+            res = (regfile[dest] + ea_ed + (c if opcode in ( op["adc"], op["adc.i"]) else 0)) & 0x1FFFF
             (c, regfile[dest])  = ( (res>>16) & 1, res & 0xFFFF)
         elif opcode in (op["ld.i"], op["ld"]):
             regfile[dest] = ea_ed

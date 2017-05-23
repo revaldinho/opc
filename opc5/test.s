@@ -14,6 +14,12 @@ CONT2:  add.i   r9, r0, 1
         ld      r8, r9
         nz.ld.i   pc,r0,XORTEST
 
+        ld.i    r9, r0, DATA-1
+        ld.i    r13, r0, CONT3
+CONT3:  add.i   r9, r0, 1
+        ld      r8, r9
+        nz.ld.i   pc,r0,ADDTEST
+
         halt    r0,r0,0x999
 
 
@@ -39,6 +45,13 @@ XORTEST: xor.i r8, r8, 1
         add.i r10, r0, 1
         ld.i  pc, r13
 
+ADDTEST: ld  r1, r8
+         add r1, r8, 1
+         adc r1, r8, 2
+         sto r1, r10, 0
+         add.i r10, r0, 1
+         ld.i  pc, r13
+
 
 SUB1:   ld.i  r2,r0,0xFFFF
 SUBLP:  add.i r2,r0,0x01
@@ -53,6 +66,9 @@ DATA:
         WORD 0xABCD
         WORD 0x9999
         WORD 0x0000
+        WORD 0x1234 #additional words for ADC
+        WORD 0x4567
+        WORD 0x0F0F
 
 RESULT:
 
