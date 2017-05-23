@@ -58,5 +58,5 @@ Instruction Table
 | and[.i] r1, r2, n  | 0010   | r1 <- r1 & (r2 + n)      | 1010   |  r1 <- r1 & mem(r2+n)        |   -   |
 | or[.i] r1, r2, n   | 0011   | r1 <- r1 \| (r2 + n)     | 1011   |  r1 <- r1 \| mem(r2+n)       |   -   |
 | xor[.i] r1, r2, n  | 0100   | r1 <- r1 ^ (r2 + n)      | 1100   |  r1 <- r1 ^ mem(r2+n)        |   -   |
-| ror[.i] r1, r2, n  | 0101   | r1 <- ROR(r2+n)          | 1101   |  r1 <- ROR(mem(r2+n)         |  LSB  |
-| sub[.i] r1, r2, n  | 0110   | r1 <- r1 - (r2 + n)      | 1110   |  r1 <- r1 - mem(r2+n)        | arith |
+| ror[.i] r1, r2, n  | 0101   | r1 <- ROR(r2+n, cin)     | 1101   |  r1 <- ROR(mem(r2+n, cin)    |  LSB  |
+| adc[.i] r1, r2, n  | 0110   | r1 <- r1 + (r2 + n) + c  | 1110   |  r1 <- r1 + mem(r2+n) +c     | arith |

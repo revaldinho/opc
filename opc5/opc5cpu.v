@@ -1,7 +1,7 @@
 module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, input reset_b);
    parameter FETCH0=3'h0, FETCH1=3'h1, EA_ED=3'h2, RDMEM=3'h3, EXEC=3'h4, WRMEM=3'h5;
    parameter PRED_C=15, PRED_NZ=14, FSM_MAP0=13, FSM_MAP1=12;
-   parameter LD=3'b000, ADD=3'b001, AND=3'b010, OR=3'b011, XOR=3'b100, ROR=3'b101, SUB=3'b110, STO=3'b111 ;
+   parameter LD=3'b000, ADD=3'b001, AND=3'b010, OR=3'b011, XOR=3'b100, ROR=3'b101, ADC=3'b110, STO=3'b111 ;
 
    reg [15:0] OR_q, IR_q, PC_q, result;
    (* RAM_STYLE="DISTRIBUTED" *)
@@ -20,11 +20,11 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
         {carry, result} = { C_q, 16'bx} ;
         case (IR_q[11:9])
           LD : result=OR_q ;
-          ADD, SUB : {carry, result}=grf_dout + (OR_q ^ {16{(IR_q[11:9]==SUB)}}) + (IR_q[11:9]==SUB);
+          ADD, ADC : {carry, result}=grf_dout + OR_q + ((IR_q[11:9]==ADC)?C_q:0) ;
           AND : result=(grf_dout & OR_q);
           OR  : result=(grf_dout | OR_q);
           XOR : result=(grf_dout ^ OR_q);
-          ROR : {result,carry} = { OR_q[0], OR_q } ;
+          ROR : {result,carry} = { carry, OR_q } ;
         endcase // case ( IR_q )
      end
 

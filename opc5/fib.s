@@ -6,6 +6,7 @@
         ld.i  r5,r0             # Seed fibonacci numbers in r5,r6
         ld.i  r6,r0,1
         ld.i  r1,r0,1           # Use R1 as a constant 1 register
+        ld.i  r11,r0,-1         # use R11 as a constant -1 register
 
         sto   r5,r10            # save r5 and r6 as first resultson results stack
         add.i r10,r1
@@ -33,7 +34,7 @@ FIB:    sto    r14,r13        # Push return address on stack
         ld.i   r5,r6          # Prepare r5,r6 for next iteration
         ld.i   r6,r2
 
-        sub.i   r13,r1        # Pop return address of stack
+        add.i   r13,r11        # Pop return address of stack
         ld      pc,r13        # and return
 
         ORG 0x100

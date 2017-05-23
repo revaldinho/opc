@@ -1,6 +1,6 @@
 import sys, re
-op = {"ld.i":0, "add.i":0x1, "and.i":0x2, "or.i":0x3, "xor.i":0x4, "ror.i":0x5, "sub.i":0x6, "ld":0x8, "sto":0x7,
-    "add":0x9, "and":0xA, "or":0xB, "xor": 0xC, "ror":0xD, "sub":0xE, "halt" :0x0 }
+op = {"ld.i":0, "add.i":0x1, "and.i":0x2, "or.i":0x3, "xor.i":0x4, "ror.i":0x5, "adc.i":0x6, "ld":0x8, "sto":0x7,
+    "add":0x9, "and":0xA, "or":0xB, "xor": 0xC, "ror":0xD, "adc":0xE, "halt" :0x0 }
 symtab = dict( [ ("r%d"%d,d) for d in range(0,16)])
 predicates = {"c":0x4000, "nz":0x8000, "cnz":0x0000, "":0xC000}
 def expand_macro(line, macro):  # recursively expand macros, passing on instonces not (yet) defined
@@ -8,7 +8,9 @@ def expand_macro(line, macro):  # recursively expand macros, passing on instonce
     if mobj and mobj.groupdict()["name"] in macro:
         (label,instname,paramstr) = (mobj.groupdict()["label"],mobj.groupdict()["name"],mobj.groupdict()["params"])
         instparams = [x.strip() for x in paramstr.split(",")]
-        text = ["#%s" % line,"%s%s"% (label, ":" if label != "" else "")]
+        text = ["#%s" % line]
+        if label:
+            text.append("%s%s"% (label, ":" if (label != "" and label != "None") else ""))
         for newline in macro[instname][1]:
             for (s,r) in zip( macro[instname][0], instparams):
                 newline = newline.replace(s,r) if s else newline
@@ -38,7 +40,7 @@ for iteration in range (0,2): # Two pass assembly
         mobj = re.match('^(?:(?P<label>\w+):)?\s*(?:(?P<pred>(nz)|(cnz)|c?)\.?)(?P<instr>\w+(?:\.i|\.p)?)?\s*(?P<operands>.*)',re.sub("#.*","",line))
         (label, pred, instr,operands) = [ mobj.groupdict()[item] for item in ("label","pred", "instr","operands")]
         opfields = [ x.strip() for x in operands.split(",")]
-        if label:
+        if label and label != "None":
             exec ("%s= %d" % (label,nextmem), globals(), symtab )
         if instr in op and iteration < 1:
             nextmem += len(opfields)-1                  # If two operands are provide instruction will be one word

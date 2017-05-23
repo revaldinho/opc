@@ -1,7 +1,7 @@
 # python3 opc3emu.py <filename.hex> [<filename.memdump>]
 import sys, re
-op = {"ld.i":0, "add.i":0x1, "and.i":0x2, "or.i":0x3, "xor.i":0x4, "ror.i":0x5, "sub.i":0x6, "ld":0x8, "sto":0x7,
-    "add":0x9, "and":0xA, "or":0xB, "xor": 0xC, "ror":0xD, "sub":0xE, "halt" :0x0 }
+op = {"ld.i":0, "add.i":0x1, "and.i":0x2, "or.i":0x3, "xor.i":0x4, "ror.i":0x5, "adc.i":0x6, "ld":0x8, "sto":0x7,
+    "add":0x9, "and":0xA, "or":0xB, "xor": 0xC, "ror":0xD, "adc":0xE, "halt" :0x0 }
 dis = dict( [ (op[k],k) for k in [ x for x in op if x != "halt" ]])
 
 with open(sys.argv[1],"r") as f:
@@ -38,11 +38,9 @@ while True:
         elif opcode in ( op["xor"], op["xor.i"]):
             regfile[dest] = (regfile[dest] ^ ea_ed) & 0xFFFF
         elif opcode in ( op["ror"], op["ror.i"]):
-            c = (ea_ed & 0x1)
-            regfile[dest] = (c<<15) | ((ea_ed&0xFFFF) >> 1)
-        elif opcode in (op["add"], op["add.i"], op["sub"], op["sub.i"]) :
-            ea_ed = -ea_ed if opcode in ( op["sub"], op["sub.i"]) else ea_ed
-            res = (regfile[dest] + ea_ed) & 0x1FFFF
+            (c, regfile[dest]) = (ea_ed & 0x1, (c<<15) | ((ea_ed&0xFFFF) >> 1))
+        elif opcode in (op["add"], op["add.i"], op["adc"], op["adc.i"]) :
+            res = (regfile[dest] + ea_ed + (1 if opcode in ( op["adc"], op["adc.i"]) else 0)) & 0x1FFFF
             (c, regfile[dest])  = ( (res>>16) & 1, res & 0xFFFF)
         elif opcode in (op["ld.i"], op["ld"]):
             regfile[dest] = ea_ed
