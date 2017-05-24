@@ -8,7 +8,7 @@ execution. All memory accesses are 16 bits wide and instructions are encoded in 
       \  \   \    \   \           \_______ 16b optional operand word
        \  \   \    \   \__________________  4b source/destination register
         \  \   \    \_____________________  4b source register
-         \  \   \_________________________  5b opcode (only 4 bits used)
+         \  \   \_________________________  4b opcode
           \  \____________________________  1b instruction length
            \______________________________  3b predicate bits                         
 
