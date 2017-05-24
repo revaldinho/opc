@@ -21,7 +21,7 @@ module opc5tb();
       clk = 0;
       reset_b = 0;
       #1005 reset_b = 1;
-      #200000000 $finish;
+      #500000000 $finish;
     end
 
   // Simple negedge synchronous memory to avoid messing with delays initially

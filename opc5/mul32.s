@@ -30,7 +30,7 @@ inner:
 	ld.i	r13,r0, next	# save return address
 	ld.i 	pc, r0, multiply32	# JSR multiply32
 next:	add.i	r12,r0,4	# increment result pointer by 4
-	add.i	r11,r11,2	# increment multiplicand address by 2
+	add.i	r11,r0,2	# increment multiplicand address by 2
 	ld	r2,r11		# get multiplicand data LSW
 	add	r2,r11,1	# get multiplicand data MSW
 	z.ld.i	pc,r0,outer	# if (0,0) then next outer loop
@@ -96,20 +96,20 @@ mcont:	add.i	r9,r0,1		# increment counter
 	
 
 
-	ORG	0x080
-	
+	ORG	0x80
+STACK:	WORD 0,0,0,0,0,0,0,0,0
+
+
 DATA0: 	WORD 0x02,0x04,0x08,0x03
-DATA1:	WORD 0x00,0x09,0x18,0x23
+	WORD 0x00,0x09,0x18,0x23
 	WORD 0x13,0x03,0x08,0x00
 	WORD 0x00,0x44,0x33,0x99
 	WORD 0x11,0x00,0xF8,0x03
 	WORD 0xC2,0x04,0xAB,0x03
-	WORD 0xDD,0xFF,0x99,0xAA
-	WORD 0x00,0x00,0x00,0x00
+	WORD 0x00,0x00,0x00,0x00	# all zero words to finish
 
 	ORG	0x100
 RESULTS:	
 
 
-	ORG	0x200
-STACK:	WORD 0	
+
