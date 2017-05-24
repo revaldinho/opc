@@ -8,7 +8,7 @@ execution. All memory accesses are 16 bits wide and instructions are encoded in 
       \  \   \    \   \           \_______ 16b optional operand word
        \  \   \    \   \__________________  4b source/destination register
         \  \   \    \_____________________  4b source register
-         \  \   \_________________________  5b opcode (only 4 bits used)
+         \  \   \_________________________  4b opcode
           \  \____________________________  1b instruction length
            \______________________________  3b predicate bits                         
 
@@ -16,16 +16,16 @@ On reset the processor will start executing instructions from location 0.
 
 All instructions can have predicated execution and this is determined by the three instruction MSBs:
 
-  |  Carry Pred.  | Non-Zero Pred. |  Predicate Invert  |   Function                       |
-  |---------------|----------------|--------------------|----------------------------------|
-  |      1        |        1       |        0           |   Always execute                 |
-  |      1        |        0       |        0           |   Execute if Zero flag is set    |
-  |      0        |        1       |        0           |   Execute if Carry flag is set   |
-  |      0        |        0       |        0           |   Execute if both Zero and Carry flags are set  |
-  |      1        |        1       |        1           |   never execute - NOP            |
-  |      1        |        0       |        1           |   Execute if Zero flag is reset  |
-  |      0        |        1       |        1           |   Execute if Carry flag is reset |
-  |      0        |        0       |        1           |   Execute if both Zero and Carry flags are reset  |
+  |  Carry Pred.  | Zero Pred. |  Predicate Invert  |   Function                       |
+  |---------------|------------|--------------------|----------------------------------|
+  |      1        |      1     |        0           |   Always execute                 |
+  |      1        |      0     |        0           |   Execute if Zero flag is set    |
+  |      0        |      1     |        0           |   Execute if Carry flag is set   |
+  |      0        |      0     |        0           |   Execute if both Zero and Carry flags are set   |
+  |      1        |      1     |        1           |   never execute - NOP            |
+  |      1        |      0     |        1           |   Execute if Zero flag is clear  |
+  |      0        |      1     |        1           |   Execute if Carry flag is clear |
+  |      0        |      0     |        1           |   Execute if both Zero and Carry flags are clear |
 
 OPC-5 has a 16 entry register file. Each instruction can specify one register as a source and another as both source
 and destination using the two 4 bit fields in the encoding. Two of the registers have special purposes:
@@ -46,8 +46,8 @@ combinations of the zero register and zero operands the following addressing mod
 
 There are only two processor status flags:
 
-  * Carry - set or reset only on arithmetic operations
-  * Zero  - set on every instruction based on the state of the destination register (and not set on stores)
+  * Carry - set or cleared only on arithmetic operations
+  * Zero  - set on every instruction based on the state of the destination register (not set on stores)
 
 All instructions support all addressing modes.
 
