@@ -4,24 +4,28 @@ OPC5 Definition
 OPC-5 is a pure 16 bit [One Page Computer](.) with a 16 entry register file and predicated instruction
 execution. All memory accesses are 16 bits wide and instructions are encoded in either one or two words ::
 
-    pp l o_ooox ssss dddd  nnnnnnnnnnnnnnnn
-     \  \   \      \    \           \_______ 16b optional operand word
-      \  \   \      \    \__________________  4b source/destination register
-       \  \   \      \______________________  4b source register
-        \  \   \____________________________  5b opcode (only 4 bits used)
-         \  \_______________________________  1b instruction length
-         \__________________________________  2b predicate bits                         
+    ppp l oooo ssss dddd  nnnnnnnnnnnnnnnn
+      \  \   \    \   \           \_______ 16b optional operand word
+       \  \   \    \   \__________________  4b source/destination register
+        \  \   \    \_____________________  4b source register
+         \  \   \_________________________  5b opcode (only 4 bits used)
+          \  \____________________________  1b instruction length
+           \______________________________  3b predicate bits                         
 
 On reset the processor will start executing instructions from location 0.
 
-All instructions can have predicated execution and this is determined by the two instruction MSBs:
+All instructions can have predicated execution and this is determined by the three instruction MSBs:
 
-  |  Carry Pred.  | Non-Zero Pred. |  Function                                           |
-  |---------------|----------------|-----------------------------------------------------|
-  |      1        |        1       |  Always execute                                     |
-  |      1        |        0       |  Execute only if Zero flag is not set               |
-  |      0        |        1       |  Execute only if Carry flag is set                  |
-  |      0        |        0       |  Execute only if Zero is not set and Carry is set   |
+  |  Carry Pred.  | Non-Zero Pred. |  Predicate Invert  |   Function                       |
+  |---------------|----------------|--------------------|----------------------------------|
+  |      1        |        1       |        0           |   Always execute                 |
+  |      1        |        0       |        0           |   Execute if Zero flag is set    |
+  |      0        |        1       |        0           |   Execute if Carry flag is set   |
+  |      0        |        0       |        0           |   Execute if both Zero and Carry flags are set  |
+  |      1        |        1       |        1           |   never execute - NOP            |
+  |      1        |        0       |        1           |   Execute if Zero flag is reset  |
+  |      0        |        1       |        1           |   Execute if Carry flag is reset |
+  |      0        |        0       |        1           |   Execute if both Zero and Carry flags are reset  |
 
 OPC-5 has a 16 entry register file. Each instruction can specify one register as a source and another as both source
 and destination using the two 4 bit fields in the encoding. Two of the registers have special purposes:

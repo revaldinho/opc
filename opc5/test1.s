@@ -14,6 +14,10 @@ CONT2:  add.i   r9, r0, 1
         ld      r8, r9
         nz.ld.i   pc,r0,XORTEST
 
+        0.ld.i    r5,r0           # 3 cycle nop
+        0.ld.i    r5,r1,0x0000    # 4 cycle nop
+        0.ld      r5,r1,0x0000    # 5 cycle nop
+
         ld.i    r9, r0, DATA-1
         ld.i    r13, r0, CONT3
 CONT3:  add.i   r9, r0, 1

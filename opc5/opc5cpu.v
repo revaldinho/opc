@@ -1,6 +1,6 @@
 module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, input reset_b);
    parameter FETCH0=3'h0, FETCH1=3'h1, EA_ED=3'h2, RDMEM=3'h3, EXEC=3'h4, WRMEM=3'h5;
-   parameter PRED_C=15, PRED_NZ=14, FSM_MAP0=13, FSM_MAP1=12;
+   parameter PRED_C=15, PRED_Z=14, PINVERT=13, FSM_MAP0=12, FSM_MAP1=11;
    parameter LD=3'b000, ADD=3'b001, AND=3'b010, OR=3'b011, XOR=3'b100, ROR=3'b101, ADC=3'b110, STO=3'b111 ;
 
    reg [15:0] OR_q, IR_q, PC_q, result;
@@ -18,9 +18,9 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
    always @( * )
      begin
         {carry, result} = { C_q, 16'bx} ;
-        case (IR_q[11:9])
+        case (IR_q[10:8])
           LD : result=OR_q ;
-          ADD, ADC : {carry, result}=grf_dout + OR_q + ((IR_q[11:9]==ADC)?C_q:0) ; 
+          ADD, ADC : {carry, result}=grf_dout + OR_q + ((IR_q[10:8]==ADC)?C_q:0) ;
           AND : result=(grf_dout & OR_q);
           OR  : result=(grf_dout | OR_q);
           XOR : result=(grf_dout ^ OR_q);
@@ -33,9 +33,9 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
        FSM_q <= FETCH0;
      else
        case (FSM_q)
-         FETCH0 : FSM_q <= (data[FSM_MAP0])? FETCH1 : (! ((data[PRED_C]| C_q)&(data[PRED_NZ]| !Z_q)))? FETCH0: EA_ED;  // Skip to next instruction if single word and predicates are not satisfied;
-         FETCH1 : FSM_q <= (! ((IR_q[PRED_C]| C_q)&(IR_q[PRED_NZ]| !Z_q)))? FETCH0: EA_ED ; // Skip to next instruction if predicates are not satisfied;
-         EA_ED  : FSM_q <= (IR_q[FSM_MAP1]) ? RDMEM : (IR_q[11:9]==STO ) ? WRMEM : EXEC;
+         FETCH0 : FSM_q <= (data[FSM_MAP0])? FETCH1 : (data[PINVERT] ^ ((data[PRED_C]|C_q)&(data[PRED_Z]|Z_q)))? EA_ED: FETCH0;  // Skip to next instruction if single word and predicates are not satisfied;
+         FETCH1 : FSM_q <= (IR_q[PINVERT] ^ ((IR_q[PRED_C]|C_q)&(IR_q[PRED_Z]|Z_q)))? EA_ED :FETCH0 ; // Skip to next instruction if predicates are not satisfied;
+         EA_ED  : FSM_q <= (IR_q[FSM_MAP1]) ? RDMEM : (IR_q[10:8]==STO ) ? WRMEM : EXEC;
          RDMEM  : FSM_q <= EXEC;
          default: FSM_q <= FETCH0;
        endcase

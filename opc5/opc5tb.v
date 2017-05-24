@@ -1,5 +1,5 @@
 `timescale 1ns / 1ns
-`define HALT 12'b0000_0000_0000
+`define HALT 10'b00_0000_0000
 
 module opc5tb();
   reg [15:0] mem [ 65535:0 ];
@@ -21,7 +21,7 @@ module opc5tb();
       clk = 0;
       reset_b = 0;
       #1005 reset_b = 1;
-      #180000000 $finish;
+      #20000000 $finish;
     end
 
   // Simple negedge synchronous memory to avoid messing with delays initially
@@ -37,7 +37,7 @@ module opc5tb();
 
   // Always stop simulation on encountering the halt pseudo instruction
   always @ (negedge clk)
-    if (dut0_u.IR_q[12:0]== `HALT)
+    if (dut0_u.IR_q[10:0]== `HALT)
       begin
         $display("Simulation terminated with halt instruction at time", $time);
         $writememh("test.vdump",mem);
