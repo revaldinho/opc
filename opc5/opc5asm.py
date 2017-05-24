@@ -16,7 +16,6 @@ def expand_macro(line, macro):  # recursively expand macros, passing on instonce
                 newline = newline.replace(s,r) if s else newline
             text.extend(expand_macro(newline, macro))
     return(text)
-
 (wordmem, macro, macroname, newtext) = ( [0x0000]*64*1024,dict(),None,[])
 for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
     mobj =  re.match("\s*?MACRO\s*(?P<name>\w*)\s*?\((?P<params>.*)\)", line, re.IGNORECASE)
@@ -31,7 +30,6 @@ for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
         newtext.append("# %s" % line)
     else:
         newtext.extend(expand_macro(line, macro))
-
 for iteration in range (0,2): # Two pass assembly
     nextmem = 0
     symtab["pc"]=15  # Add Alias for pc = r15
