@@ -33,8 +33,8 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
        FSM_q <= FETCH0;
      else
        case (FSM_q)
-         FETCH0 : FSM_q <= (data[FSM_MAP0])? FETCH1 : (data[PINVERT] ^ ((data[PRED_C]|C_q)&(data[PRED_Z]|Z_q)))? EA_ED: FETCH0;  // Skip to next instruction if single word and predicates are not satisfied;
-         FETCH1 : FSM_q <= (IR_q[PINVERT] ^ ((IR_q[PRED_C]|C_q)&(IR_q[PRED_Z]|Z_q)))? EA_ED :FETCH0 ; // Skip to next instruction if predicates are not satisfied;
+         FETCH0 : FSM_q <= (data[FSM_MAP0])? FETCH1 : (data[PINVERT] ^ ((data[PRED_C]|C_q)&(data[PRED_Z]|Z_q)))? EA_ED: FETCH0;  
+         FETCH1 : FSM_q <= (IR_q[PINVERT] ^ ((IR_q[PRED_C]|C_q)&(IR_q[PRED_Z]|Z_q)))? EA_ED :FETCH0 ;
          EA_ED  : FSM_q <= (IR_q[FSM_MAP1]) ? RDMEM : (IR_q[10:8]==STO ) ? WRMEM : EXEC;
          RDMEM  : FSM_q <= EXEC;
          default: FSM_q <= FETCH0;
