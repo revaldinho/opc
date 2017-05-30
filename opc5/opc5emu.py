@@ -8,6 +8,7 @@ with open(sys.argv[1],"r") as f:
     wordmem = [ (int(x,16) & 0xFFFF) for x in f.read().split() ]
 
 (regfile, acc, c, z, pcreg) = ([0]*16,0,0,0,15) # initialise machine state inc PC = reg[15]
+stdout=""
 print ("PC   : Mem       : C Z : Instruction            : %s\n%s" % (''.join([" r%2d " % d for d in range(0,16)]), '-'*130))
 while True:
     regfile[0] = 0    # always overwrite regfile location 0 and then dont care about assignments
@@ -44,6 +45,9 @@ while True:
             regfile[dest] = ea_ed
         elif opcode == op["sto"]:
             wordmem[ea_ed] = regfile[dest]
+            if ea_ed == 0xfe09:
+                stdout += chr(regfile[dest])
+                print (stdout)
         if opcode != op["sto"]:
             z = 1 if (regfile[dest]==0) else 0
 

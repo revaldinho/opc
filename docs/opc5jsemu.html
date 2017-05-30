@@ -13,9 +13,9 @@ function load(){
     mem.set(eval("[0x" + document.getElementById("RAM").value.replace(/,/g,",0x")+"]"));
 }
 function boot() {
-    var maxcycles=5999, cycle=0, pcreg=15, regs=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], c=0, z=0, log="";
-    while (cycle < maxcycles){
-        pc=regs[pcreg]; regs[0] = 0; // fixup special registers
+    var max=5999, cycle=0, regs=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], c=0, z=0, log="", stdout="";
+    while (cycle < max){
+        pc=regs[15]; regs[0] = 0; // fixup special registers
         iword = mem[pc];
         [cp,zp,pi]      = [(iword & 0x8000) >> 15, (iword & 0x4000) >> 14,   (iword & 0x2000)>>13];
         [opcode,ilen]   = [(iword & 0xF00) >> 8,   (iword & 0x1000) ? 2 : 1];
@@ -31,7 +31,7 @@ function boot() {
             ":",c,z,":",(istr + pad).slice(0,24),":",regs.map(function(x){return hex(x)}).join(" "),
             "\n"].join(" ");
 
-        regs[pcreg] += ilen; cycle++;
+        regs[15] += ilen; cycle++;
         ea_ed = regs[source] + operand; if (iword & 0x0800) { ea_ed = mem[ea_ed]; }
         if ( pi ^ ((cp || c) && (zp || z)) ){
             if ( opcode==op["halt"] && source==0 && dest==0){ break; }
@@ -50,6 +50,7 @@ function boot() {
                 regs[dest] = ea_ed;
             } else if ( opcode == op["sto"] ){
                 mem[ea_ed] = regs[dest];
+                if (ea_ed == 0xfe09){stdout += String.fromCharCode(regs[dest]); log += stdout+"\n"}
             }
             if ( opcode != op["sto"] ){ z = (regs[dest]==0) ? 1 : 0; }
         }
