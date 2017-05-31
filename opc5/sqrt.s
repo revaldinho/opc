@@ -41,6 +41,11 @@ MACRO   NOT( _a_, _b_ )
         xor.i   _a_, r0, 0xFFFF
 ENDMACRO
 
+MACRO   FNOT( _a_, _b_, _reg_all1s_ )
+        ld.i    _a_, _b_
+        xor.i   _a_, _reg_all1s_
+ENDMACRO
+
 
 
         ld.i    r14,r0,STACK   # Setup global stack pointer
@@ -108,21 +113,27 @@ sqrt:
         ld.i    r6, r0, 0x4000  # r5,r6 are the 'bit' var starting at 0x40000000
         ld.i    r5, r0, 0x0000
 
+        ld.i    r12,r0, 0xFFFF  # Use r12 as all 1s reg for F(ast)NOT macro
+        ld.i    r13,r0, sqrt_next # stash most often used label in r13
         #while (bit > num):
         #    bit >>= 2
+
+        # Use r10,r11 as temp registers to hold inverted version of r1,r2
+        FNOT     (r10,r1,r12)
+        FNOT     (r11,r2,r12)        
 sqrt_bitloop:        
         # Subtract num from bit using r7,r8 temporary registers
-        NOT     (r7,r1)
-        NOT     (r8,r2)
+        ld.i    r7,r10
+        ld.i    r8,r11
         add.i   r7,r5,1
         adc.i   r8,r6
-        nc.ld.i  pc,r0,sqrt_next  # done if carry out is set
-        z.ld.i  pc,r0,sqrt_next   # or if zero is set (and carry clear)
+        nc.ld.i  pc,r13         # r13=sqrt_next - done if carry out is set
+        z.ld.i  pc,r13          # r13=sqrt_next - or if zero is set (and carry clear)
         CLC     ()
-        ror.i   r6,r6            # rotate bit right (carry clear)
+        ror.i   r6,r6           # rotate bit right (carry clear)
         ror.i   r5,r5
         CLC     ()
-        ror.i   r6,r6            # rotate bit right (carry clear)
+        ror.i   r6,r6           # rotate bit right (carry clear)
         ror.i   r5,r5
         ld.i    pc,r0,sqrt_bitloop
 sqrt_next:
@@ -141,8 +152,8 @@ sqrt_next:
         add.i   r7,r3
         adc.i   r8,r4
         # Subtract r7,r8 (res+bit) from r1,r2 (num) without storing back in num...yet ..so use temp var r9,r10
-        NOT     (r9,r7)
-        NOT     (r10,r8)
+        FNOT     (r9,r7,r12)
+        FNOT     (r10,r8,r12)
         add.i   r9,r1,1
         adc.i   r10,r2
         # Greater or equal than means c=1 from subtraction
@@ -170,7 +181,7 @@ sqrt_next3:
         CLC     ()
         ror.i   r6,r6
         ror.i   r5,r5
-        ld.i    pc,r0,sqrt_next
+        ld.i    pc,r13          # r13=sqrt_next
 
 sqrt_next2:
         # root in r3,r4, num/remainder in r1,r2
@@ -188,11 +199,11 @@ STACK:  WORD    0,0,0,0         # Reserve some stack space
         WORD    0,0,0,0
         WORD    0,0,0,0  
 DATA0:
-        WORD 0x0001,0x0000,0x0010,0x0000
-        WORD 0x0011,0x0000,0x0100,0x0000
-        WORD 0x0101,0x0000,0x0110,0x0000
-        WORD 0x1000,0x0000,0x1001,0x0000                        
-        WORD 0x0011,0x0100,0x0019,0xff00                
+        WORD 0x0001,0x0000,0x0002,0x0000
+        WORD 0x0003,0x0000,0x0004,0x0000
+        WORD 0x0009,0x0000,0x000A,0x0000
+        WORD 0x0010,0x0000,0x0011,0x0000                        
+        WORD 0x1111,0x0000,0x0000,0xff00                
         WORD 0x0002,0x0204,0x0501,0x0f00
         WORD 0x0000,0x2309,0x0618,0x2300
         WORD 0x0013,0x6003,0x0408,0x0a00
