@@ -146,18 +146,23 @@ sqrt_next:
         add.i   r9,r1,1
         adc.i   r10,r2
         # Greater or equal than means c=1 from subtraction
-        c.ld.i  r2,r10          # Copy subtraction result into num r1,r2
-        c.ld.i  r1,r9
-        ld.i    r9,r0           # set mask = bit if success else mask = zero
-        ld.i    r10,r0
-        c.or.i  r9,r5
-        c.or.i  r10,r6
+        c.ld.i  pc,r0,sqrt_mmask   # If < just shift root and next iteration
+        CLC     ()                 # Clear carry and shift root right
+        ror.i   r4,r4
+        ror.i   r3,r3
+        ld.i    pc,r0,sqrt_next3
+
+sqrt_mmask:
+        # If >= then copy result into num r1r2, rotate and merge mask into bit
+        ld.i    r2,r10          # Copy subtraction result into num r1,r2
+        ld.i    r1,r9
         CLC     ()              # Clear carry and shift root right
         ror.i   r4,r4
         ror.i   r3,r3
-        or.i    r4,r10          # Now OR in the mask
-        or.i    r3,r9
+        or.i    r4,r6          # Now OR in the mask
+        or.i    r3,r5
 
+sqrt_next3:     
         #    bit >>= 2
         CLC     ()
         ror.i   r6,r6
