@@ -23,7 +23,6 @@ CONT2:  add.i   r9, r0, 1
 CONT3:  add.i   r9, r0, 1
         ld      r8, r9
         nz.ld.i   pc,r0,ADDTEST
-
         halt    r0,r0,0x999
 
 
