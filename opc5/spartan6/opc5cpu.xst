@@ -2,7 +2,7 @@ set -tmpdir "tmp"
 set -xsthdpdir "xst"
 run
 -ifn opc5cpu.prj
--p xc6slx9-csg225-2
+-p xc6slx9-csg225-3
 -ifmt mixed
 -ofn opc5cpu
 -ofmt NGC

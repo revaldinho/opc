@@ -6,7 +6,7 @@
 
 # code project name here temporarily
 project_name="opc5cpu"
-target="xc6slx9-csg225-2"
+target="xc6slx9-csg225-3"
 
 # Clean up so only primary data remains
 rm -rf *~ xst .#* `ls -1 | egrep -v '(prj|xst|README)$'`
