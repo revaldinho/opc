@@ -2,13 +2,13 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
    parameter FETCH0=3'h0, FETCH1=3'h1, EA_ED=3'h2, RDMEM=3'h3, EXEC=3'h4, WRMEM=3'h5;
    parameter PRED_C=15, PRED_Z=14, PINVERT=13, FSM_MAP0=12, FSM_MAP1=11;
    parameter LD=3'b000, ADD=3'b001, AND=3'b010, OR=3'b011, XOR=3'b100, ROR=3'b101, ADC=3'b110, STO=3'b111 ;
-   reg [15:0] OR_q, PC_q, IR_q, result;
+   reg [15:0] OR_q, PC_q, IR_q, result, result_q;
    (* RAM_STYLE="DISTRIBUTED" *)
    reg [15:0] GRF_q[15:0];  
    reg [2:0]  FSM_q;
-   reg        C_q, Z_q, carry;
-   wire       predicate = (IR_q[PINVERT] ^ ((IR_q[PRED_C]|C_q)&(IR_q[PRED_Z]|Z_q)));       // For use once IR_q is loaded (in FETCH1,EA_ED)
-   wire       predicate_data = (data[PINVERT] ^ ((data[PRED_C]|C_q)&(data[PRED_Z]|Z_q))) ; // For use before IR_q is loaded (in FETCH0)
+   reg        C_q, zero, carry;
+   wire       predicate = (IR_q[PINVERT] ^ ((IR_q[PRED_C]|C_q)&(IR_q[PRED_Z]|zero)));       // For use once IR_q is loaded (in FETCH1,EA_ED)
+   wire       predicate_data = (data[PINVERT] ^ ((data[PRED_C]|C_q)&(data[PRED_Z]|zero))) ; // For use before IR_q is loaded (in FETCH0)
    wire [3:0]  grf_radr=((FSM_q==EXEC)||(FSM_q==WRMEM))?IR_q[3:0]:IR_q[7:4];
    wire [15:0] grf_dout= (grf_radr==4'hF) ? PC_q: (GRF_q[grf_radr] & { 16{(grf_radr!=4'h0)}});
    assign      rnw= ! (FSM_q==WRMEM) ;
@@ -17,7 +17,7 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
    
    always @( * )
      begin
-        { carry, result }  = { C_q, 16'bx }  ;
+        { carry, result, zero}  = { C_q, 16'bx, !(|result_q) }  ;
         case (IR_q[10:8])
           LD  : result=OR_q ;
           ADD, ADC : {carry, result}= grf_dout + OR_q + (!IR_q[8] & C_q) ; // IF ADC or ADD, IR_q[8] enough to distinguish between them
@@ -34,7 +34,7 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
      else
        case (FSM_q)
          FETCH0 : FSM_q <= (data[FSM_MAP0])? FETCH1 : (!predicate_data )? FETCH0: EA_ED;
-         FETCH1 : FSM_q <= (!predicate )? FETCH0: EA_ED;
+         FETCH1 : FSM_q <= (!predicate )? FETCH0: ((grf_radr!=0) || (IR_q[FSM_MAP1]) || (IR_q[10:8]==STO)) ? EA_ED : EXEC ; // Allow FETCH1 to skip through to EXEC
          EA_ED  : FSM_q <= (!predicate )? FETCH0: (IR_q[FSM_MAP1]) ? RDMEM : (IR_q[10:8]==STO) ? WRMEM : EXEC;
          RDMEM  : FSM_q <= EXEC;
          EXEC   : FSM_q <= (IR_q[3:0]==4'hF)? FETCH0: (data[FSM_MAP0]) ? FETCH1 : EA_ED;
@@ -61,5 +61,5 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
      if ( FSM_q == FETCH0 )
         IR_q <= data ;
      else if ( FSM_q == EXEC )
-       { C_q, GRF_q[IR_q[3:0]], Z_q, IR_q}  <= { carry, result, !(|result), data};
+       { C_q, GRF_q[IR_q[3:0]], result_q, IR_q}  <= { carry, result, result, data};
 endmodule
