@@ -32,7 +32,7 @@ function boot() {
             "\n"].join(" ");
 
         regs[15] += ilen; cycle++;
-        ea_ed = regs[source] + operand; if (iword & 0x0800) { ea_ed = mem[ea_ed]; }
+        ea_ed = (regs[source] + operand)&0xFFFF; if (iword & 0x0800) { ea_ed = mem[ea_ed]; }
         if ( pi ^ ((cp || c) && (zp || z)) ){
             if ( opcode==op["halt"] && source==0 && dest==0){ break; }
             if ( opcode==op["and.i"] || opcode==op["and"] ){

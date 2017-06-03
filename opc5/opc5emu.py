@@ -25,7 +25,7 @@ while True:
     print ("%04x :%s: %d %d : %-22s : %s" % (regfile[pcreg], mem_str, c, z, instr_str, ' '.join(["%04x" % i for i in regfile])))
 
     regfile[15] += instr_len # EA_ED must be computed after PC is brought up to date
-    ea_ed = wordmem[regfile[source] + operand] if rdmem else regfile[source] + operand
+    ea_ed = wordmem[(regfile[source] + operand)&0xFFFF] if rdmem else (regfile[source] + operand)&0xFFFF
     if (bool(pinvert) ^ bool(((pcarry or c) and (pzero or z)))):
         if opcode == op["halt"] and (source==dest==0):
             print("Stopped on halt instruction at %04x with halt number 0x%04x" % (regfile[15]-(instr_len), operand) )
