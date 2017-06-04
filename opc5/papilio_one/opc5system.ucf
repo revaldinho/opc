@@ -4,8 +4,7 @@ TIMESPEC TS_clk_period_32 = PERIOD "clk_period_grp_32" 31.25ns HIGH;
 
 NET "clk"     LOC = "P89" | IOSTANDARD = LVCMOS33 | PERIOD = 31.25ns;
 NET "txd"     LOC = "P90" | IOSTANDARD = LVCMOS33 ;
-
-#NET "rxd"    LOC = "P88" | IOSTANDARD = LVCMOS33 ;
+NET "rxd"     LOC = "P88" | IOSTANDARD = LVCMOS33 ;
 
 NET "sw<0>"   LOC = "P91" | IOSTANDARD = LVCMOS33 ;
 NET "sw<1>"   LOC = "P92" | IOSTANDARD = LVCMOS33 ;

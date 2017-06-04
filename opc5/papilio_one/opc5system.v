@@ -1,4 +1,4 @@
-module opc5system ( input clk, input[7:0] sw, output[7:0] led, output txd,
+module opc5system ( input clk, input[7:0] sw, output[7:0] led, input rxd, output txd,
                     output [6:0] seg, output [3:0] an, input select);
 
    wire [15:0] data;
@@ -20,7 +20,7 @@ module opc5system ( input clk, input[7:0] sw, output[7:0] led, output txd,
    ram_2k_16 RAM (data, address[10:0], rnw, !clk, ram_cs_b);
 
    // A simple 115200 baud UART
-   uart UART (data, address[0], rnw, clk, reset_b, uart_cs_b, txd);
+   uart UART (data, address[0], rnw, clk, reset_b, uart_cs_b, rxd, txd);
 
    // Use the 4-digit hex display for the address
    sevenseg DISPLAY (address, clk, an, seg);
