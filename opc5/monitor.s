@@ -46,6 +46,15 @@ test:
     JSR     (osnewl)
 
 forever:
+    JSR     (osrdch)
+    JSR     (oswrch)
+    PUSH    (r1)
+    ld.i    r1, r0, 0x20
+    JSR     (oswrch)
+    POP     (r1)
+    JSR     (print_hex4)
+    JSR     (osnewl)
+        
     ld.i    pc, r0, forever
 
 # --------------------------------------------------------------
@@ -70,7 +79,7 @@ osnewl:
 #
 # oswrch
 #
-# Output a single ASCII character
+# Output a single ASCII character to the UART
 #
 # Entry:
 # - r1 is the character to output
@@ -86,6 +95,24 @@ oswrch_loop:
     nz.ld.i pc, r0, oswrch_loop
     POP     (r1)
     sto     r1, r0, 0xfe09
+    RTS     ()
+
+# --------------------------------------------------------------
+#
+# osrdch
+#
+# Read a single ASCII character from the UART
+#
+# Entry:
+#
+# Exit:
+# - r1 is the character read
+
+osrdch:
+    ld      r1, r0, 0xfe08
+    and.i   r1, r0, 0x4000
+    z.ld.i  pc, r0, osrdch
+    ld      r1, r0, 0xfe09
     RTS     ()
 
 # --------------------------------------------------------------
