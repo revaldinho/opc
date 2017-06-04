@@ -1,22 +1,22 @@
 MACRO JSR( _address_)
    ld.i     r13, pc, 0x0005
    sto      r13, r14
-   add.i    r14, r0, -1
+   ld.i     r14, r14, 0xffff
    ld.i     pc,  r0, _address_
 ENDMACRO
 
 MACRO RTS()
-    add.i   r14, r0, 1
+    ld.i    r14, r14, 0x0001
     ld      pc, r14
 ENDMACRO
 
 MACRO   PUSH( _data_)
     sto     _data_, r14
-    add.i   r14, r0, -1
+    ld.i    r14, r14, 0xffff
 ENDMACRO
 
 MACRO   POP( _data_ )
-    add.i   r14, r0, 1
+    ld.i    r14, r14, 0x0001
     ld      _data_, r14
 ENDMACRO
 
@@ -25,14 +25,6 @@ ORG 0x0000
 test:
     ld.i    r14, r0, 0x07ff
  
-    ld.i    r1, r0, 0x41
-    JSR     (oswrch)
-
-    ld.i    r1, r0, 0x42
-    JSR     (oswrch)
-
-    JSR     (osnewl)
-
     JSR     (print_string)
     WORD 0x4f,0x50,0x43,0x35,0x20,0x4d,0x6f,0x6e,0x69,0x74,0x6f,0x72,0x00
     JSR     (osnewl)
