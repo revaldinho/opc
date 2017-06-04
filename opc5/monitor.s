@@ -45,8 +45,8 @@ test:
     JSR     (print_hex4)
     JSR     (osnewl)
 
-halt:
-    ld.i    r0, r0
+forever:
+    ld.i    pc, r0, forever
 
 # --------------------------------------------------------------
 #
@@ -79,6 +79,12 @@ osnewl:
 # - all registers preserved
 
 oswrch:
+    PUSH    (r1)
+oswrch_loop:
+    ld      r1, r0, 0xfe08
+    and.i   r1, r0, 0x8000
+    nz.ld.i pc, r0, oswrch_loop
+    POP     (r1)
     sto     r1, r0, 0xfe09
     RTS     ()
 
