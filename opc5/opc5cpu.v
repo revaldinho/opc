@@ -1,4 +1,3 @@
-
 module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, input reset_b);
    parameter FETCH0=3'h0, FETCH1=3'h1, EA_ED=3'h2, RDMEM=3'h3, EXEC=3'h4, WRMEM=3'h5;
    parameter PRED_C=15, PRED_Z=14, PINVERT=13, FSM_MAP0=12, FSM_MAP1=11;
@@ -9,21 +8,16 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
    reg [15:0] GRF2_q[15:0];
    reg [2:0]  FSM_q;
    reg        C_q, zero, carry;
-
-   wire [15:0] R4 = GRF_q[4];
-   
    wire [3:0]  grf_radr_p2= IR_q[7:4];
    wire [15:0] grf_dout_p2= (grf_radr_p2==4'hF) ? PC_q: {16{(grf_radr_p2!=4'h0)}} & GRF2_q[grf_radr_p2];
    wire [3:0]  grf_radr= IR_q[3:0];
    wire [15:0] grf_dout= (grf_radr==4'hF) ? PC_q: (GRF_q[grf_radr] & { 16{(grf_radr!=4'h0)}});
    wire       predicate = (IR_q[PINVERT]^((IR_q[PRED_C]|C_q)&(IR_q[PRED_Z]|zero)));      // For use once IR_q loaded (FETCH1,EA_ED)
    wire       predicate_data = (data[PINVERT]^((data[PRED_C]|C_q)&(data[PRED_Z]|zero))); // For use before IR_q loaded (FETCH0)
- 
+   wire [15:0] operand = (IR_q[FSM_MAP0]==1 || IR_q[FSM_MAP1]==1) ? OR_q : grf_dout_p2; // For one word instructions operand comes from GRF2
    assign      rnw= ! (FSM_q==WRMEM) ;
    assign      data=(FSM_q==WRMEM)?grf_dout:16'bz ;
    assign      address=( FSM_q==WRMEM || FSM_q == RDMEM)? OR_q : PC_q;
-
-   wire [15:0] operand = (IR_q[FSM_MAP0]==1 || IR_q[FSM_MAP1]==1) ? OR_q : grf_dout_p2; // For one word instructions operand comes from GRF2
 
    always @( * )
      begin
@@ -43,15 +37,9 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
        FSM_q <= FETCH0;
      else
        case (FSM_q)
-         FETCH0 :
-                if (data[FSM_MAP0])
-                    FSM_q <= FETCH1;
-                else if (!predicate_data)
-                    FSM_q <= FETCH0;
-                else if ((data[FSM_MAP1]==1) || (data[10:8]==STO))
-                    FSM_q <= EA_ED;
-                else
-                    FSM_q <= EXEC; // One word instructions direct to EXEC, use GRF2 !
+         FETCH0 : FSM_q <= (data[FSM_MAP0]) ? FETCH1 :
+                           (!predicate_data) ? FETCH0 :
+                           ((data[FSM_MAP1]==1) || (data[10:8]==STO)) ? EA_ED : EXEC; // One word instructions direct to EXEC, use GRF2 !
          FETCH1 : FSM_q <= (!predicate)? FETCH0:
                            (grf_radr==0 && !IR_q[FSM_MAP1] && !(IR_q[10:8]==STO)) ? EXEC : EA_ED;
          EA_ED  : FSM_q <= (!predicate)? FETCH0: (IR_q[FSM_MAP1]) ? RDMEM : (IR_q[10:8]==STO) ? WRMEM : EXEC;
@@ -59,8 +47,8 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
          EXEC   : FSM_q <= (IR_q[3:0]==4'hF)? FETCH0: 
                            (data[FSM_MAP0]) ? FETCH1:
                            ((data[FSM_MAP1]==1) || (data[10:8]==STO)) ? EA_ED :
-                           (data[15:13]==3'b110) ? EXEC :
-                           EA_ED;         
+                           // Always predicated  OR carry is available in this cycle but not zero
+                           ((data[15:13]==3'b110) ||  ((data[PRED_C:PRED_Z]==2'b01) && (carry ^ data[PINVERT]))) ? EXEC : EA_ED;         
          default: FSM_q <= FETCH0;
        endcase
 
