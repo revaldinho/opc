@@ -24,7 +24,7 @@ ORG 0x0000
 
 test:
     ld.i    r14, r0, 0x07ff
- 
+
     JSR     (print_string)
     WORD 0x4f,0x50,0x43,0x35,0x20,0x4d,0x6f,0x6e,0x69,0x74,0x6f,0x72,0x00
     JSR     (osnewl)
@@ -49,7 +49,7 @@ halt:
     ld.i    r0, r0
 
 # --------------------------------------------------------------
-#       
+#
 # osnewl
 #
 # Outputs <cr> then <lf>
@@ -63,11 +63,11 @@ osnewl:
     ld.i    r1, r0, 0x0a
     JSR     (oswrch)
 
-    ld.i    r1, r0, 0x0d    
+    ld.i    r1, r0, 0x0d
     # fall through to oswrch
-           
+
 # --------------------------------------------------------------
-#       
+#
 # oswrch
 #
 # Output a single ASCII character
@@ -83,13 +83,13 @@ oswrch:
     RTS     ()
 
 # --------------------------------------------------------------
-#       
+#
 # print_string
 #
 # Prints the zero terminated ASCII string following the JSR (print_string)
 #
 # Entry:
-# 
+#
 # Exit:
 # - r1 will be zero, r2 will be trashed
 # - all other registers preserved
@@ -107,10 +107,10 @@ ps_loop:
 
 ps_exit:
     ld.i    pc, r2, 0x0001
-    
+
 
 # --------------------------------------------------------------
-#       
+#
 # print_hex4
 #
 # Prints a 4-digit hex value
@@ -127,46 +127,32 @@ print_hex4:
     PUSH    (r2)
     PUSH    (r3)
 
-    # the first loop calculates and stacks the 4 hex digits
+    ld.i    r2, r1          # r2 is now the value to be printed
 
-    ld.i    r3, r0, 0x04
+    ld.i    r3, r0, 0x04    # r3 is a loop counter for 4 digits
 
-ph_loop1:
+ph_loop:
+    add.i   r2, r2          # shift the upper nibble of r2
+    adc.i   r1, r1          # into the lower nibble of r1
+    add.i   r2, r2          # one bit at a time
+    adc.i   r1, r1
+    add.i   r2, r2          # add.i rd, rd is the same as ASL
+    adc.i   r1, r1          # adc.i rd, rd is the same as ROL
+    add.i   r2, r2
+    adc.i   r1, r1
 
-    ld.i    r2, r1
+    and.i   r1, r0, 0x0F    # mask off everything but the bottom nibble
+    add.i   r1, r0, -0x0A   # set the carry if r1 >= 0x0A
+    c.add.i  r1, r0, 0x07   # 'A' - '9' + 1
+    add.i r1, r0, 0x3A      # '0' (plus the 0x0A from the earlier add)
 
-    and.i   r2, r0, 0x0F    # mask off everything but the bottom nibble
-    add.i   r2, r0, -0x0A   # there must be a better way to do a compare!
-    c.add.i  r2, r0, 0x07   # 'A' - '9' + 1
-    add.i r2, r0, 0x3A      # '0' (plus the 0x0A from the compare)
+    JSR     (oswrch)        # output R1
 
-    PUSH    (r2)
-
-    ror.i     r1, r1
-    ror.i     r1, r1
-    ror.i     r1, r1
-    ror.i     r1, r1
-
-    add.i   r3, r0, -1
-    nz.ld.i pc, r0, ph_loop1
-
-    # the second loop calculates and unstacks and prints the 4 hex digits
-
-    ld.i    r3, r0, 0x04
-
-ph_loop2:
-
-    POP     (r1)
-    JSR     (oswrch)
-
-    add.i   r3, r0, -1
-    nz.ld.i pc, r0, ph_loop2
+    add.i   r3, r0, -1      # decrement the loop counter
+    nz.ld.i pc, r0, ph_loop # loop back for four digits
 
     POP     (r3)            # restore working registers
     POP     (r2)
     POP     (r1)
 
     RTS     ()
-
-
-    
