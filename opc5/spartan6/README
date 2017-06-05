@@ -82,3 +82,6 @@ bitgen \
 
 # dump a verilog netlist - something like this,..
 netgen -w -ofmt verilog  -aka ${project_name}_map.ncd
+
+
+#smartxplorer opc5cpu.ngd -p xc6slx9-csg225-3 -uc ../opc5cpu.ucf  -wd smart_explorer
