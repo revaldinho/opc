@@ -23,7 +23,7 @@ module opc5system ( input clk, input[7:0] sw, output[7:0] led, input rxd, output
    uart UART (data, address[0], rnw, clk, reset_b, uart_cs_b, rxd, txd);
 
    // Use the 4-digit hex display for the address
-   sevenseg DISPLAY (address, clk, an, seg);
+   sevenseg DISPLAY (sw[0] ? data : address, clk, an, seg);
 
    // LEDs could be used for debugging in the future
    assign led = sw;
