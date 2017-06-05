@@ -5,14 +5,13 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
    reg [15:0] OR_q, IR_q, PC_q, result;
    (* RAM_STYLE="DISTRIBUTED" *)
    reg [15:0] GRF_q[14:0];
-   reg [15:0] GRF2_q[14:0];
    reg [2:0]  FSM_q;
    reg        C_q, Z_q, carry;
-   wire [15:0] grf_dout_p2= (IR_q[7:4]==4'hF) ? PC_q: {16{(IR_q[7:4]!=4'h0)}} & GRF2_q[IR_q[7:4]];
+   wire [15:0] grf_dout_p2= (IR_q[7:4]==4'hF) ? PC_q: {16{(IR_q[7:4]!=4'h0)}} & GRF_q[IR_q[7:4]];
    wire [15:0] grf_dout= (IR_q[3:0]==4'hF) ? PC_q: (GRF_q[IR_q[3:0]] & { 16{(IR_q[3:0]!=4'h0)}});
    wire       predicate = (IR_q[PINVERT]^((IR_q[PRED_C]|C_q)&(IR_q[PRED_Z]|Z_q)));      // For use once IR_q loaded (FETCH1,EA_ED)
    wire       predicate_data = (data[PINVERT]^((data[PRED_C]|C_q)&(data[PRED_Z]|Z_q))); // For use before IR_q loaded (FETCH0)
-   wire [15:0] operand = (IR_q[FSM_MAP0]==1 || IR_q[FSM_MAP1]==1) ? OR_q : grf_dout_p2; // For one word instructions operand comes from GRF2
+   wire [15:0] operand = (IR_q[FSM_MAP0]==1 || IR_q[FSM_MAP1]==1) ? OR_q : grf_dout_p2; // For one word instructions operand comes from GRF
    wire        zero = !(|result);
        
    assign      rnw= ! (FSM_q==WRMEM) ;
@@ -35,7 +34,7 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
        FSM_q <= FETCH0;
      else
        case (FSM_q)
-         FETCH0 : FSM_q <= (data[FSM_MAP0]) ? FETCH1 : (!predicate_data) ? FETCH0 : ((data[FSM_MAP1]==1) || (data[10:8]==STO)) ? EA_ED : EXEC; // One word instructions direct to EXEC, use GRF2 !
+         FETCH0 : FSM_q <= (data[FSM_MAP0]) ? FETCH1 : (!predicate_data) ? FETCH0 : ((data[FSM_MAP1]==1) || (data[10:8]==STO)) ? EA_ED : EXEC; // One word instructions direct to EXEC, use GRF !
          FETCH1 : FSM_q <= (!predicate)? FETCH0: (IR_q[3:0]==0 && !IR_q[FSM_MAP1] && !(IR_q[10:8]==STO)) ? EXEC : EA_ED;
          EA_ED  : FSM_q <= (!predicate)? FETCH0: (IR_q[FSM_MAP1]) ? RDMEM : (IR_q[10:8]==STO) ? WRMEM : EXEC;
          RDMEM  : FSM_q <= EXEC;
@@ -61,5 +60,5 @@ module opc5cpu( inout[15:0] data, output[15:0] address, output rnw, input clk, i
      if ( FSM_q == FETCH0 )        
        IR_q <= data;
      else if ( FSM_q == EXEC)
-       { C_q, Z_q, GRF_q[IR_q[3:0]], GRF2_q[IR_q[3:0]], IR_q}  <= {carry, zero, result, result, data };
+       { C_q, Z_q, GRF_q[IR_q[3:0]], IR_q}  <= {carry, zero, result, data };
 endmodule
