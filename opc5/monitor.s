@@ -1,3 +1,10 @@
+# A loose port of C'mon, the Compact monitor, by Bruce Clark, from
+# the 65org16 to the opc5.
+#
+# see: http://biged.github.io/6502-website-archives/lowkey.comuf.com/cmon.htm
+#
+# (c) 2017 David Banks
+
 MACRO JSR( _address_)
    ld.i     r13, pc, 0x0005
    sto      r13, r14
@@ -26,36 +33,164 @@ test:
     ld.i    r14, r0, 0x07ff
 
     JSR     (print_string)
-    WORD 0x4f,0x50,0x43,0x35,0x20,0x4d,0x6f,0x6e,0x69,0x74,0x6f,0x72,0x00
-    JSR     (osnewl)
+    WORD    0x0a,0x0d,0x4f,0x50,0x43,0x35,0x20,0x4d
+    WORD    0x6f,0x6e,0x69,0x74,0x6f,0x72,0x0a,0x0d
+    WORD    0x00
 
-    ld.i    r1, r0, 0x1234
-    JSR     (print_hex4)
+m1:
     JSR     (osnewl)
+    ld.i    r1, r0, 0x2D
+    JSR     (oswrch)
 
-    ld.i    r1, r0, 0x5678
-    JSR     (print_hex4)
-    JSR     (osnewl)
+m2:
+    ld.i    r5, r0          # r5 == NUMBER
+    ld.i    r1, r0
 
-    ld.i    r1, r0, 0x9abc
-    JSR     (print_hex4)
-    JSR     (osnewl)
+m3:
+    and.i   r1, r0, 0x0F
 
-    ld.i    r1, r0, 0xdef0
-    JSR     (print_hex4)
-    JSR     (osnewl)
+m4:
+    add.i   r5, r5          # accumulate digit
+    add.i   r5, r5
+    add.i   r5, r5
+    add.i   r5, r5
+    or.i    r5, r1
 
-forever:
+m6:
     JSR     (osrdch)
+
+    ld.i    r2, r1
+    add.i   r2, r0, -0x0D
+    z.ld.i  pc, r0, m1
+
+#
+# Insert additional commands for characters (e.g. control characters)
+# outside the range $20 (space) to $7E (tilde) here
+#
+
+    ld.i    r2, r1          # don't output if < 0x20
+    add.i   r2, r0, -0x20
+    nc.ld.i pc, r0, m6
+
+    ld.i    r2, r1          # don't output if >= 07F
+    add.i   r2, r0, -0x7F
+    c.ld.i  pc, r0, m6
+
     JSR     (oswrch)
-    PUSH    (r1)
-    ld.i    r1, r0, 0x20
-    JSR     (oswrch)
-    POP     (r1)
-    JSR     (print_hex4)
+
+    ld.i    r2, r1
+    add.i   r2, r0, -0x2c
+    z.ld.i  pc, r0, comma
+
+    ld.i    r2, r1
+    add.i   r2, r0, -0x40
+    z.ld.i  pc, r0, at
+
+#
+# Insert additional commands for non-letter characters (or case-sensitive
+# letters) here
+#
+    xor.i   r1, r0, 0x30
+
+
+    ld.i    r2, r1
+    add.i   r2, r0, -0x0A
+    nc.ld.i pc, r0, m4
+    or.i    r1, r0, 0x20
+    add.i   r1, r0, -0x77
+#
+# mapping:
+#   A-F -> $FFFA-$FFFF
+#   G-O -> $0000-$0008
+#   P-Z -> $FFE9-$FFF3
+#
+
+    z.ld.i  pc, r0, go
+
+    ld.i    r2, r1
+    add.i   r2, r0, -0xfffa
+    c.ld.i  pc, r0, m3
+
+#
+# Insert additional commands for (case-insensitive) letters here
+#
+
+    ld.i    r2, r1
+    add.i   r2, r0, -0xfff1
+    nz.ld.i pc, r0, m6
+
+
+dump:
+    ld.i    r3, r0
+
+d0:
     JSR     (osnewl)
-        
-    ld.i    pc, r0, forever
+
+    ld.i    r1, r5
+    add.i   r1, r3
+    JSR     (print_hex4_sp)
+
+d1:
+    ld.i    r1, r5
+    add.i   r1, r3
+    ld      r1, r1
+    JSR     (print_hex4_sp)
+
+    add.i   r3, r0, 1
+
+    ld.i    r2, r3
+    and.i   r2, r0, 0x07
+    nz.ld.i pc, r0, d1
+
+    add.i   r3, r0, -0x08
+
+d2:
+    ld.i    r1, r5
+    add.i   r1, r3
+    ld      r1, r1
+    and.i   r1, r0, 0x7F
+
+    ld.i    r2, r1
+    add.i   r2, r0, -0x20
+    nc.ld.i pc, r0, d3
+    ld.i    r2, r1
+    add.i   r2, r0, -0x7F
+    nc.ld.i pc, r0, d4
+
+d3:
+    ld.i     r1, r0, 0x2E
+
+d4:
+    JSR     (oswrch)
+    add.i   r3, r0, 1
+    ld.i    r2, r3
+    and.i   r2, r0, 0x07
+    nz.ld.i pc, r0, d2
+
+    ld.i    r2, r3
+    add.i   r2, r0, -0x80
+    nc.ld.i pc, r0, d0
+
+    add.i   r5, r3
+
+    ld.i    pc, r0, m6
+
+comma:
+    sto     r5, r6
+    add.i   r6, r0, 1
+    ld.i    pc, r0, m2
+
+at:
+    ld.i    r6, r5
+    ld.i    pc, r0, m2
+
+go:
+    JSR     (g1)
+    ld.i    pc, r0, m2
+
+g1:
+    ld.i    pc, r5
+
 
 # --------------------------------------------------------------
 #
@@ -189,3 +324,24 @@ ph_loop:
     POP     (r1)
 
     RTS     ()
+
+# --------------------------------------------------------------
+#
+# print_hex4_sp
+#
+# Prints a 4-digit hex value followed by a space
+#
+# Entry:
+# - r1 is the value to be printed
+#
+# Exit:
+# - all registers preserved
+
+print_hex4_sp:
+     JSR    (print_hex4)
+     PUSH   (r1)
+     ld.i   r1, r0, 0x20
+     JSR    (oswrch)
+     POP    (r1)
+     RTS    ()
+
