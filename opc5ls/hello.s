@@ -13,9 +13,9 @@
     mov       r6, r0, -1
 
 LOOP:
-    sto        r1, r4
-    add      r1, r3
-    add      r2, r6
+    sto       r1, r4
+    add       r1, r3
+    add       r2, r6
     nz.mov    pc, r5
 
 DONE:

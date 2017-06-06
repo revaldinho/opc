@@ -60,7 +60,7 @@ module opc5lscpu( input[15:0] datain, output[15:0] dataout, output[15:0] address
      if ( FSM_q == FETCH0 )
         IR_q <= {(datain[11:8]==STO),(datain[11:8]==LD), datain};
      else if ( FSM_q == EXEC && IR_q[11:8]!=CMP && IR_q[11:8]!=CMPC)
-        { C_q, result_q, IR_q} <= { carry, result, {(datain[11:8]==STO),(datain[11:8]==LD), datain}};
-     else if ( FSM_q == EXEC )
         { C_q, GRF_q[grf_adr_q], result_q, IR_q} <= { carry, result, result, {(datain[11:8]==STO),(datain[11:8]==LD), datain}};
+     else if ( FSM_q == EXEC )
+        { C_q, result_q, IR_q} <= { carry, result, {(datain[11:8]==STO),(datain[11:8]==LD), datain}};
 endmodule
