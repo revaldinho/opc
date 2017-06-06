@@ -34,8 +34,9 @@ for iteration in range (0,2): # Two pass assembly
     symtab["pc"]=15  # Add Alias for pc = r15
     for line in newtext:
         (words, memptr) = ([], nextmem)
-        mobj = re.match('^(?:(?P<label>\w+):)?\s*(?:(?P<pred>((ncz)|(nz)|(nc)|(cz)|(c)|(z)|(1)|(0)?)?)\.?)(?P<instr>\w+)?\s*(?P<operands>.*)',re.sub("#.*","",line))
+        mobj = re.match('^(?:(?P<label>\w+):)?\s*((?:(?P<pred>((ncz)|(nz)|(nc)|(cz)|(c)|(z)|(1)|(0)?)?)\.))?(?P<instr>\w+)?\s*(?P<operands>.*)',re.sub("#.*","",line))
         (label, pred, instr,operands) = [ mobj.groupdict()[item] for item in ("label","pred", "instr","operands")]
+        pred = "1" if pred==None else pred
         opfields = [ x.strip() for x in operands.split(",")]
         if label and label != "None":
             exec ("%s= %d" % (label,nextmem), globals(), symtab )
