@@ -10,10 +10,11 @@ module opc5tb();
   wire rnw ;
   wire ceb = 1'b0;
   wire oeb = !rnw;
-  wire [15:0]  data = ( !ceb & rnw & !oeb ) ? mem[ addr ] : 16'bz ;
+  wire [15:0]  data0 = mem[ addr ];
+  wire [15:0]  data1 ;
 
   // OPC CPU instantiation
-  opc5cpu  dut0_u (.address(addr), .data(data), .rnw(rnw), .clk(clk), .reset_b(reset_b));
+  opc5cpu  dut0_u (.address(addr), .datain(data0), .dataout(data1), .rnw(rnw), .clk(clk), .reset_b(reset_b));
 
   initial
     begin
@@ -28,7 +29,7 @@ module opc5tb();
   // Simple negedge synchronous memory to avoid messing with delays initially
   always @ (negedge clk)
     if (!rnw && !ceb && oeb && reset_b)
-      mem[addr] <= data;
+      mem[addr] <= data1;
 
   always
     begin
