@@ -44,8 +44,8 @@ while True:
         elif opcode in (op["mov"], op["ld"], op["not"]):
             regfile[dest] = (~ea_ed if opcode==op["not"] else ea_ed) & 0xFFFF
         elif opcode in (op["sub"], op["sbc"], op["cmp"], op["cmpc"]) :
-            res = (regfile[dest] + ~ea_ed + (~c if (opcode in (op["cmpc"],op["sbc"])) else 1)) & 0x1FFFF
-            dest = dest if opcode in( op["cmp"], op["cmpc"]) else 0 # retarget r0 with result of comparison
+            res = (regfile[dest] + ~ea_ed + ((~c)&1 if (opcode in (op["cmpc"],op["sbc"])) else 1)) & 0x1FFFF
+            dest = 0 if opcode in( op["cmp"], op["cmpc"]) else dest # retarget r0 with result of comparison
             (c, regfile[dest])  = ( (res>>16) & 1, res & 0xFFFF)
         elif opcode == op["bswp"]:
             res = (((ea_ed&0xFF00)>>8)|((ea_ed&0x00FF)<<8)) & 0xFFFF
