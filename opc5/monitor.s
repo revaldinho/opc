@@ -122,13 +122,20 @@ m6:
 #
 
     ld.i    r2, r1
-    add.i   r2, r0, -0xfff3
+    add.i   r2, r0, -0xfff3   # z
     z.ld.i  pc, r0, dis
 
     ld.i    r2, r1
-    add.i   r2, r0, -0xfff1
-    nz.ld.i pc, r0, m6
+    add.i   r2, r0, -0xffeb   # r
+    z.ld.i  pc, r0, regs
 
+    ld.i    r2, r1
+    add.i   r2, r0, -0xffec   # s
+    z.ld.i  pc, r0, step
+
+    ld.i    r2, r1
+    add.i   r2, r0, -0xfff1   # x
+    nz.ld.i pc, r0, m6
 
 dump:
     ld.i    r3, r0
@@ -217,6 +224,152 @@ dis_loop:
     nz.ld.i pc, r0, dis_loop
 
     ld.i    pc, r0, m6
+
+
+# Single Step Command
+#
+# Global registers:
+# r4 is the emulated program counter (set by @)
+#
+# Local registers:
+# r5 is the source register number
+# r6 is the destination register number
+# r7 is the patched source register
+# r8 is the patched destination register
+# r9 is the emulated flags
+
+
+step:
+
+    JSR     (osnewl)
+    ld.i    r1, r4                 # display the next instruction
+    JSR     (disassemble)
+    JSR     (osnewl)
+
+    ld      r1, r4                 # fetch the instruction
+    add.i   r4, r0, 1              # increment the PC
+
+    ld.i    r5, r1                 # extract the src register num (r5)
+    ror.i   r5, r5
+    ror.i   r5, r5
+    ror.i   r5, r5
+    ror.i   r5, r5
+    and.i   r5, r0, 0x000F
+
+    ld.i    r6, r1                 # extract the dst register num (r6)
+    and.i   r6, r0, 0x000F
+
+    and.i   r1, r0, 0xff00         # patch the instruction so:
+    or.i    r1, r0, 0x0078         # src = r7, dst = r8
+
+    sto     r1, r0, instruction    # write the patched instruction
+
+    and.i   r1, r0, 0x1000         # test for an operand
+    z.ld.i  pc, r0, no_operand
+
+    ld      r1, r4                 # fetch the operand
+    add.i   r4, r0, 1              # increment the PC
+    ld.i    pc, r0, store_operand
+
+no_operand:
+    ld.i    r1, r0, 0xE200         # operand slot is filled with a nop
+                                   #   0.and.i r0, r0
+store_operand:
+    sto     r1, r0, operand        # store the operand
+
+    sto     r4, r0, reg_state_pc   # save the updated program counter which
+                                   # will now point to the next instruction
+
+    ld      r7, r5, reg_state      # load the src register value
+    ld      r8, r6, reg_state      # load the dst register value
+    ld      r9, r0, reg_state_zc   # load the z (bit 1) and c (bit 0) flags
+
+    ror.i   r9, r9                 # carry flag now updated
+
+    and.i   r9, r0, 1              # zero flag now updated
+                                   # (r9 holds the inverse of the Z flag)
+instruction:
+    WORD    0x0000                 # emulated instruction patched here
+
+operand:
+    WORD    0x0000                 # emulated opcode patched here
+
+save_z_flag:
+    z.ld.i  pc, r0, z_flag_set     # save the sero flag
+
+z_flag_clear:
+    or.i    r9, r0, 0x0002         # r9 bit 1 = 1 means Z clear
+    ld.i    pc, r0, save_c_flag
+
+z_flag_set:
+    and.i   r9, r0, 0xfffd         # r9 bit 1 = 0 means Z set
+
+save_c_flag:
+    nc.and.i r9, r0, 0xfffe        # r9 bit 0 = 0 means C clear
+    c.or.i   r9, r0, 0x0001        # r9 bit 0 = 1 means C set
+
+    sto     r8, r6, reg_state      # save the new dst register value
+    sto     r9, r0, reg_state_zc   # save the new flags
+
+    JSR     (print_regs)           # display the saved registers
+    ld      r4, r0, reg_state_pc   # load the PC (r5)
+
+    ld.i    pc, r0, m1             # back to the - prompt
+
+regs:
+    JSR     (osnewl)
+    JSR     (print_regs)
+    ld.i    pc, r0, m1             # back to the - prompt
+
+
+# --------------------------------------------------------------
+#
+# Display the registers from single step
+#
+# Entry:
+#
+# Exit:
+# - r1, r2, r3 are trashed
+
+print_regs:
+    ld.i     r2, r0
+    ld.i     r3, r0, 16
+
+dr_loop:
+    ld.i     r1, r2
+    JSR      (print_reg)           # "r9"
+    ld.i     r1, r0, 0x3d          # "="
+    JSR      (oswrch)
+    ld       r1, r2, reg_state
+    JSR      (print_hex4_sp)       # "1234"
+    add.i    r2, r0, 1
+    ld.i     r1, r2
+    and.i    r1, r0, 0x0003
+    nz.ld.i  pc, r0, no_newline
+    JSR      (osnewl)
+no_newline:
+    add.i    r3, r0, -1
+    nz.ld.i  pc, r0, dr_loop
+
+    ld.i     r1, r0, 0x63          # c
+    ld       r2, r0, reg_state_zc
+    and.i    r2, r0, 1
+    JSR      (print_flag)
+
+    ld.i     r1, r0, 0x7a          # z
+    ld       r2, r0, reg_state_zc
+    ror.i    r2, r2
+    xor.i    r2, r0, 1
+
+print_flag:
+    JSR      (oswrch)              # "c" or "z"
+    ld.i     r1, r0, 0x3d          # "="
+    JSR      (oswrch)
+    ld.i     r1, r2
+    and.i    r1, r0, 1
+    add.i    r1, r0, 0x30
+    JSR      (oswrch)              # "0" or "1"
+    ld.i     pc, r0, print_sp      # " "
 
 # --------------------------------------------------------------
 #
@@ -568,3 +721,77 @@ opcodes:
     WORD 0x72,0x6f,0x72,0x20,0x20,0x00    # 1101 "ror  "
     WORD 0x61,0x64,0x63,0x20,0x20,0x00    # 1110 "adc  "
     WORD 0x3f,0x3f,0x3f,0x20,0x20,0x00    # 1111 "???  "
+
+reg_state:
+    WORD 0x0000
+    WORD 0x1111
+    WORD 0x2222
+    WORD 0x3333
+    WORD 0x4444
+    WORD 0x5555
+    WORD 0x6666
+    WORD 0x7777
+    WORD 0x8888
+    WORD 0x9999
+    WORD 0xaaaa
+    WORD 0xbbbb
+    WORD 0xcccc
+    WORD 0xdddd
+    WORD 0xeeee
+
+reg_state_pc:
+    WORD 0xffff
+
+reg_state_zc:
+    WORD 0x0002
+
+# ----------------------------------------------------
+# Some test code (fib)
+
+ORG 0x600
+        ld.i  r10,r0,RSLTS      # initialise the results pointer
+        ld.i  r13,r0,RETSTK     # initialise the return address stack
+        ld.i  r5,r0             # Seed fibonacci numbers in r5,r6
+        ld.i  r6,r0,1
+        ld.i  r1,r0,1           # Use R1 as a constant 1 register
+        ld.i  r11,r0,-1         # use R11 as a constant -1 register
+
+        sto   r5,r10            # save r5 and r6 as first resultson results stack
+        add.i r10,r1
+        sto   r6,r10
+        add.i r10,r1
+
+        ld.i  r4,r0,-23         # set up a counter in R4
+        ld.i  r14,r0,CONT       # return address in r14
+        ld.i  r8,r0,FIB         # Store labels in registers to minimize loop instructions
+LOOP:   ld.i  pc,r8             # JSR FIB
+CONT:   add.i r4,r1             # inc loop counter
+        nz.ld.i pc,r8           # another iteration if not zero
+
+END:    ld.i pc, r0, END
+
+
+FIB:    sto    r14,r13        # Push return address on stack
+        add.i  r13,r1         # incrementing stack pointer
+
+        ld.i   r2,r5          # Fibonacci computation
+        add.i  r2,r6
+        sto    r2,r10         # Push result in results stack
+        add.i  r10,r1         # incrementing stack pointer
+
+        ld.i   r5,r6          # Prepare r5,r6 for next iteration
+        ld.i   r6,r2
+
+        add.i   r13,r11        # Pop return address of stack
+        ld      pc,r13        # and return
+
+        ORG 0x700
+
+# 8 deep return address stack and stack pointer
+RETSTK: WORD 0,0,0,0,0,0,0,0
+
+# stack for results with stack pointer
+RSLTS:  WORD 0
+
+
+
