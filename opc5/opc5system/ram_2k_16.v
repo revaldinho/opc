@@ -1,4 +1,4 @@
-module ram_2k_16 ( inout[15:0] data, input[10:0] address, input rnw, input clk, input cs_b);
+module ram ( inout[15:0] data, input[10:0] address, input rnw, input clk, input cs_b);
 
 //   parameter MEM_INIT_FILE = "opc5monitor.init";
 //

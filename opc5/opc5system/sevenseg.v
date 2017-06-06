@@ -1,5 +1,8 @@
 module sevenseg(input [15:0] value, input clk, output reg [3:0] an, output [6:0] seg);
 
+   // Duty Cycle controls the brightness of the seven segment display (0..15)
+   parameter SEVEN_SEG_DUTY_CYCLE = 0;
+   
    reg [15:0]   counter;
    reg [3:0]    binary;
    reg [6:0]    sseg;
@@ -7,7 +10,7 @@ module sevenseg(input [15:0] value, input clk, output reg [3:0] an, output [6:0]
    always @(posedge clk) begin
       counter <= counter + 1;
       // important to enable anode with a low duty cycle, as no resistors!
-      if (counter[13:10] == 4'b0) begin
+      if (counter[13:10] <= SEVEN_SEG_DUTY_CYCLE) begin
          case (counter[15:14])
            2'b00:
              { an[0], binary} <= {1'b0, value[15:12]};

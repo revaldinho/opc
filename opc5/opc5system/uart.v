@@ -1,11 +1,17 @@
 module uart ( inout[15:0] data, input a0, input rnw, input clk, input reset_b, input cs_b, input rxd, output txd);
 
+   // CLKSPEED is the main clock speed
+   parameter CLKSPEED = 32000000;
+   
+   // BAUD is the desired serial baud rate
+   parameter BAUD = 115200;
+   
    // DIVISOR is the number of clk cycles per bit time
-   parameter DIVISOR = 32000000 / 115200;
+   parameter DIVISOR = CLKSPEED / BAUD;
 
    // Registers
-   reg [8:0]  rx_bit_cnt;
-   reg [8:0]  tx_bit_cnt;
+   reg [15:0] rx_bit_cnt;
+   reg [15:0] tx_bit_cnt;
    reg [10:0] tx_shift_reg;
    reg [9:0]  rx_shift_reg;
    reg        rxd1;
