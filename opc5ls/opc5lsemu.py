@@ -48,7 +48,7 @@ while True:
             dest = 0 if opcode in( op["cmp"], op["cmpc"]) else dest # retarget r0 with result of comparison
             (c, regfile[dest])  = ( (res>>16) & 1, res & 0xFFFF)
         elif opcode == op["bswp"]:
-            res = (((ea_ed&0xFF00)>>8)|((ea_ed&0x00FF)<<8)) & 0xFFFF
+            regfile[dest] = (((ea_ed&0xFF00)>>8)|((ea_ed&0x00FF)<<8)) & 0xFFFF
         elif opcode == op["sto"]:
             wordmem[ea_ed] = regfile[dest]
             if ea_ed == 0xfe09:

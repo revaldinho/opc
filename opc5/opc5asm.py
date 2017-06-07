@@ -2,7 +2,7 @@ import sys, re
 op = {"ld.i":0, "add.i":0x1, "and.i":0x2, "or.i":0x3, "xor.i":0x4, "ror.i":0x5, "adc.i":0x6, "ld":0x8, "sto":0x7,
     "add":0x9, "and":0xA, "or":0xB, "xor": 0xC, "ror":0xD, "adc":0xE, "halt" :0x0 }
 symtab = dict( [ ("r%d"%d,d) for d in range(0,16)])
-predicates = {"c":0x4000, "z":0x8000, "cz":0x0000,  "nc":0x6000,  "nz":0xA000, "":0xC000, "0":0xE000, "1":0xC000, "ncz":0x1000, "nzc":0x1000}
+predicates = {"c":0x4000, "z":0x8000, "cz":0x0000,  "nc":0x6000,  "nz":0xA000, "":0xC000, "0":0xE000, "1":0xC000, "ncz":0x2000, "nzc":0x2000}
 def expand_macro(line, macro):  # recursively expand macros, passing on instonces not (yet) defined
     (text,mobj)=([line],re.match("^(?P<label>\w*\:)?\s*(?P<name>\w+)\s*?\((?P<params>.*)\)",line))
     if mobj and mobj.groupdict()["name"] in macro:
