@@ -1,4 +1,4 @@
-module ram ( inout[15:0] data, input[10:0] address, input rnw, input clk, input cs_b);
+module ram ( input [15:0] din, output [15:0] dout, input[10:0] address, input rnw, input clk, input cs_b);
 
 //   parameter MEM_INIT_FILE = "opc5monitor.init";
 //
@@ -20,7 +20,6 @@ module ram ( inout[15:0] data, input[10:0] address, input rnw, input clk, input 
 
    wire en = !cs_b;
    wire we = !rnw;
-   wire [15:0] dout;
    
    RAMB16_S9 ram0
      (
@@ -29,7 +28,7 @@ module ram ( inout[15:0] data, input[10:0] address, input rnw, input clk, input 
       .SSR(),        
       .CLK(clk),        
       .ADDR(address),        
-      .DI(data[7:0]),        
+      .DI(din[7:0]),        
       .DIP(1'b0),        
       .DO(dout[7:0]),        
       .DOP()
@@ -42,12 +41,10 @@ module ram ( inout[15:0] data, input[10:0] address, input rnw, input clk, input 
       .SSR(),        
       .CLK(clk),        
       .ADDR(address),        
-      .DI(data[15:8]),        
+      .DI(din[15:8]),        
       .DIP(1'b0),        
       .DO(dout[15:8]),        
       .DOP()
       );
            
-   assign data = (!cs_b && rnw) ? dout : 16'bz;
-
 endmodule
