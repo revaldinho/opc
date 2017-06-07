@@ -83,10 +83,8 @@ udiv32:
         PUSH    (r13, r14)      # save return address
         PUSH4   (r12,r11,r10,r3, r14)
 
-        ld      r6, r2          # Get inverted divisor into r6,r7
-        xor   r6, r0, 0xFFFF
+        ld      r6, r2          # Get divisor into r6,r7
         ld      r7, r2,1
-        xor   r7, r0, 0xFFFF
 
         mov    r5, r0          # Get divident/quotient into r2,3,4,5
         mov    r4, r0
@@ -105,17 +103,16 @@ udiv32_loop:
         ROL(r5)
 
         # Speculative subtraction of divisor
-        mov    r8,r6           # r6 already inverted
-        add   r8,r4,1
-        mov    r9,r7           # r7 already inverted
-        adc   r9,r5
-
+        mov    r8,r4
+        mov    r9,r5
+        sub    r8,r6           
+        sbc    r9,r7
         # If carry set then need to copy the result and update the quotient
         c.mov  r4,r8
         c.mov  r5,r9
         c.or  r2,r1           # set LSB of quotient
 
-        add   r10, r1         # increment loop counter
+        add   r10, r1          # increment loop counter
         nz.mov pc, r11         # loop again if not finished
         # remainder/quotient in r2,3,4,5
         POP     (r1, r14)       # Get results pointer from stack
