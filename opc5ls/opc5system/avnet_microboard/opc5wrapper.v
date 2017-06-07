@@ -61,7 +61,7 @@ module opc5wrapper
       .txd(USB_RS232_TXD),
       .seg(),
       .an(),
-      .select(USER_RESET)
+      .select(!USER_RESET)
     );
 
    // Sensible defaults for AVNet On-board peripherals
