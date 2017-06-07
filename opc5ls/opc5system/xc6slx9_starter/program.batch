@@ -1,0 +1,43 @@
+setMode -pff
+addConfigDevice  -name "opc5system.mcs" -path "."
+setSubmode -pffspi
+setAttribute -configdevice -attr multibootBpiType -value ""
+addDesign -version 0 -name "0"
+setMode -pff
+addDeviceChain -index 0
+setMode -pff
+addDeviceChain -index 0
+setAttribute -configdevice -attr compressed -value "FALSE"
+setAttribute -configdevice -attr compressed -value "FALSE"
+setAttribute -configdevice -attr autoSize -value "TRUE"
+setAttribute -configdevice -attr fileFormat -value "mcs"
+setAttribute -configdevice -attr fillValue -value "FF"
+setAttribute -configdevice -attr swapBit -value "FALSE"
+setAttribute -configdevice -attr dir -value "UP"
+setAttribute -configdevice -attr multiboot -value "FALSE"
+setAttribute -configdevice -attr multiboot -value "FALSE"
+setAttribute -configdevice -attr spiSelected -value "TRUE"
+setAttribute -configdevice -attr spiSelected -value "TRUE"
+setMode -pff
+setMode -pff
+setMode -pff
+setMode -pff
+addDeviceChain -index 0
+setMode -pff
+addDeviceChain -index 0
+setSubmode -pffspi
+setMode -pff
+setAttribute -design -attr name -value "0000"
+addDevice -p 1 -file "opc5system.bit"
+setMode -pff
+setSubmode -pffspi
+generate -generic
+setCurrentDesign -version 0
+setMode -bs
+setCable -port auto
+Identify -inferir 
+identifyMPM 
+attachflash -position 1 -spi "W25Q64BV"
+assignfiletoattachedflash -position 1 -file "/home/dmb/atom/opc/opc5/opc5system/xc6slx9_starter/opc5system.mcs"
+Program -p 1 -dataWidth 1 -spionly -e -v -loadfpga 
+quit
