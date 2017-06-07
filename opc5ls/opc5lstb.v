@@ -2,7 +2,7 @@
 `define HALT 10'b00_0000_0000
 `define EXEC 3'b100
 
-module opc5tb();
+module opc5lstb();
   reg [15:0] mem [ 65535:0 ];
   reg clk, reset_b;
 
@@ -10,11 +10,11 @@ module opc5tb();
   wire rnw ;
   wire ceb = 1'b0;
   wire oeb = !rnw;
-  wire [15:0]  data0 = mem[ addr ];
+  wire [15:0]  data0 = mem[addr];
   wire [15:0]  data1 ;
 
   // OPC CPU instantiation
-  opc5cpu  dut0_u (.address(addr), .datain(data0), .dataout(data1), .rnw(rnw), .clk(clk), .reset_b(reset_b));
+  opc5lscpu  dut0_u (.address(addr), .datain(data0), .dataout(data1), .rnw(rnw), .clk(clk), .reset_b(reset_b));
 
   initial
     begin
