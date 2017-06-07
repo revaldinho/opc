@@ -23,7 +23,7 @@ module opc5lscpu( input[15:0] datain, output[15:0] dataout, output[15:0] address
           LD, MOV  : result=OR_q;
           AND, OR  : result= (IR_q[8])? (grf_dout & OR_q) : (grf_dout | OR_q);
           ADD, ADC : {carry, result}= grf_dout + OR_q + (IR_q[8] & C_q);
-          SUB, SBC, CMP, CMPC : {carry, result}= grf_dout + (~OR_q)&0xFFFF + ((IR_q[8])? C_q: 1);
+          SUB, SBC, CMP, CMPC : {carry, result}= grf_dout + ((~OR_q)&16'hFFFF) + ((IR_q[8])? C_q: 1);
           XOR, BSWP : result= (!IR_q[11])? (grf_dout ^ OR_q): { OR_q[7:0], OR_q[15:8] };
           NOT : result= ~OR_q;
           ROR : {result,carry} = {carry, OR_q} ;
