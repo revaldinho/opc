@@ -1,7 +1,7 @@
 import sys, re
 op = "mov,and,or,xor,add,adc,sto,ld,ror,not,sub,sbc,cmp,cmpc,bswp,int,halt".split(',') #halt aliassed to mov
 symtab = dict( [ ("r%d"%d,d) for d in range(0,16)])
-predicates = {"c":0x4000, "z":0x8000, "cz":0x0000,  "nc":0x6000,  "nz":0xA000, "":0xC000, "0":0xE000, "1":0xC000, "ncz":0x1000, "nzc":0x1000}
+predicates = {"c":0x4000, "z":0x8000, "cz":0x0000,  "nc":0x6000,  "nz":0xA000, "":0xC000, "0":0xE000, "1":0xC000, "ncz":0x2000, "nzc":0x2000}
 def expand_macro(line, macro):  # recursively expand macros, passing on instonces not (yet) defined
     (text,mobj)=([line],re.match("^(?P<label>\w*\:)?\s*(?P<name>\w+)\s*?\((?P<params>.*)\)",line))
     if mobj and mobj.groupdict()["name"] in macro:
