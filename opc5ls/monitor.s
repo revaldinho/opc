@@ -65,8 +65,7 @@ m4:
 m6:
     JSR     (osrdch)
 
-    mov     r2, r1
-    add     r2, r0, -0x0D
+    cmp     r1, r0, 0x0D
     z.mov   pc, r0, m1
 
 #
@@ -74,22 +73,18 @@ m6:
 # outside the range $20 (space) to $7E (tilde) here
 #
 
-    mov     r2, r1          # don't output if < 0x20
-    add     r2, r0, -0x20
+    cmp     r1, r0, 0x20  # don't output if < 0x20
     nc.mov  pc, r0, m6
 
-    mov     r2, r1          # don't output if >= 07F
-    add     r2, r0, -0x7F
+    cmp     r1, r0, 0x7F  # don't output if >= 07F
     c.mov   pc, r0, m6
 
     JSR     (oswrch)
 
-    mov     r2, r1
-    add     r2, r0, -0x2c
+    cmp     r1, r0, 0x2c
     z.mov   pc, r0, comma
 
-    mov     r2, r1
-    add     r2, r0, -0x40
+    cmp     r1, r0, 0x40
     z.mov   pc, r0, at
 
 #
@@ -99,11 +94,10 @@ m6:
     xor     r1, r0, 0x30
 
 
-    mov     r2, r1
-    add     r2, r0, -0x0A
+    cmp     r1, r0, 0x0A
     nc.mov  pc, r0, m4
     or      r1, r0, 0x20
-    add     r1, r0, -0x77
+    sub     r1, r0, 0x77
 #
 # mapping:
 #   A-F -> $FFFA-$FFFF
@@ -113,28 +107,23 @@ m6:
 
     z.mov   pc, r0, go
 
-    mov     r2, r1
-    add     r2, r0, -0xfffa
+    cmp     r1, r0, 0xfffa
     c.mov   pc, r0, m3
 
 #
 # Insert additional commands for (case-insensitive) letters here
 #
 
-    mov     r2, r1
-    add     r2, r0, -0xfff3   # z
+    cmp     r1, r0, 0xfff3   # z
     z.mov   pc, r0, dis
 
-    mov     r2, r1
-    add     r2, r0, -0xffeb   # r
+    cmp     r1, r0, 0xffeb   # r
     z.mov   pc, r0, regs
 
-    mov     r2, r1
-    add     r2, r0, -0xffec   # s
+    cmp     r1, r0, 0xffec   # s
     z.mov   pc, r0, step
 
-    mov     r2, r1
-    add     r2, r0, -0xfff1   # x
+    cmp     r1, r0, 0xfff1   # x
     nz.mov  pc, r0, m6
 
 dump:
@@ -159,7 +148,7 @@ d1:
     and     r2, r0, 0x07
     nz.mov  pc, r0, d1
 
-    add     r3, r0, -0x08
+    sub     r3, r0, 0x08
 
 d2:
     mov     r1, r5
@@ -167,11 +156,9 @@ d2:
     ld      r1, r1
     and     r1, r0, 0x7F
 
-    mov     r2, r1
-    add     r2, r0, -0x20
+    cmp     r1, r0, 0x20
     nc.mov  pc, r0, d3
-    mov     r2, r1
-    add     r2, r0, -0x7F
+    cmp     r1, r0, 0x7F
     nc.mov  pc, r0, d4
 
 d3:
@@ -184,8 +171,7 @@ d4:
     and     r2, r0, 0x07
     nz.mov  pc, r0, d2
 
-    mov     r2, r3
-    add     r2, r0, -0x80
+    cmp     r3, r0, 0x80
     nc.mov  pc, r0, d0
 
     add     r5, r3
@@ -220,7 +206,7 @@ dis_loop:
     JSR     (disassemble)
     mov     r5, r1
 
-    add     r3, r0, -1
+    sub     r3, r0, 1
     nz.mov  pc, r0, dis_loop
 
     mov     pc, r0, m6
@@ -348,7 +334,7 @@ dr_loop:
     nz.mov   pc, r0, no_newline
     JSR      (osnewl)
 no_newline:
-    add      r3, r0, -1
+    sub      r3, r0, 1
     nz.mov   pc, r0, dr_loop
 
     mov      r1, r0, 0x63          # c
@@ -490,13 +476,13 @@ ph_loop:
     adc     r1, r1
 
     and     r1, r0, 0x0F    # mask off everything but the bottom nibble
-    add     r1, r0, -0x0A   # set the carry if r1 >= 0x0A
-    c.add    r1, r0, 0x07   # 'A' - '9' + 1
-    add   r1, r0, 0x3A      # '0' (plus the 0x0A from the earlier add)
+    cmp     r1, r0, 0x0A    # set the carry if r1 >= 0x0A
+    c.add   r1, r0, 0x07    # 'A' - '9' + 1
+    add     r1, r0, 0x30    # '0'
 
     JSR     (oswrch)        # output R1
 
-    add     r3, r0, -1      # decrement the loop counter
+    sub     r3, r0, 1       # decrement the loop counter
     nz.mov  pc, r0, ph_loop # loop back for four digits
 
     POP     (r3)            # restore working registers
@@ -596,7 +582,7 @@ dis2:
 dis3:
     add     r2, r0                      # is r2 zero?
     z.mov   pc, r0, dis4
-    add     r2, r0, -0x2000
+    sub     r2, r0, 0x2000
     add     r1, r0, 0x0005              # move on to next predicate
     mov     pc, r0, dis3
 
@@ -611,7 +597,7 @@ dis4:
 dis5:
     add     r2, r0                      # is r2 zero?
     z.mov   pc, r0, dis6
-    add     r2, r0, -0x0100
+    sub     r2, r0, 0x0100
     add     r1, r0, 0x0005              # move on to next opcode
     mov     pc, r0, dis5
 
@@ -665,7 +651,7 @@ dis7:
 print_reg:
 
     and     r1, r0, 0x0F
-    add     r1, r0, -0x0A
+    cmp     r1, r0, 0x0A
 
     PUSH    (r1)
 
@@ -686,10 +672,10 @@ pr1:
     JSR     (oswrch)
     POP     (r1)
 
-    add     r1, r0, -0x0A
+    sub     r1, r0, 0x0A
 
 pr2:
-    add     r1, r0, 0x3A
+    add     r1, r0, 0x30
     mov     pc, r0, oswrch
 
 predicates:
