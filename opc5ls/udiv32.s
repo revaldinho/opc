@@ -105,7 +105,7 @@ udiv32_loop:
         # Speculative subtraction of divisor
         mov    r8,r4
         mov    r9,r5
-        sub    r8,r6           
+        sub    r8,r6
         sbc    r9,r7
         # If carry set then need to copy the result and update the quotient
         c.mov  r4,r8
