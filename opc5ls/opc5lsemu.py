@@ -17,7 +17,7 @@ while True:
     (instr_len, rdmem) = (2 if (instr_word & 0x1000) else 1, (opcode==op["ld"]))
     operand = wordmem[regfile[pcreg]+1] if (instr_len==2) else 0
     instr_str = "%s%s r%d,r%d" % (pred_dict[pcarry <<2 | pzero<<1 | pinvert],dis[opcode],dest,source)
-    instr_str = re.sub("r0","psr",instr_str) if (opcode==op["psr"]) else instr_str
+    instr_str = re.sub("r0","psr",instr_str,1) if (opcode==op["psr"]) else instr_str
     if opcode == op["mov"] and (dest==source==0):
         (opcode,instr_str) = (op["halt"], re.sub("ld","halt",instr_str))
     instr_str += (",0x%04x" % operand) if instr_len==2 else ''
@@ -57,7 +57,7 @@ while True:
             if ea_ed == 0xfe09:
                 stdout += chr(regfile[dest])
                 print (stdout)
-        c = c_save if dest == 0x15 else c   # Preserve previous carry for instructions writing to PC
+        c = c_save if dest == 0xF else c   # Preserve previous carry for instructions writing to PC
         if opcode not in (op["sto"], op["psr"])  and dest!=0xF:
             z = 1 if (regfile[dest]==0) else 0
 if len(sys.argv) > 2:                       # Dump memory for inspection if required
