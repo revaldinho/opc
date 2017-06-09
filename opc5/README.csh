@@ -2,7 +2,7 @@
 # Remove non primary data files
 rm -rf #* *~ `ls -1 | egrep -v '(\.v|\.csh|\.ucf|\.py|\.s|spartan|xc95)'`
 
-foreach test ( fib test1 mul32 udiv32 sqrt hello )
+foreach test ( fib test1 mul32 udiv32 sqrt hello  )
     # Assemble the test
     python3 opc5asm.py ${test}.s ${test}.hex | tee ${test}.lst
     # Run the emulator
