@@ -14,7 +14,7 @@ module opc5lstb();
   wire [15:0]  data1 ;
 
   // OPC CPU instantiation
-  opc5lscpu  dut0_u (.address(addr), .datain(data0), .dataout(data1), .rnw(rnw), .clk(clk), .reset_b(reset_b));
+  opc5lscpu  dut0_u (.address(addr), .din(data0), .dout(data1), .rnw(rnw), .clk(clk), .reset_b(reset_b));
 
   initial
     begin
