@@ -13,24 +13,14 @@ accesses are 16 bits wide and instructions are encoded in either one or two word
 
 On reset the processor will start executing instructions from location 0.
 
-All instructions can have predicated execution and this is determined by the three instruction MSBs:
-
-  |  Carry Pred.  | Zero Pred. |  Predicate Invert  |   Function                       |
-  |---------------|------------|--------------------|----------------------------------|
-  |      1        |      1     |        0           |   Always execute                 |
-  |      1        |      0     |        0           |   Execute if Zero flag is set    |
-  |      0        |      1     |        0           |   Execute if Carry flag is set   |
-  |      0        |      0     |        0           |   Execute if both Zero and Carry flags are set   |
-  |      1        |      1     |        1           |   never execute - NOP            |
-  |      1        |      0     |        1           |   Execute if Zero flag is clear  |
-  |      0        |      1     |        1           |   Execute if Carry flag is clear |
-  |      0        |      0     |        1           |   Execute if both Zero and Carry flags are clear |
-
 OPC-5LS has a 16 entry register file. Each instruction can specify one register as a source and another as both source
 and destination using the two 4 bit fields in the encoding. Two of the registers have special purposes:
 
   * R0 holds 'all-zeros'. It is legal to write R0 but this has no effect on the register contents.
   * R15 is the program counter. This can be written or read like any other register.
+
+Addressing Modes and Effective Address/Data Computation
+-------------------------------------------------------
 
 The 16b effective address or data (EAD) for all instructions is created by adding the 16b operand to the source register.
 By using combinations of the zero register and zero operands with the LD and STO instructions the following addressing modes are supported:
@@ -42,12 +32,34 @@ By using combinations of the zero register and zero operands with the LD and STO
   | Indexed   | \<reg\>    | \<index\> | mem[\<reg\> + \<index\>] |
   | Immediate | R0         | \<immed\> | \<immed\>                |
 
-There are only two processor status flags and these are set only by ALU operations - calculation of the EAD values
-has no effect on these, also any instructions which write to the PC preserve the contents of Z and C.
+Processor Flags
+---------------
+
+There are three processor status flags which are set by ALU operations - calculation of the EAD values
+has no effect on these, also any instructions which write to the PC preserve the contents of all flags.
 
   * Carry - set or cleared only on arithmetic operations
-  * Zero  - set on every instruction based on the state of the destination register (not set on stores)
+  * Zero  - set on every instruction based on the state of the destination register
+  * Sign  - set when the MSB of the result is a '1' 
 
+Predication
+-----------
+
+All instructions can have predicated execution and this is determined by the three instruction MSBs:
+
+  | P0 | P1 | P2 | Asm Prefix | Function                       |
+  |----|----|----|------------|--------------------------------|
+  |  0 |  0 |  0 | 1. or none | Always execute                 |
+  |  0 |  0 |  1 | 0.         | never execute - NOP            |
+  |  0 |  1 |  0 | z.         | Execute if Zero flag is set    |
+  |  0 |  1 |  1 | nz.        | Execute if Zero flag is clear  |
+  |  1 |  0 |  0 | c.         | Execute if Carry flag is set   |
+  |  1 |  0 |  1 | nc.        | Execute if Carry flag is clear |
+  |  1 |  1 |  0 | mi.        | Execute if Sign flag is set    |
+  |  1 |  1 |  1 | pl.        | Execute if Sign flag is clear  |
+
+Instruction Set
+---------------
 
   | #  | mnemonic | alias      | opcode  | Assembler    | EA/ED Calc       | Assembler           | EA/ED Calc                 | FUNCTION                   |
   |----|----------|------------|---------|--------------|------------------|---------------------|----------------------------|----------------------------|
@@ -66,5 +78,5 @@ has no effect on these, also any instructions which write to the PC preserve the
   | 12 | cmp      |            | 1 1 0 0 | cmp rd, rs   | ED = rs + 0      | cmp rd, rs, imm     | ED = (rs + imm) & 0xFFFF   | {C, r0} <- rd + ~ED + 1    |
   | 13 | cmpc     |            | 1 1 0 1 | cmpc rd, rs  | ED = rs + 0      | cmpc rd, rs, imm    | ED = (rs + imm) & 0xFFFF   | {C, r0} <- rd + ~ED + C    |
   | 14 | bswp     |            | 1 1 1 0 | bswp rd, rs  | ED = rs + 0      | bswp rd, rs, imm    | ED = (rs + imm) & 0xFFFF   | {rd_h,rd_l} <- {ED_l,ED_h} |
-  | 15 | psr      |            | 1 1 1 1 | psr rd,psr   | ED = {14'b0,C,Z} | psr rd,psr,imm      | ED = {14'b0,C,Z}           | rd <- ED                   |
-  | 15 | psr      |            | 1 1 1 1 | psr psr,rs   | ED = rs + 0      | psr psr,rs,imm      | ED = (rs + imm) & 0xFFFF   | {C, Z} <- ED[1:0]          |  
+  | 15 | psr      |            | 1 1 1 1 | psr rd,psr   | ED = {14'b0,C,Z} | psr rd,psr,imm      | ED = {13'b0, S, C, Z}      | rd <- ED                   |
+  | 15 | psr      |            | 1 1 1 1 | psr psr,rs   | ED = rs + 0      | psr psr,rs,imm      | ED = (rs + imm) & 0xFFFF   | {S, C, Z} <- ED[2:0]       |  
