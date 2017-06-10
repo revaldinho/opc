@@ -5,27 +5,24 @@
         #
 reset:
         ld.i      r10, r0, 1             # r10 = constant 1 for quick incrementing
-        ld.i      r11, r0, 0x8000        # r11 = const used in inner loop
-        
+        ld.i      r11, r0, endFibbonaci  # r11 = label constant in inner loop
+        ld.i      r12, r0, j0001         # r12 = label constant in inner loop
         ld.i      r1,r0
         ld.i      r2,r10   
         ld.i      r4,r0,results
 j0001:
         ld.i      r3,r2
         add.i     r3,r1
-        add.i     r3,r3                  # rol to get sign bit into carry
-        c.ld.i    pc,r0,endFibbonaci     # if >= 0x8000 then exit
-        ror.i     r3,r3                  # restore r3
+        c.ld.i    pc, r11               # r11 = endFibonacci
         sto       r1,r4
         add.i     r4,r10
         ld.i      r1,r2
         ld.i      r2,r3
-        ld.i      pc,r0,j0001
+        ld.i      pc,r12                # r12 = j0001
 endFibbonaci:
-        ror.i     r3,r3                  # restore r3        
         sto      r1,r4
         sto      r2,r4,1
-        sto      r3,r4,2
+        nc.sto   r3,r4,2
 endFibbonaci2:
         halt    r0,r0,0x999
 
