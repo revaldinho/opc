@@ -1,0 +1,66 @@
+<!DOCTYPE html><html><head><title>OPC5 emulator</title><script>
+var dis = "mov,and,or,xor,add,adc,sto,ld,ror,not,sub,sbc,cmp,cmpc,bswp,psr,halt".split(',');
+var m = new Uint16Array(2048), pad="                             ";
+function h(n) {return ((1 << 16 | n).toString(16).substr(-4));} // print 16 bits as hex
+function init(){
+    m.set(eval('['+location.search.replace(/.d=/,'').replace(/([0-9a-f]{4})/ig,'0x$1,')+']'));
+    document.getElementById("RAM").innerHTML=[].slice.call(m.slice(0x0,0x100)).
+        map(function(x){return h(x)});  }
+function load(){
+    m.set(eval("[0x" + document.getElementById("RAM").value.replace(/,/g,",0x")+"]"));  }
+function boot() {
+    var max=70123, cyc=0, regs=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], c=0, z=0, log="", stdout="";
+    while (cyc < max){
+        pc=regs[15]; regs[0] = 0; iword = m[pc]; csave=c;
+        [cp,zp,pi]    = [(iword & 0x8000) >> 15,    (iword & 0x4000) >> 14, (iword & 0x2000)>>13];
+        [opcode,ilen] = [dis[(iword & 0xF00) >> 8], (iword & 0x1000) ? 2 : 1];
+        [source,dest] = [(iword & 0xF0) >> 4,       iword & 0xF];
+        operand = (ilen==2) ? m[pc+1] : 0;
+        istr = ["cz.", "ncz", "c.", "nc.", "z.", "nz.", "", "0."][(cp << 2) | (zp << 1) | pi];
+        istr += opcode+" r"+dest+",r"+source+((ilen==2) ? ",0x" + h(operand) : "");
+        if(opcode=="psr"){ istr=istr.replace(/r0/,'psr'); }
+        log += [(pad+cyc).slice(-5),":",h(pc),":",h(m[pc]),(ilen==2)?h(m[pc+1]):"    ",":",c,z,":",
+            (istr+pad).slice(0,24),":",regs.map(function(x){return h(x)}).join(" "),"\n"].join(" ");
+        regs[15] += ilen; cyc++;
+        ea_ed = (regs[source]+operand) & 0xFFFF; if (opcode=="ld") { ea_ed = m[ea_ed]; }
+        if ( pi ^ ((cp || c) && (zp || z)) ){
+            if ( opcode=="mov" && source==0 && dest==0){ break; }
+            if ( opcode=="and" ){
+                regs[dest] = regs[dest] & ea_ed;
+            } else if ( opcode=="or" ){
+                regs[dest] = regs[dest] | ea_ed;
+            } else if ( opcode=="xor" ){
+                regs[dest] = regs[dest] ^ ea_ed;
+            } else if ( opcode=="ror" ){
+                regs[dest] = (c<<15) | (ea_ed>>1); c = 1 & ea_ed;
+            } else if ( opcode=="bswp" ){
+                regs[dest] = (ea_ed >> 8)|(ea_ed << 8);
+            } else if ( opcode=="add" || opcode=="adc" ){
+                res = regs[dest] + ea_ed + (opcode=="adc" ? c : 0);
+                regs[dest] = res & 0xFFFF; c = (res>>16) & 1;
+            } else if ( ["sub","sbc","cmp","cmpc"].indexOf(opcode)>=0 ){
+                res = regs[dest] + ((~ea_ed & 0xffff)) + (/c$/.test(opcode) ? c : 1);
+                if(/^c/.test(opcode)){ dest=0; }
+                regs[dest] = res & 0xFFFF; c = (res>>16) & 1;
+            } else if ( opcode=="ld" || opcode=="mov" || opcode=="not"){
+                opcode=="not" ? regs[dest] = ~ea_ed : regs[dest] = ea_ed;
+            } else if ( opcode=="psr" && dest==0 ){    // putpsr
+                [c,z] = [ (regs[source] & 0x2)>>1, regs[source]&0x1 ];
+            } else if ( opcode=="psr" && source==0 ){  // getpsr
+                regs[dest] = (c<<1) | z;
+            } else if ( opcode=="sto" ){
+                m[ea_ed]=regs[dest];
+                if (ea_ed == 0xfe09){stdout += String.fromCharCode(regs[dest]); log += stdout+"\n"}
+            }
+            if ( dest == 15 ){ c = csave; } // preserve carry for PC updates
+            if ( opcode!="sto" && opcode!="psr" && dest!=15 ){ z = (regs[dest]==0) ? 1 : 0; }
+    }   }
+    document.getElementById("printout").innerHTML = log + "Done!\n";
+}
+</script></head><body onload="init()">Welcome to the <a href=".">OPC</a> in-browser Emulator
+<p>Memory: <button type="button" onclick="load()">Load RAM</button>
+<p><textarea rows="4" cols="80" id=RAM>JavaScript disabled!</textarea>
+<p><button type="button" onclick="boot()">Boot</button><pre id=printout>
+Cycle : PC   : Mem       : C Z : Instruction              : Registers
+-------------------------------------------------------------------------------------
+</pre></body></html>

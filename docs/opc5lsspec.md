@@ -1,0 +1,70 @@
+OPC5LS Definition
+-----------------
+
+OPC-5LS is a reworking of the earlier OPC-5 into a load/store machine with double the number of instructions. Like OPC-5
+it is a pure 16 bit [One Page Computer](.) with a 16 entry register file and predicated instruction execution. All memory
+accesses are 16 bits wide and instructions are encoded in either one or two words ::
+
+    ppp l oooo ssss dddd  nnnnnnnnnnnnnnnn
+      \  \   \    \   \           \_______ 16b optional operand word
+       \  \   \    \___\__________________  4b source and destination registers
+        \  \___\__________________________  1b instruction length + 4b opcode
+         \________________________________  3b predicate bits                         
+
+On reset the processor will start executing instructions from location 0.
+
+All instructions can have predicated execution and this is determined by the three instruction MSBs:
+
+  |  Carry Pred.  | Zero Pred. |  Predicate Invert  |   Function                       |
+  |---------------|------------|--------------------|----------------------------------|
+  |      1        |      1     |        0           |   Always execute                 |
+  |      1        |      0     |        0           |   Execute if Zero flag is set    |
+  |      0        |      1     |        0           |   Execute if Carry flag is set   |
+  |      0        |      0     |        0           |   Execute if both Zero and Carry flags are set   |
+  |      1        |      1     |        1           |   never execute - NOP            |
+  |      1        |      0     |        1           |   Execute if Zero flag is clear  |
+  |      0        |      1     |        1           |   Execute if Carry flag is clear |
+  |      0        |      0     |        1           |   Execute if both Zero and Carry flags are clear |
+
+OPC-5LS has a 16 entry register file. Each instruction can specify one register as a source and another as both source
+and destination using the two 4 bit fields in the encoding. Two of the registers have special purposes:
+
+  * R0 holds 'all-zeros'. It is legal to write R0 but this has no effect on the register contents.
+  * R15 is the program counter. This can be written or read like any other register.
+
+The 16b effective address or data (EAD) for all instructions is created by adding the 16b operand to the source register.
+By using combinations of the zero register and zero operands with the LD and STO instructions the following addressing modes are supported:
+
+  |  Mode     | Source Reg | Operand   |  Effective address/Data  |
+  |-----------|------------|-----------|--------------------------|
+  | Direct    | R0         | \<addr\>  | mem[\<addr\>]            |
+  | Indirect  | \<reg\>    | 0         | mem[\<reg\>]             |
+  | Indexed   | \<reg\>    | \<index\> | mem[\<reg\> + \<index\>] |
+  | Immediate | R0         | \<immed\> | \<immed\>                |
+
+There are only two processor status flags and these are set only by ALU operations - calculation of the EAD values
+has no effect on these, also any instructions which write to the PC preserve the contents of Z and C.
+
+  * Carry - set or cleared only on arithmetic operations
+  * Zero  - set on every instruction based on the state of the destination register (not set on stores)
+
+
+  | #  | mnemonic | alias      | opcode  | Assembler    | EA/ED Calc       | Assembler           | EA/ED Calc                 | FUNCTION                   |
+  |----|----------|------------|---------|--------------|------------------|---------------------|----------------------------|----------------------------|
+  | 0  | mov      |            | 0 0 0 0 | mov rd, rs   | ED = rs + 0      | mov rd,rs,imm       | ED = (rs + imm) & 0xFFFF   | rd <- ED                   |
+  | 1  | and      |            | 0 0 0 1 | and rd, rs   | ED = rs + 0      | and rd,rs,imm       | ED = (rs + imm) & 0xFFFF   | rd <- rd & ED              |
+  | 2  | or       |            | 0 0 1 0 | or rd,rs     | ED = rs + 0      | or rd,rs,imm        | ED = (rs + imm) & 0xFFFF   | rd <- rd | ED              |
+  | 3  | xor      |            | 0 0 1 1 | xor rd,rs    | ED = rs + 0      | xor rd,rs,imm       | ED = (rs + imm) & 0xFFFF   | rd <- rd ^ ED              |
+  | 4  | add      | asl rd, rd | 0 1 0 0 | add rd, rs   | ED = rs + 0      | add rd, rs, imm     | ED = (rs + imm) & 0xFFFF   | {C, rd}  <- rd + ED        |
+  | 5  | adc      | rol rd,rd  | 0 1 0 1 | adc rd, rs   | ED = rs + 0      | adc rd, rs, imm     | ED = (rs + imm) & 0xFFFF   | {C, rd } <- rd + ED + C    |
+  | 6  | sto      |            | 0 1 1 0 | sto rd, rs   | EA = rs + 0      | sto rd, rs, index   | EA = (rs + index) & 0xFFFF | mem[EA] <- rd              |
+  | 7  | ld       |            | 0 1 1 1 | ld rd, rs    | EA = rs + 0      | ld rd, rs, index    | EA = (rs + index) & 0xFFFF | rd <-mem[EA]               |
+  | 8  | ror      |            | 1 0 0 0 | ror rd,rs    | ED = rs + 0      | sub rd, rs, imm     | ED = (rs + imm) & 0xFFFF   | {rd,C} <- {C,ED}           |
+  | 9  | not      |            | 1 0 0 1 | not rd, rs   | ED = rs + 0      | not rd,rs,imm       | ED = (rs + imm) & 0xFFFF   | rd <- ~ED                  |
+  | 10 | sub      |            | 1 0 1 0 | sub rd, rs   | ED = rs + 0      | sub rd, rs, imm     | ED = (rs + imm) & 0xFFFF   | {C,rd} <- rd + ~ED + 1     |
+  | 11 | sbc      |            | 1 0 1 1 | sbc rd, rs   | ED = rs + 0      | sbc rd, rs, imm     | ED = (rs + imm) & 0xFFFF   | {C, rd} <- rd + ~ED + C    |
+  | 12 | cmp      |            | 1 1 0 0 | cmp rd, rs   | ED = rs + 0      | cmp rd, rs, imm     | ED = (rs + imm) & 0xFFFF   | {C, r0} <- rd + ~ED + 1    |
+  | 13 | cmpc     |            | 1 1 0 1 | cmpc rd, rs  | ED = rs + 0      | cmpc rd, rs, imm    | ED = (rs + imm) & 0xFFFF   | {C, r0} <- rd + ~ED + C    |
+  | 14 | bswp     |            | 1 1 1 0 | bswp rd, rs  | ED = rs + 0      | bswp rd, rs, imm    | ED = (rs + imm) & 0xFFFF   | {rd_h,rd_l} <- {ED_l,ED_h} |
+  | 15 | psr      |            | 1 1 1 1 | psr rd,psr   | ED = {14'b0,C,Z} | psr rd,psr,imm      | ED = {14'b0,C,Z}           | rd <- ED                   |
+  | 15 | psr      |            | 1 1 1 1 | psr psr,rs   | ED = rs + 0      | psr psr,rs,imm      | ED = (rs + imm) & 0xFFFF   | {C, Z} <- ED[1:0]          |  

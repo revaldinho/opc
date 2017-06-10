@@ -105,15 +105,11 @@ sqrt:
         #while (bit > num):
         #    bit >>= 2
 
-        # Use r10,r11 as temp registers to hold inverted version of r1,r2
-        not   r10,r1
-        not   r11,r2
+
 sqrt_bitloop:
-        # Subtract num from bit using r7,r8 temporary registers
-        mov   r7,r10
-        mov   r8,r11
-        add   r7,r5,1
-        adc   r8,r6
+        # Compare num with bit
+        cmp   r5,r1
+        cmpc   r6,r2
         nc.mov  pc,r13         # r13=sqrt_next - done if carry out is set
         z.mov  pc,r13          # r13=sqrt_next - or if zero is set (and carry clear)
         CLC     ()
@@ -125,8 +121,8 @@ sqrt_bitloop:
         mov    pc,r0,sqrt_bitloop
 sqrt_next:
         # while (bit != 0):
-        mov    r8, r5
-        or    r8, r6
+        mov    r7, r5
+        z.mov  r8, r6
         z.mov  pc,r0, sqrt_next2
         #    if (num >= res + bit) :
         #        num -= res + bit
@@ -134,15 +130,12 @@ sqrt_next:
         #    else :
         #        res >>= 1
         # Add res + bit
-        mov    r7,r5
         mov    r8,r6
         add   r7,r3
         adc   r8,r4
-        # Subtract r7,r8 (res+bit) from r1,r2 (num) without storing back in num...yet ..so use temp var r9,r10
-        not   r9,r7
-        not   r10,r8
-        add   r9,r1,1
-        adc   r10,r2
+        # Compare  r1r2 with  r7,r8 (res+bit)
+        cmp   r1, r7
+        cmpc  r2, r8
         # Greater or equal than means c=1 from subtraction
         c.mov  pc,r0,sqrt_mmask   # If < just shift root and next iteration
         CLC     ()                 # Clear carry and shift root right
@@ -151,9 +144,9 @@ sqrt_next:
         mov    pc,r0,sqrt_next3
 
 sqrt_mmask:
-        # If >= then copy result into num r1r2, rotate and merge mask into bit
-        mov    r2,r10          # Copy subtraction result into num r1,r2
-        mov    r1,r9
+        # If >= then do substract again into num r1r2, rotate and merge mask into bit
+        sub    r1,r7          # Copy subtraction result into num r1,r2
+        sbc    r2,r8
         CLC     ()              # Clear carry and shift root right
         ror   r4,r4
         ror   r3,r3
