@@ -303,34 +303,20 @@ store_operand:
 
     ld      r7, r5, reg_state      # load the src register value
     ld      r8, r6, reg_state      # load the dst register value
-    ld      r9, r0, reg_state_zc   # load the z (bit 1) and c (bit 0) flags
+    ld      r9, r0, reg_state_psr  # load the c (bit 1) and z (bit 0) flags
 
-    ror     r9, r9                 # carry flag now updated
+    psr     psr, r9                # load the flags
 
-    and     r9, r0, 1              # zero flag now updated
-                                   # (r9 holds the inverse of the Z flag)
 instruction:
     WORD    0x0000                 # emulated instruction patched here
 
 operand:
     WORD    0x0000                 # emulated opcode patched here
 
-save_z_flag:
-    z.mov   pc, r0, z_flag_set     # save the sero flag
-
-z_flag_clear:
-    or      r9, r0, 0x0002         # r9 bit 1 = 1 means Z clear
-    mov     pc, r0, save_c_flag
-
-z_flag_set:
-    and     r9, r0, 0xfffd         # r9 bit 1 = 0 means Z set
-
-save_c_flag:
-    nc.and   r9, r0, 0xfffe        # r9 bit 0 = 0 means C clear
-    c.or     r9, r0, 0x0001        # r9 bit 0 = 1 means C set
+    psr     r9, psr                # save the flags
+    sto     r9, r0, reg_state_psr
 
     sto     r8, r6, reg_state      # save the new dst register value
-    sto     r9, r0, reg_state_zc   # save the new flags
 
     JSR     (print_regs)           # display the saved registers
     ld      r4, r0, reg_state_pc   # load the PC (r5)
@@ -373,14 +359,12 @@ no_newline:
     nz.mov   pc, r0, dr_loop
 
     mov      r1, r0, 0x63          # c
-    ld       r2, r0, reg_state_zc
-    and      r2, r0, 1
+    ld       r2, r0, reg_state_psr
+    ror      r2, r2
     JSR      (print_flag)
 
     mov      r1, r0, 0x7a          # z
-    ld       r2, r0, reg_state_zc
-    ror      r2, r2
-    xor      r2, r0, 1
+    ld       r2, r0, reg_state_psr
 
 print_flag:
     JSR      (oswrch)              # "c" or "z"
@@ -747,7 +731,7 @@ opcodes:
     BSTRING "cmp "    #  1100
     BSTRING "cmpc"    #  1101
     BSTRING "bswp"    #  1110
-    BSTRING "intr"    #  1111
+    BSTRING "psr "    #  1111
 
 reg_state:
     WORD 0x0000
@@ -781,7 +765,7 @@ reg_state_r14:
     WORD 0xeeee
 reg_state_pc:
     WORD 0xffff
-reg_state_zc:
+reg_state_psr:
     WORD 0x0002
 
 # ----------------------------------------------------
