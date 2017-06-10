@@ -779,52 +779,32 @@ reg_state_zc:
     WORD 0x0002
 
 # ----------------------------------------------------
-# Some test code (fib)
+# Some test code (fastfib)
 
-ORG 0x600
-        mov   r10,r0,RSLTS      # initialise the results pointer
-        mov   r13,r0,RETSTK     # initialise the return address stack
-        mov   r5,r0             # Seed fibonacci numbers in r5,r6
-        mov   r6,r0,1
-        mov   r1,r0,1           # Use R1 as a constant 1 register
-        mov   r11,r0,-1         # use R11 as a constant -1 register
+        ORG     0x700
 
-        sto   r5,r10            # save r5 and r6 as first resultson results stack
-        add   r10,r1
-        sto   r6,r10
-        add   r10,r1
+fib:
+        mov     r4, r0, fibRes
+        mov     r5, r0, fibEnd
+        mov     r6, r0, fibLoop
+        mov     r10, r0, 1
 
-        mov   r4,r0,-23         # set up a counter in R4
-        mov   r14,r0,CONT       # return address in r14
-        mov   r8,r0,FIB         # Store labels in registers to minimize loop instructions
-LOOP:   mov   pc,r8             # JSR FIB
-CONT:   add   r4,r1             # inc loop counter
-        nz.mov  pc,r8           # another iteration if not zero
+        mov     r1, r0     # r1 = 0
+        mov     r2, r10    # r2 = 1
+fibLoop: 
+        add     r1, r2
+        c.mov   pc, r5     # r5 = fibEnd
+        sto     r1, r4     # r4 = results
+        add     r4, r10    # r10 = 1
+        add     r2, r1
+        c.mov   pc, r5     # r5 = fibEnd
+        sto     r2, r4     # r4 = results
+        add     r4, r10    # r10 = 1
+        mov     pc, r6     # r6 = fibLoop
 
-END:    mov  pc, r0, END
+fibEnd:
+        RTS     ()
 
-
-FIB:    sto    r14,r13        # Push return address on stack
-        add    r13,r1         # incrementing stack pointer
-
-        mov    r2,r5          # Fibonacci computation
-        add    r2,r6
-        sto    r2,r10         # Push result in results stack
-        add    r10,r1         # incrementing stack pointer
-
-        mov    r5,r6          # Prepare r5,r6 for next iteration
-        mov    r6,r2
-
-        add     r13,r11        # Pop return address of stack
-        ld      pc,r13        # and return
-
-        ORG 0x700
-
-# 8 deep return address stack and stack pointer
-RETSTK: WORD 0,0,0,0,0,0,0,0
-
-# stack for results with stack pointer
-RSLTS:  WORD 0
-
-
-
+        ORG     0x780
+        
+fibRes:
