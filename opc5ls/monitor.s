@@ -189,12 +189,31 @@ at:
 
 go:
     JSR     (g1)
-    mov     pc, r0, m2
+    JSR     (save_regs)
+    mov     pc, r0, m1
 
 g1:
     mov     pc, r5
 
 
+
+save_regs:
+    sto     r1, r0, reg_state_r1
+    sto     r2, r0, reg_state_r2
+    sto     r3, r0, reg_state_r3
+    sto     r4, r0, reg_state_r4
+    sto     r5, r0, reg_state_r5
+    sto     r6, r0, reg_state_r6
+    sto     r7, r0, reg_state_r7
+    sto     r8, r0, reg_state_r8
+    sto     r9, r0, reg_state_r9
+    sto     r10, r0, reg_state_r10
+    sto     r11, r0, reg_state_r11
+    sto     r12, r0, reg_state_r12
+    sto     r13, r0, reg_state_r13
+    sto     r14, r0, reg_state_r14
+    RTS     ()
+        
 dis:
 
     mov     r3, r0, 16
@@ -710,24 +729,36 @@ opcodes:
 
 reg_state:
     WORD 0x0000
+reg_state_r1:
     WORD 0x1111
+reg_state_r2:
     WORD 0x2222
+reg_state_r3:
     WORD 0x3333
+reg_state_r4:
     WORD 0x4444
+reg_state_r5:
     WORD 0x5555
+reg_state_r6:
     WORD 0x6666
+reg_state_r7:
     WORD 0x7777
+reg_state_r8:
     WORD 0x8888
+reg_state_r9:
     WORD 0x9999
+reg_state_r10:
     WORD 0xaaaa
+reg_state_r11:
     WORD 0xbbbb
+reg_state_r12:
     WORD 0xcccc
+reg_state_r13:
     WORD 0xdddd
+reg_state_r14:
     WORD 0xeeee
-
 reg_state_pc:
     WORD 0xffff
-
 reg_state_zc:
     WORD 0x0002
 
