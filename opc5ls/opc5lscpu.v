@@ -7,7 +7,7 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
    (* RAM_STYLE="DISTRIBUTED" *)
    reg [15:0] GRF_q[15:0];
    reg [2:0]  FSM_q;
-   reg [3:0]  grf_radr_q, grf_wadr_q;
+   reg [3:0]  grf_radr_q;
    reg        C_q, Z_q, zero, carry;
    wire       predicate = (IR_q[PINVERT]^((IR_q[PRED_C]|C_q)&(IR_q[PRED_Z]|Z_q)));      // For use once IR_q loaded (FETCH1,EA_ED)
    wire       predicate_din = (din[PINVERT]^((din[PRED_C]|C_q)&(din[PRED_Z]|Z_q))); // For use before IR_q loaded (FETCH0)
@@ -24,7 +24,7 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
           XOR, BSWP           : {carry, result} = {C_q, (!IR_q[11])? (grf_dout ^ OR_q): { OR_q[7:0], OR_q[15:8] }};
           NOT, ROR            : {result, carry} = (IR_q[8]) ? {~OR_q, C_q} : {C_q, OR_q} ;
         endcase // case ( IR_q )
-        {carry, zero} = (IR_q[IRPUTPSR])? OR_q[1:0]: (grf_wadr_q!=4'hF)? {carry,!(|result)}: {C_q,Z_q} ; // don't update Carry or Zero on PC dest operations
+        {carry, zero} = (IR_q[IRPUTPSR])? OR_q[1:0]: (IR_q[3:0]!=4'hF)? {carry,!(|result)}: {C_q,Z_q} ; // don't update Carry or Zero on PC dest operations
      end
    always @(posedge clk or negedge reset_b )
      if (!reset_b)
@@ -40,11 +40,11 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
        endcase // case (FSM_q)
    always @(posedge clk)
      case(FSM_q)
-       FETCH0, EXEC  : {grf_wadr_q, grf_radr_q, OR_q } <= {(IR_q[IRCMP])?4'b0:IR_q[3:0], din[7:4], 16'b0};
-       FETCH1        : {grf_wadr_q, grf_radr_q, OR_q } <= {(IR_q[IRCMP])?4'b0:IR_q[3:0], ((skip_eaed)? IR_q[3:0] : IR_q[7:4]), din};
-       RDMEM         : {grf_wadr_q, grf_radr_q, OR_q } <= {(IR_q[IRCMP])?4'b0:IR_q[3:0], IR_q[3:0], din};
-       EA_ED         : {grf_wadr_q, grf_radr_q, OR_q } <= {(IR_q[IRCMP])?4'b0:IR_q[3:0], IR_q[3:0], grf_dout + OR_q};
-       default       : {grf_wadr_q, grf_radr_q, OR_q } <= {(IR_q[IRCMP])?4'b0:IR_q[3:0], 4'bx, 16'bx};
+       FETCH0, EXEC  : {grf_radr_q, OR_q } <= {din[7:4], 16'b0};
+       FETCH1        : {grf_radr_q, OR_q } <= {((skip_eaed)? IR_q[3:0] : IR_q[7:4]), din};
+       RDMEM         : {grf_radr_q, OR_q } <= {IR_q[3:0], din};
+       EA_ED         : {grf_radr_q, OR_q } <= {IR_q[3:0], grf_dout + OR_q};
+       default       : {grf_radr_q, OR_q } <= {4'bx, 16'bx};
      endcase
    always @(posedge clk or negedge reset_b)
      if ( !reset_b)
@@ -52,10 +52,10 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
      else if ( FSM_q == FETCH0 || FSM_q == FETCH1 )
        PC_q <= PC_q + 1;
      else if ( FSM_q == EXEC )
-       PC_q <= (grf_wadr_q==4'hF) ? result : PC_q + 1;
+       PC_q <= (IR_q[3:0]==4'hF) ? result : PC_q + 1;
    always @ (posedge clk)
      if ( FSM_q == EXEC )
-        { C_q, Z_q, GRF_q[grf_wadr_q]} <= { carry, zero, result };
+        { C_q, Z_q, GRF_q[(IR_q[IRCMP])?4'b0:IR_q[3:0]]} <= { carry, zero, result };
    always @ (posedge clk)
      if ( FSM_q == FETCH0 || FSM_q == EXEC)
         IR_q <= { ((din[11:8]==CMP)||(din[11:8]==CMPC)), {2{(din[11:8]==PSR)}} & {(din[3:0]==4'h0),(din[7:4]==4'b0)}, (din[11:8]==STO),(din[11:8]==LD), din};
