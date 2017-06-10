@@ -5,12 +5,12 @@
         #
 reset:
         mov      r1,r0
-        mov      r2,r0,1  
+        mov      r2,r0,1
         mov      r4,r0,results
 j0001:
         mov      r3,r2
+        mi.mov    pc,r0,endFibbonaci     
         add      r3,r1
-        c.mov    pc,r0,endFibbonaci     
         sto      r1,r4
         add      r4,r0,1
         mov      r1,r2
@@ -24,4 +24,3 @@ endFibbonaci2:
 
         ORG 0x100
 results:
-        
