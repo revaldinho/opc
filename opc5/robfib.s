@@ -13,16 +13,14 @@ reset:
 j0001:
         ld.i      r3,r2
         add.i     r3,r1
-        add.i     r3,r3                  # rol to get sign bit into carry
+        add.i     r4,r3                  # rol to get sign bit into carry
         c.ld.i    pc,r0,endFibbonaci     # if >= 0x8000 then exit
-        ror.i     r3,r3                  # restore r3
         sto       r1,r4
         add.i     r4,r10
         ld.i      r1,r2
         ld.i      r2,r3
         ld.i      pc,r0,j0001
 endFibbonaci:
-        ror.i    r3,r3                  # restore r3        
         sto      r1,r4
         sto      r2,r4,1
         sto      r3,r4,2
