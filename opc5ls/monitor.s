@@ -189,7 +189,7 @@ at:
 
 go:
     sto     r5, r0, go2
-    JSR     (load_regs)    
+    JSR     (load_regs)
     JSR     (go1)
     JSR     (save_regs)
     mov     pc, r0, m1
@@ -200,7 +200,7 @@ go2:
     WORD    0x0000
 
 
-load_regs:    
+load_regs:
     ld      r1, r0, reg_state_r1
     ld      r2, r0, reg_state_r2
     ld      r3, r0, reg_state_r3
@@ -215,7 +215,7 @@ load_regs:
     ld      r12, r0, reg_state_r12
     RTS     ()
 
-save_regs:    
+save_regs:
     sto     r1, r0, reg_state_r1
     sto     r2, r0, reg_state_r2
     sto     r3, r0, reg_state_r3
@@ -229,7 +229,7 @@ save_regs:
     sto     r11, r0, reg_state_r11
     sto     r12, r0, reg_state_r12
     RTS     ()
-        
+
 dis:
 
     mov     r3, r0, 16
@@ -453,13 +453,13 @@ print_string:
 ps_loop:
     ld      r1, r2
     and     r1, r0, 0xff
-    z.mov   pc, r0, ps_exit        
+    z.mov   pc, r0, ps_exit
     JSR     (oswrch)
     ld      r1, r2
     bswp    r1, r1
     and     r1, r0, 0xff
-    z.mov   pc, r0, ps_exit        
-    JSR     (oswrch)        
+    z.mov   pc, r0, ps_exit
+    JSR     (oswrch)
     mov     r2, r2, 0x0001
     mov     pc, r0, ps_loop
 
@@ -781,7 +781,7 @@ fib:
 
         mov     r1, r0     # r1 = 0
         mov     r2, r10    # r2 = 1
-fibLoop: 
+fibLoop:
         add     r1, r2
         c.mov   pc, r5     # r5 = fibEnd
         sto     r1, r4     # r4 = results
@@ -796,5 +796,5 @@ fibEnd:
         RTS     ()
 
         ORG     0x780
-        
+
 fibRes:
