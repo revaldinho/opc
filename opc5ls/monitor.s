@@ -33,8 +33,8 @@ monitor:
     mov     pc, r0, m0
 
 welcome:
-    WORD    0x0a,0x0d
-    STRING  "OPC5 Monitor"
+    WORD    0x0D0A
+    BSTRING "OPC5 Monitor"
 
 m0:
     mov     r14, r0, 0x07ff
@@ -468,8 +468,14 @@ print_string:
 
 ps_loop:
     ld      r1, r2
-    z.mov   pc, r0, ps_exit
+    and     r1, r0, 0xff
+    z.mov   pc, r0, ps_exit        
     JSR     (oswrch)
+    ld      r1, r2
+    bswp    r1, r1
+    and     r1, r0, 0xff
+    z.mov   pc, r0, ps_exit        
+    JSR     (oswrch)        
     mov     r2, r2, 0x0001
     mov     pc, r0, ps_loop
 
@@ -618,7 +624,7 @@ dis3:
     add     r2, r0                      # is r2 zero?
     z.mov   pc, r0, dis4
     sub     r2, r0, 0x2000
-    add     r1, r0, 0x0005              # move on to next predicate
+    add     r1, r0, 0x0003              # move on to next predicate
     mov     pc, r0, dis3
 
 dis4:
@@ -633,7 +639,7 @@ dis5:
     add     r2, r0                      # is r2 zero?
     z.mov   pc, r0, dis6
     sub     r2, r0, 0x0100
-    add     r1, r0, 0x0005              # move on to next opcode
+    add     r1, r0, 0x0003              # move on to next opcode
     mov     pc, r0, dis5
 
 dis6:
@@ -714,34 +720,34 @@ pr2:
     mov     pc, r0, oswrch
 
 predicates:
-    STRING " zc."
-    STRING "nzc."
-    STRING "  c."
-    STRING " nc."
-    STRING "  z."
-    STRING " nz."
+    BSTRING " zc."
+    BSTRING "nzc."
+    BSTRING "  c."
+    BSTRING " nc."
+    BSTRING "  z."
+    BSTRING " nz."
 
 four_spaces:
-    STRING "    "
-    STRING "nop."
+    BSTRING "    "
+    BSTRING "nop."
 
 opcodes:
-    STRING "mov "    #  0000
-    STRING "and "    #  0001
-    STRING "or  "    #  0010
-    STRING "xor "    #  0011
-    STRING "add "    #  0100
-    STRING "adc "    #  0101
-    STRING "sto "    #  0110
-    STRING "ld  "    #  0111
-    STRING "ror "    #  1000
-    STRING "not "    #  1001
-    STRING "sub "    #  1010
-    STRING "sbc "    #  1011
-    STRING "cmp "    #  1100
-    STRING "cmpc"    #  1101
-    STRING "bswp"    #  1110
-    STRING "intr"    #  1111
+    BSTRING "mov "    #  0000
+    BSTRING "and "    #  0001
+    BSTRING "or  "    #  0010
+    BSTRING "xor "    #  0011
+    BSTRING "add "    #  0100
+    BSTRING "adc "    #  0101
+    BSTRING "sto "    #  0110
+    BSTRING "ld  "    #  0111
+    BSTRING "ror "    #  1000
+    BSTRING "not "    #  1001
+    BSTRING "sub "    #  1010
+    BSTRING "sbc "    #  1011
+    BSTRING "cmp "    #  1100
+    BSTRING "cmpc"    #  1101
+    BSTRING "bswp"    #  1110
+    BSTRING "intr"    #  1111
 
 reg_state:
     WORD 0x0000
