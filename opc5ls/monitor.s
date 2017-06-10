@@ -188,16 +188,34 @@ at:
     mov     pc, r0, m2
 
 go:
-    JSR     (g1)
+    sto     r5, r0, go2
+    JSR     (load_regs)    
+    JSR     (go1)
     JSR     (save_regs)
     mov     pc, r0, m1
 
-g1:
-    mov     pc, r5
+go1:
+    WORD    0xD00F   # mov pc, r0, ...
+go2:
+    WORD    0x0000
 
 
+load_regs:    
+    ld      r1, r0, reg_state_r1
+    ld      r2, r0, reg_state_r2
+    ld      r3, r0, reg_state_r3
+    ld      r4, r0, reg_state_r4
+    ld      r5, r0, reg_state_r5
+    ld      r6, r0, reg_state_r6
+    ld      r7, r0, reg_state_r7
+    ld      r8, r0, reg_state_r8
+    ld      r9, r0, reg_state_r9
+    ld      r10, r0, reg_state_r10
+    ld      r11, r0, reg_state_r11
+    ld      r12, r0, reg_state_r12
+    RTS     ()
 
-save_regs:
+save_regs:    
     sto     r1, r0, reg_state_r1
     sto     r2, r0, reg_state_r2
     sto     r3, r0, reg_state_r3
@@ -210,8 +228,6 @@ save_regs:
     sto     r10, r0, reg_state_r10
     sto     r11, r0, reg_state_r11
     sto     r12, r0, reg_state_r12
-    sto     r13, r0, reg_state_r13
-    sto     r14, r0, reg_state_r14
     RTS     ()
         
 dis:
