@@ -1,7 +1,7 @@
 import sys, re
 op = "mov,and,or,xor,add,adc,sto,ld,ror,not,sub,sbc,cmp,cmpc,bswp,psr,halt".split(',') #halt aliassed to mov (modulo 16)
 symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
-predicates = {"c":0x4000,"z":0x8000,"cz":0x0000,"nc":0x6000,"nz":0xA000,"":0xC000,"0":0xE000,"1":0xC000,"ncz":0x2000,"nzc":0x2000}
+predicates = {"1":0x0000,"0":0x2000,"z":0x4000,"nz":0x6000,"c":0x8000,"nc":0xA000,"mi":0xC000,"pl":0xE000,"":0x0000}
 def expand_macro(line, macro):  # recursively expand macros, passing on instances not (yet) defined
     (text,mobj)=([line],re.match("^(?P<label>\w*\:)?\s*(?P<name>\w+)\s*?\((?P<params>.*)\)",line))
     if mobj and mobj.groupdict()["name"] in macro:
@@ -32,7 +32,7 @@ for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
 for iteration in range (0,2): # Two pass assembly
     nextmem = 0
     for line in newtext:
-        mobj = re.match('^(?:(?P<label>\w+):)?\s*((?:(?P<pred>((ncz)|(nz)|(nc)|(cz)|(c)|(z)|(1)|(0)?)?)\.))?(?P<instr>\w+)?\s*(?P<operands>.*)',re.sub("#.*","",line))
+        mobj = re.match('^(?:(?P<label>\w+):)?\s*((?:(?P<pred>((pl)|(mi)|(nc)|(nz)|(c)|(z)|(1)|(0)?)?)\.))?(?P<instr>\w+)?\s*(?P<operands>.*)',re.sub("#.*","",line))
         (label, pred, instr,operands) = [ mobj.groupdict()[item] for item in ("label","pred", "instr","operands")]
         (pred, opfields,words, memptr) = ("1" if pred==None else pred, [ x.strip() for x in operands.split(",")],[], nextmem)
         if label and label != "None":
@@ -43,7 +43,7 @@ for iteration in range (0,2): # Two pass assembly
             nextmem += len(opfields)
         elif instr in op or instr in ("WORD","STRING","BSTRING"):
             if  instr=="STRING" or instr=="BSTRING":
-                (step, wordstr) =  ( 2 if instr=="BSTRING" else 1, (''.join(opfields)).strip('"')+chr(0)+chr(0))
+                (step, wordstr) =  ( 2 if instr=="BSTRING" else 1, (''.join(opfields)).strip('"')+chr(0))
                 (words) = ([(ord(wordstr[i]) | ((ord(wordstr[i+1])<<8) if instr=="BSTRING" else 0)) for  i in range(0,len(wordstr)-1,step) ])
             else:
                 try:
