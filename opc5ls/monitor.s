@@ -30,14 +30,6 @@ ENDMACRO
 ORG 0x0000
 
 monitor:
-    mov     pc, r0, m0
-
-welcome:
-    WORD    0x0D0A
-    BSTRING "OPC5 Monitor"
-    WORD    0x0D0A, 0x0000
-
-m0:
     mov     r14, r0, 0x07ff
 
     mov     r1, r0, welcome
@@ -404,15 +396,12 @@ osnewl:
 # - r1 is the character to output
 #
 # Exit:
-# - all registers preserved
+# - all registers preserved, apart from r13 the scratch register
 
 oswrch:
-    PUSH    (r1)
-oswrch_loop:
-    ld      r1, r0, 0xfe08
-    and     r1, r0, 0x8000
-    nz.mov  pc, r0, oswrch_loop
-    POP     (r1)
+    ld      r13, r0, 0xfe08
+    and     r13, r0, 0x8000
+    nz.mov  pc, r0, oswrch
     sto     r1, r0, 0xfe09
     RTS     ()
 
@@ -702,6 +691,11 @@ pr1:
 pr2:
     add     r1, r0, 0x30
     mov     pc, r0, oswrch
+
+welcome:
+    WORD    0x0D0A
+    BSTRING "OPC5 Monitor"
+    WORD    0x0D0A, 0x0000
 
 predicates:
     BSTRING "   "     # Odd no of characters, so BSTRING will pad with 0x00
