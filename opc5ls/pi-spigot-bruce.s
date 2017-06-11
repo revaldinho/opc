@@ -35,13 +35,22 @@ ENDMACRO
 ndigits:	
 	ORG 1193
 psize:
-	
-	ORG 0x1000-1
 
-	mov r14, r0, stack	; initialise stack pointer
+	ORG 0x1000
+
+	;; trivial banner
+	mov r1, r0, 0x4f
+	JSR(oswrch)
+	mov r1, r0, 0x6b
+	JSR(oswrch)
+	mov r1, r0, 0x20
+	JSR(oswrch)
+	
+
+	;; mov r14, r0, stack	; initialise stack pointer
 	JSR( init)
-	ld  r2, r0, ndigits	# ldx #359
-	ld  r3, r0, psize	# ldy #1193
+	mov r2, r0, ndigits	# ldx #359
+	mov r3, r0, psize	# ldy #1193
 l1:
 	mov r6, r3 		# phy
 	mov r4, r1 		# pha
