@@ -12,7 +12,7 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
     wire predicate_din = din[P2] ^ (din[P1] ? (din[P0] ? S_q : Z_q) : (din[P0] ? C_q : 1));
     wire [15:0] grf_dout_p2= (IR_q[7:4]==4'hF) ? PC_q: (IR_q[7:4]!=4'h0) ? GRF_q[IR_q[7:4]]:16'b0;// Port 2 always reads source reg
     wire [15:0] grf_dout= (IR_q[3:0]==4'hF) ? PC_q: (IR_q[3:0]!=4'h0) ? GRF_q[IR_q[3:0]]:16'b0;   // Port 1 always reads dest reg
-    wire [15:0] operand = (IR_q[IRLEN]==1 || IR_q[IRLD]==1) ? OR_q : grf_dout_p2;                 // For one word instructions operand comes from GRF
+    wire [15:0] operand = (IR_q[IRLEN]||IR_q[IRLD]) ? OR_q : grf_dout_p2;                         // For one word instructions operand comes from GRF
     assign     {rnw, dout, address} = { !(FSM_q==WRMEM), grf_dout, ( FSM_q==WRMEM || FSM_q == RDMEM)? OR_q : PC_q };
     always @( * )
         begin
@@ -20,7 +20,7 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
             LD, MOV, PSR, STO   : {carry, result} = {C_q, (IR_q[IRGETPSR])? {13'b0, S_q, C_q, Z_q}: operand} ;
             AND, OR             : {carry, result} = {C_q, (IR_q[8])? (grf_dout & operand) : (grf_dout | operand)};
             ADD, ADC            : {carry, result} = grf_dout + operand + (IR_q[8] & C_q);
-            SUB, SBC, CMP, CMPC : {carry, result} = grf_dout + (operand ^ 16'hFFFF) + ((IR_q[8])? C_q: 1);
+            SUB, SBC, CMP, CMPC : {carry, result} = grf_dout + (~operand & 16'hFFFF) + ((IR_q[8])? C_q: 1);
             XOR, BSWP           : {carry, result} = {C_q, (!IR_q[11])? (grf_dout ^ operand): { operand[7:0], operand[15:8] }};
             NOT, ROR            : {result, carry} = (IR_q[8]) ? {~operand, C_q} : {C_q, operand} ;
             endcase // case ( IR_q )
@@ -44,10 +44,8 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
     always @(posedge clk)
         case(FSM_q)
         FETCH0, EXEC  : OR_q <= 16'b0;
-        FETCH1        : OR_q <= din;
-        RDMEM         : OR_q <= din;
         EA_ED         : OR_q <= grf_dout_p2 + OR_q;
-        default       : OR_q <= 16'bx;
+        default       : OR_q <= din;
         endcase
     always @(posedge clk or negedge reset_b)
         if ( !reset_b)
