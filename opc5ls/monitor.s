@@ -187,7 +187,7 @@ go:
     mov     pc, r0, m1
 
 go1:
-    WORD    0xD00F   # mov pc, r0, ...
+    WORD    0x100F   # mov pc, r0, ...
 go2:
     WORD    0x0000
 
@@ -285,7 +285,7 @@ step:
     mov     pc, r0, store_operand
 
 no_operand:
-    mov     r1, r0, 0xE200         # operand slot is filled with a nop
+    mov     r1, r0, 0x2200         # operand slot is filled with a nop
                                    #   0.and   r0, r0
 store_operand:
     sto     r1, r0, operand        # store the operand
