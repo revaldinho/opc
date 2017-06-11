@@ -35,7 +35,7 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
          FETCH1 : FSM_q <= (!predicate )? FETCH0: (skip_eaed) ? EXEC : EA_ED;        // Allow FETCH1 to skip through to EXEC
          EA_ED  : FSM_q <= (!predicate )? FETCH0: (IR_q[IRLD]) ? RDMEM : (IR_q[IRSTO]) ? WRMEM : EXEC;
          RDMEM  : FSM_q <= EXEC;
-         EXEC   : FSM_q <= (IR_q[3:0]==4'hF)? FETCH0: (din[IRLEN]) ? FETCH1 : EA_ED;
+         EXEC   : FSM_q <= (IR_q[11:8]==PSR || IR_q[3:0]==4'hF)? FETCH0: (din[IRLEN]) ? FETCH1 : EA_ED;
          default: FSM_q <= FETCH0;
        endcase // case (FSM_q)
    always @(posedge clk)
