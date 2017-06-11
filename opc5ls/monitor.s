@@ -294,7 +294,7 @@ store_operand:
 
     ld      r7, r5, reg_state      # load the src register value
     ld      r8, r6, reg_state      # load the dst register value
-    ld      r9, r0, reg_state_psr  # load the c (bit 1) and z (bit 0) flags
+    ld      r9, r0, reg_state_psr  # load the s (bit 2), c (bit 1) and z (bit 0) flags
 
     psr     psr, r9                # load the flags
 
@@ -305,7 +305,9 @@ operand:
     WORD    0x0000                 # emulated opcode patched here
 
     psr     r9, psr                # save the flags
-    sto     r9, r0, reg_state_psr
+
+    cmp     r6, r0, 15             # was the destination register r15
+    nz.sto  r9, r0, reg_state_psr  # no, then save the flags
 
     sto     r8, r6, reg_state      # save the new dst register value
 
