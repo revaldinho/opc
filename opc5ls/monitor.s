@@ -187,7 +187,7 @@ go:
     mov     pc, r0, m1
 
 go1:
-    WORD    0xD00F   # mov pc, r0, ...
+    WORD    0x100F   # mov pc, r0, ...
 go2:
     WORD    0x0000
 
@@ -250,14 +250,13 @@ dis_loop:
 # r7 is the patched source register
 # r8 is the patched destination register
 # r9 is the emulated flags
-
+# r10 is the iteration count
 
 step:
+    mov     r10, r5, 1             # iteration count + 1
 
-    JSR     (osnewl)
-    mov     r1, r4                 # display the next instruction
-    JSR     (disassemble)
-    JSR     (osnewl)
+step_loop:
+    JSR     (print_state)
 
     ld      r1, r4                 # fetch the instruction
     add     r4, r0, 1              # increment the PC
@@ -285,7 +284,7 @@ step:
     mov     pc, r0, store_operand
 
 no_operand:
-    mov     r1, r0, 0xE200         # operand slot is filled with a nop
+    mov     r1, r0, 0x2200         # operand slot is filled with a nop
                                    #   0.and   r0, r0
 store_operand:
     sto     r1, r0, operand        # store the operand
@@ -295,7 +294,7 @@ store_operand:
 
     ld      r7, r5, reg_state      # load the src register value
     ld      r8, r6, reg_state      # load the dst register value
-    ld      r9, r0, reg_state_psr  # load the c (bit 1) and z (bit 0) flags
+    ld      r9, r0, reg_state_psr  # load the s (bit 2), c (bit 1) and z (bit 0) flags
 
     psr     psr, r9                # load the flags
 
@@ -306,12 +305,18 @@ operand:
     WORD    0x0000                 # emulated opcode patched here
 
     psr     r9, psr                # save the flags
-    sto     r9, r0, reg_state_psr
+
+    cmp     r6, r0, 15             # was the destination register r15
+    nz.sto  r9, r0, reg_state_psr  # no, then save the flags
 
     sto     r8, r6, reg_state      # save the new dst register value
 
-    JSR     (print_regs)           # display the saved registers
     ld      r4, r0, reg_state_pc   # load the PC (r5)
+
+    sub     r10, r0, 1             # decrement the iteration count
+    nz.mov  pc, r0, step_loop      # and loop back for more instructions
+
+    JSR     (print_state)          # print the final state
 
     mov     pc, r0, m1             # back to the - prompt
 
@@ -320,6 +325,20 @@ regs:
     JSR     (print_regs)
     mov     pc, r0, m1             # back to the - prompt
 
+print_state:
+    JSR     (osnewl)
+    mov     r1, r4                 # display the next instruction
+    JSR     (disassemble)
+
+pad1:
+    cmp     r12, r0, 42            # pad instruction like the emulator does
+    z.mov   pc, r0, pad2
+    JSR     (print_sp)
+    mov     pc, r0, pad1
+
+pad2:
+    JSR     (print_delim)
+    # fall through into print_regs
 
 # --------------------------------------------------------------
 #
@@ -331,38 +350,34 @@ regs:
 # - r1, r2, r3 are trashed
 
 print_regs:
-    mov      r2, r0
-    mov      r3, r0, 16
 
-dr_loop:
-    mov      r1, r2
-    JSR      (print_reg)           # "r9"
-    mov      r1, r0, 0x3d          # "="
-    JSR      (oswrch)
-    ld       r1, r2, reg_state
-    JSR      (print_hex4_sp)       # "1234"
-    add      r2, r0, 1
-    mov      r1, r2
-    and      r1, r0, 0x0003
-    nz.mov   pc, r0, no_newline
-    JSR      (osnewl)
-no_newline:
-    sub      r3, r0, 1
-    nz.mov   pc, r0, dr_loop
-
-    mov      r1, r0, 0x63          # c
-    ld       r2, r0, reg_state_psr
-    ror      r2, r2
+    ld       r1, r0, reg_state_psr # extract S flag
+    ror      r1, r1
+    ror      r1, r1
     JSR      (print_flag)
 
-    mov      r1, r0, 0x7a          # z
-    ld       r2, r0, reg_state_psr
+    ld       r1, r0, reg_state_psr # extract C flag
+    ror      r1, r1
+    JSR      (print_flag)
+
+    ld       r1, r0, reg_state_psr # extract Z flag
+    JSR      (print_flag)
+
+    mov      r1, r0, 0x3A          # ":"
+    JSR      (oswrch)
+
+    mov      r2, r0
+    mov      r3, r0, 16
+dr_loop:
+    ld       r1, r2, reg_state
+    JSR      (print_sp)
+    JSR      (print_hex4)          # "1234"
+    add      r2, r0, 1
+    sub      r3, r0, 1
+    nz.mov   pc, r0, dr_loop
+    RTS      ()
 
 print_flag:
-    JSR      (oswrch)              # "c" or "z"
-    mov      r1, r0, 0x3d          # "="
-    JSR      (oswrch)
-    mov      r1, r2
     and      r1, r0, 1
     add      r1, r0, 0x30
     JSR      (oswrch)              # "0" or "1"
@@ -394,15 +409,20 @@ osnewl:
 #
 # Entry:
 # - r1 is the character to output
-#
 # Exit:
-# - all registers preserved, apart from r13 the scratch register
+# - r12 is the horizontal position
+# - r13 (the scratch register) is trashed
+# - all other registers preserved
 
 oswrch:
     ld      r13, r0, 0xfe08
     and     r13, r0, 0x8000
     nz.mov  pc, r0, oswrch
     sto     r1, r0, 0xfe09
+    mov     r12, r12, 1       # increment the horizontal position
+    mov     r13, r1           #
+    xor     r13, r0, 13       # test for <cr> without corrupting x
+    z.mov   r12, r0           # reset horizontal position
     RTS     ()
 
 # --------------------------------------------------------------
@@ -491,7 +511,7 @@ ph_loop:
 
     and     r1, r0, 0x0F    # mask off everything but the bottom nibble
     cmp     r1, r0, 0x0A    # set the carry if r1 >= 0x0A
-    c.add   r1, r0, 0x07    # 'A' - '9' + 1
+    c.add   r1, r0, 0x27    # 'a' - '9' + 1
     add     r1, r0, 0x30    # '0'
 
     JSR     (oswrch)        # output R1
@@ -541,6 +561,26 @@ print_sp:
 
 # --------------------------------------------------------------
 #
+# print_delim
+#
+# Prints a <space>:<space> delimeter
+#
+# Entry:
+#
+# Exit:
+# - all registers preserved
+
+print_delim:
+     PUSH   (r1)
+     mov    r1, r0, 0x3a
+     JSR    (oswrch)
+     mov    r1, r0, 0x20
+     JSR    (oswrch)
+     POP    (r1)
+     RTS    ()
+
+# --------------------------------------------------------------
+#
 # disassemble
 #
 # Disassemble a single instruction
@@ -563,6 +603,7 @@ disassemble:
     mov     r5, r1                      # r5 holds the instruction addess
 
     JSR     (print_hex4_sp)             # print address
+    JSR     (print_delim)               # print ": " delimiter
 
     ld      r6, r5                      # r6 holds the opcode
     add     r5, r0, 1                   # increment the address pointer
@@ -587,7 +628,8 @@ dis1:
     JSR     (print_string)              # print 4 spaces - one word instructions
 
 dis2:
-    JSR     (print_sp)                  # print a space
+    JSR     (print_sp)                  # print space
+    JSR     (print_delim)               # print ": " delimiter
 
     mov     r2, r6
     and     r2, r0, 0xE000              # extract predicate
@@ -624,7 +666,6 @@ dis6:
 
     mov     r1, r0, 0x2c
     JSR     (oswrch)
-    JSR     (print_sp)                  # print a space
 
     mov     r1, r6                      # extract source register
     ror     r1, r1
@@ -640,8 +681,6 @@ dis6:
 
     mov     r1, r0, 0x2c                # print a ,
     JSR     (oswrch)
-
-    JSR     (print_sp)                  # print a space
 
     mov     r1, r0, 0x30                # print 0x
     JSR     (oswrch)
@@ -665,21 +704,14 @@ dis7:
 print_reg:
 
     and     r1, r0, 0x0F
-    cmp     r1, r0, 0x0A
 
     PUSH    (r1)
-
-    c.mov  pc, r0, pr1
-
-    JSR    (print_sp)
-
-pr1:
-
     mov     r1, r0, 0x72
     JSR     (oswrch)
     POP     (r1)
 
-    nc.mov  pc, r0, pr2
+    cmp     r1, r0, 0x0A
+    nc.mov  pc, r0, print_reg_num
 
     PUSH    (r1)
     mov     r1, r0, 0x31
@@ -688,7 +720,7 @@ pr1:
 
     sub     r1, r0, 0x0A
 
-pr2:
+print_reg_num:
     add     r1, r0, 0x30
     mov     pc, r0, oswrch
 
@@ -697,88 +729,100 @@ welcome:
     BSTRING "OPC5 Monitor"
     WORD    0x0D0A, 0x0000
 
-predicates:
-    BSTRING "   "     # Odd no of characters, so BSTRING will pad with 0x00
-    BSTRING " 0."
-    BSTRING " z."
+predicates:       # Each predicate must be 2 words, zero terminated
+    WORD 0x0000
+    WORD 0x0000
+
+    BSTRING "0."
+    WORD 0x0000
+
+    BSTRING "z."
+    WORD 0x0000
+
     BSTRING "nz."
-    BSTRING " c."
+
+    BSTRING "c."
+    WORD 0x0000
+
     BSTRING "nc."
+
     BSTRING "mi."
+
     BSTRING "pl."
+
 
 four_spaces:
     BSTRING "    "
     WORD    0x0000
 
-opcodes:
-    BSTRING "mov "    #  0000
+opcodes:    # Each opcode must be 3 words, zero terminated
+    BSTRING "mov"    #  0000
     WORD    0x0000
-    BSTRING "and "    #  0001
+    BSTRING "and"    #  0001
     WORD    0x0000
-    BSTRING "or  "    #  0010
+    BSTRING "or"     #  0010
+    WORD    0x0000, 0x0000
+    BSTRING "xor"    #  0011
     WORD    0x0000
-    BSTRING "xor "    #  0011
+    BSTRING "add"    #  0100
     WORD    0x0000
-    BSTRING "add "    #  0100
+    BSTRING "adc"    #  0101
     WORD    0x0000
-    BSTRING "adc "    #  0101
+    BSTRING "sto"    #  0110
     WORD    0x0000
-    BSTRING "sto "    #  0110
+    BSTRING "ld"     #  0111
+    WORD    0x0000, 0x0000
+    BSTRING "ror"    #  1000
     WORD    0x0000
-    BSTRING "ld  "    #  0111
+    BSTRING "not"    #  1001
     WORD    0x0000
-    BSTRING "ror "    #  1000
+    BSTRING "sub"    #  1010
     WORD    0x0000
-    BSTRING "not "    #  1001
+    BSTRING "sbc"    #  1011
     WORD    0x0000
-    BSTRING "sub "    #  1010
+    BSTRING "cmp"    #  1100
     WORD    0x0000
-    BSTRING "sbc "    #  1011
+    BSTRING "cmpc"   #  1101
     WORD    0x0000
-    BSTRING "cmp "    #  1100
+    BSTRING "bswp"   #  1110
     WORD    0x0000
-    BSTRING "cmpc"    #  1101
-    WORD    0x0000
-    BSTRING "bswp"    #  1110
-    WORD    0x0000
-    BSTRING "psr "    #  1111
+    BSTRING "psr"    #  1111
     WORD    0x0000
 
 reg_state:
     WORD 0x0000
 reg_state_r1:
-    WORD 0x1111
+    WORD 0x0000
 reg_state_r2:
-    WORD 0x2222
+    WORD 0x0000
 reg_state_r3:
-    WORD 0x3333
+    WORD 0x0000
 reg_state_r4:
-    WORD 0x4444
+    WORD 0x0000
 reg_state_r5:
-    WORD 0x5555
+    WORD 0x0000
 reg_state_r6:
-    WORD 0x6666
+    WORD 0x0000
 reg_state_r7:
-    WORD 0x7777
+    WORD 0x0000
 reg_state_r8:
-    WORD 0x8888
+    WORD 0x0000
 reg_state_r9:
-    WORD 0x9999
+    WORD 0x0000
 reg_state_r10:
-    WORD 0xaaaa
+    WORD 0x0000
 reg_state_r11:
-    WORD 0xbbbb
+    WORD 0x0000
 reg_state_r12:
-    WORD 0xcccc
+    WORD 0x0000
 reg_state_r13:
-    WORD 0xdddd
+    WORD 0x0000
 reg_state_r14:
-    WORD 0xeeee
+    WORD 0x0000
 reg_state_pc:
-    WORD 0xffff
+    WORD 0x0000
 reg_state_psr:
-    WORD 0x0002
+    WORD 0x0000
 
 # ----------------------------------------------------
 # Some test code (fastfib)
