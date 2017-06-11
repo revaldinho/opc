@@ -31,13 +31,19 @@ MACRO RTS()
     ld      pc, r14
 ENDMACRO
 
-	ORG 359
+# preamble for a bootable program
+# remove this for a monitor-friendly loadable program
+	ORG 0
+	mov r14, r0, 0x2000
+	mov pc, r0, start
+
+	ORG 3 #59
 ndigits:	
-	ORG 1193
+	ORG 11 #93
 psize:
 
 	ORG 0x1000
-
+start:
 	;; trivial banner
 	mov r1, r0, 0x4f
 	JSR(oswrch)
@@ -161,7 +167,7 @@ oswrch_loop:
     ld      r13, r0, 0xfe08
     and     r13, r0, 0x8000
     nz.mov  pc, r0, oswrch_loop
-    sto     r13, r0, 0xfe09
+    sto     r1, r0, 0xfe09
     RTS     ()
 
 base:   WORD 0,0,0,0,0,0,0,0,0  # reserve some stack space
