@@ -40,7 +40,7 @@ has no effect on these, also any instructions which write to the PC preserve the
 
   * Carry - set or cleared only on arithmetic operations
   * Zero  - set on every instruction based on the state of the destination register
-  * Sign  - set when the MSB of the result is a '1' 
+  * Sign  - set when the MSB of the result is a '1'
 
 Predication
 -----------
@@ -66,7 +66,7 @@ Instruction Set
   |----|----------|------------|---------|--------------|------------------|---------------------|----------------------------|----------------------------|
   | 0  | mov      |            | 0 0 0 0 | mov rd, rs   | ED = rs + 0      | mov rd,rs,imm       | ED = (rs + imm) & 0xFFFF   | rd <- ED                   |
   | 1  | and      |            | 0 0 0 1 | and rd, rs   | ED = rs + 0      | and rd,rs,imm       | ED = (rs + imm) & 0xFFFF   | rd <- rd & ED              |
-  | 2  | or       |            | 0 0 1 0 | or rd,rs     | ED = rs + 0      | or rd,rs,imm        | ED = (rs + imm) & 0xFFFF   | rd <- rd | ED              |
+  | 2  | or       |            | 0 0 1 0 | or rd,rs     | ED = rs + 0      | or rd,rs,imm        | ED = (rs + imm) & 0xFFFF   | rd <- rd \| ED             |
   | 3  | xor      |            | 0 0 1 1 | xor rd,rs    | ED = rs + 0      | xor rd,rs,imm       | ED = (rs + imm) & 0xFFFF   | rd <- rd ^ ED              |
   | 4  | add      | asl rd, rd | 0 1 0 0 | add rd, rs   | ED = rs + 0      | add rd, rs, imm     | ED = (rs + imm) & 0xFFFF   | {C, rd}  <- rd + ED        |
   | 5  | adc      | rol rd,rd  | 0 1 0 1 | adc rd, rs   | ED = rs + 0      | adc rd, rs, imm     | ED = (rs + imm) & 0xFFFF   | {C, rd } <- rd + ED + C    |
