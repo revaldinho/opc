@@ -8,7 +8,7 @@ module opc5system ( input clk, input[7:0] sw, output[7:0] led, input rxd, output
    parameter BAUD = 115200;
 
    // RAMSIZE is the size of the RAM address bus
-   parameter RAMSIZE = 11;
+   parameter RAMSIZE = 14;
    
    // Duty Cycle controls the brightness of the seven segment display (0..15)
    parameter SEVEN_SEG_DUTY_CYCLE = 0;
