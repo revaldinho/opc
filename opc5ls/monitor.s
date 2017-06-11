@@ -250,14 +250,13 @@ dis_loop:
 # r7 is the patched source register
 # r8 is the patched destination register
 # r9 is the emulated flags
-
+# r10 is the iteration count
 
 step:
+    mov     r10, r5, 1             # iteration count + 1
 
-    JSR     (osnewl)
-    mov     r1, r4                 # display the next instruction
-    JSR     (disassemble)
-    JSR     (osnewl)
+step_loop:
+    JSR     (print_state)
 
     ld      r1, r4                 # fetch the instruction
     add     r4, r0, 1              # increment the PC
@@ -310,8 +309,12 @@ operand:
 
     sto     r8, r6, reg_state      # save the new dst register value
 
-    JSR     (print_regs)           # display the saved registers
     ld      r4, r0, reg_state_pc   # load the PC (r5)
+
+    sub     r10, r0, 1             # decrement the iteration count
+    nz.mov  pc, r0, step_loop      # and loop back for more instructions
+
+    JSR     (print_state)          # print the final state
 
     mov     pc, r0, m1             # back to the - prompt
 
@@ -320,6 +323,12 @@ regs:
     JSR     (print_regs)
     mov     pc, r0, m1             # back to the - prompt
 
+print_state:
+    JSR     (osnewl)
+    mov     r1, r4                 # display the next instruction
+    JSR     (disassemble)
+    JSR     (osnewl)
+    # fall through into print_regs
 
 # --------------------------------------------------------------
 #
