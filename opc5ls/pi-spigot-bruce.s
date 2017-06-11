@@ -31,17 +31,33 @@ MACRO RTS()
     ld      pc, r14
 ENDMACRO
 
-	ORG 359
-ndigits:	
-	ORG 1193
-psize:
-	
-	ORG 0x1000-1
+# preamble for a bootable program
+# remove this for a monitor-friendly loadable program
+	ORG 0
+	mov r14, r0, 0x2000
+	mov pc, r0, start
 
-	mov r14, r0, stack	; initialise stack pointer
+	ORG 3 # 359
+ndigits:	
+
+	ORG 41 # 1193
+psize:
+
+	ORG 0x1000
+start:
+	;; trivial banner
+	mov r1, r0, 0x4f
+	JSR(oswrch)
+	mov r1, r0, 0x6b
+	JSR(oswrch)
+	mov r1, r0, 0x20
+	JSR(oswrch)
+	
+
+	;; mov r14, r0, stack	; initialise stack pointer
 	JSR( init)
-	ld  r2, r0, ndigits	# ldx #359
-	ld  r3, r0, psize	# ldy #1193
+	mov r2, r0, ndigits	# ldx #359
+	mov r3, r0, psize	# ldy #1193
 l1:
 	mov r6, r3 		# phy
 	mov r4, r1 		# pha
@@ -73,13 +89,13 @@ l2:	mov r1, r2		# txa
 	sto r1, r0, p		# sta p
 	mov r2, r5 		# plx
 	mov r1, r4 		# pla
-	ld  r3, r11		# ldy q
+	mov r3, r11		# ldy q
 	cmp r3, r0, 10		# cpy #10
 	nc.mov pc, r0, l3	# bcc l3
 	mov r3, r0		# ldy #0
 	add r1, r0, 1		# inc
 l3:
-	cmp r2, r0, 358		# cpx #358
+	cmp r2, r0, ndigits-1	# cpx #358
 	nc.mov pc, r0, l4	# bcc l4
 	nz.mov pc, r0, l5	# bne l5
 	JSR (oswrch)
@@ -89,11 +105,11 @@ l4:
 l5:	mov r1, r3		# tya
 	xor r1, r0, 48		# eor #48
 	mov r3, r6 		# ply
-	cmp r2, r0, 358		# cpx #358
+	cmp r2, r0, ndigits-1	# cpx #358
 	c.mov pc, r0, l6	# bcs l6
 				# dey
 				# dey
-	add r3, r0, -3		# dey
+	add r3, r0, -3		# dey by 3
 l6:	add r2, r0, -1		# dex
 	nz.mov pc, r0, l1	# bne l1
 	JSR (oswrch)
@@ -111,7 +127,7 @@ i1:	sto r1, r2, p-1		# was sta p,x
 
 mul:				# uses y as loop counter
 	mov r10, r1		# sta r
-	ld  r3, r0, 16		# ldy #16
+	mov r3, r0, 16		# ldy #16
 m1:	add r1, r1		# asl
 	add r11, r11		# asl q
 	nc.mov pc, r0, m2	# bcc m2
@@ -123,7 +139,7 @@ m2:	add r3, r0, -1		# dey
 
 div:				# uses y as loop counter
 	mov r10, r1		# sta r
-	ld  r3, r0, 16		# ldy #16
+	mov r3, r0, 16		# ldy #16
 	mov r1, r0, 0		# lda #0
 	add r11, r11		# asl q
 d1:	adc r1, r1		# rol
@@ -131,7 +147,7 @@ d1:	adc r1, r1		# rol
 	nc.mov pc, r0, d2	# bcc d2
 	sbc r1, r10		# sbc r
 d2:	adc r11, r11		# rol q
-	add r3, r0, -3		# dey
+	add r3, r0, -1		# dey
 	nz.mov pc, r0, d1	# bne d1
 	RTS()
 
@@ -152,7 +168,7 @@ oswrch_loop:
     ld      r13, r0, 0xfe08
     and     r13, r0, 0x8000
     nz.mov  pc, r0, oswrch_loop
-    sto     r13, r0, 0xfe09
+    sto     r1, r0, 0xfe09
     RTS     ()
 
 base:   WORD 0,0,0,0,0,0,0,0,0  # reserve some stack space
