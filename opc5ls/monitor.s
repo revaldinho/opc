@@ -350,6 +350,12 @@ no_newline:
     sub      r3, r0, 1
     nz.mov   pc, r0, dr_loop
 
+    mov      r1, r0, 0x73          # s
+    ld       r2, r0, reg_state_psr
+    ror      r2, r2
+    ror      r2, r2
+    JSR      (print_flag)
+
     mov      r1, r0, 0x63          # c
     ld       r2, r0, reg_state_psr
     ror      r2, r2
@@ -359,7 +365,7 @@ no_newline:
     ld       r2, r0, reg_state_psr
 
 print_flag:
-    JSR      (oswrch)              # "c" or "z"
+    JSR      (oswrch)              # "s" or "c" or "z"
     mov      r1, r0, 0x3d          # "="
     JSR      (oswrch)
     mov      r1, r2
