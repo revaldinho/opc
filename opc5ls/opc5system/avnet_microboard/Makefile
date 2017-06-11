@@ -23,7 +23,7 @@ opc5system.bit: monitor.mem $(BIT_FILE)
 
 monitor.mem : ../../monitor.s
 	python ../../opc5lsasm.py ../../monitor.s monitor.hex
-	tr " " "\n" <monitor.hex | head -2048 > monitor.mem
+	tr " " "\n" <monitor.hex | head -16384 > monitor.mem
 
 .phony: clean
 
