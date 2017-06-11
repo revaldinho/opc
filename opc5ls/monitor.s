@@ -754,37 +754,37 @@ opcodes:
 reg_state:
     WORD 0x0000
 reg_state_r1:
-    WORD 0x1111
+    WORD 0x0000
 reg_state_r2:
-    WORD 0x2222
+    WORD 0x0000
 reg_state_r3:
-    WORD 0x3333
+    WORD 0x0000
 reg_state_r4:
-    WORD 0x4444
+    WORD 0x0000
 reg_state_r5:
-    WORD 0x5555
+    WORD 0x0000
 reg_state_r6:
-    WORD 0x6666
+    WORD 0x0000
 reg_state_r7:
-    WORD 0x7777
+    WORD 0x0000
 reg_state_r8:
-    WORD 0x8888
+    WORD 0x0000
 reg_state_r9:
-    WORD 0x9999
+    WORD 0x0000
 reg_state_r10:
-    WORD 0xaaaa
+    WORD 0x0000
 reg_state_r11:
-    WORD 0xbbbb
+    WORD 0x0000
 reg_state_r12:
-    WORD 0xcccc
+    WORD 0x0000
 reg_state_r13:
-    WORD 0xdddd
+    WORD 0x0000
 reg_state_r14:
-    WORD 0xeeee
+    WORD 0x0000
 reg_state_pc:
-    WORD 0xffff
+    WORD 0x0000
 reg_state_psr:
-    WORD 0x0002
+    WORD 0x0000
 
 # ----------------------------------------------------
 # Some test code (fastfib)
