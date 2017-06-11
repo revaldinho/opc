@@ -8,9 +8,9 @@ with open(sys.argv[1],"r") as f:
     wordmem = [ (int(x,16) & 0xFFFF) for x in f.read().split() ]
 (regfile, acc, c, z, pcreg, c_save, s) = ([0]*16,0,0,0,15,0,0) # initialise machine state inc PC = reg[15]
 stdout=""
-print ("PC   : Mem       : S C Z : Instruction            : %s\n%s" % (''.join([" r%2d " % d for d in range(0,16)]), '-'*130))
+print ("PC   : Mem       : Instruction            : S C Z : %s\n%s" % (''.join([" r%2d " % d for d in range(0,16)]), '-'*130))
 while True:
-    regfile[0] = 0    # always overwrite regfile location 0 and then dont care about assignments
+    (c_save,regfile[0]) = (c,0)    # always overwrite regfile location 0 and then dont care about assignments
     instr_word = wordmem[regfile[pcreg]] &  0xFFFF
     (p0, p1, p2) = ( (instr_word & 0x8000) >> 15, (instr_word & 0x4000) >> 14, (instr_word & 0x2000)>>13)
     (opcode, source, dest) = ((instr_word & 0xF00) >> 8, (instr_word & 0xF0) >>4, instr_word & 0xF)
@@ -22,7 +22,7 @@ while True:
         (opcode,instr_str) = (op["halt"], re.sub("ld","halt",instr_str))
     instr_str += (",0x%04x" % operand) if instr_len==2 else ''
     mem_str = " %04x %4s " % (instr_word, "%04x" % (operand) if instr_len==2 else '')
-    print ("%04x :%s: %d %d %d : %-22s : %s" % (regfile[pcreg], mem_str, s, c, z, instr_str, ' '.join(["%04x" % i for i in regfile])))
+    print ("%04x :%s: %-22s : %d %d %d : %s" % (regfile[pcreg], mem_str, instr_str, s, c, z, ' '.join(["%04x" % i for i in regfile])))
     regfile[15] += instr_len # EA_ED must be computed after PC is brought up to date
     ea_ed = wordmem[(regfile[source] + operand)&0xFFFF] if rdmem else (regfile[source] + operand)&0xFFFF
     if ( bool(p2) ^ (bool(s if p0==1 else z) if p1==1 else bool(c if p0==1 else 1))):
