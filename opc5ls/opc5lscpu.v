@@ -5,13 +5,13 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
     reg [15:0] OR_q, PC_q, result;
     reg [20:0] IR_q;
     (* RAM_STYLE="DISTRIBUTED" *)
-    reg [15:0] GRF_q[14:0];
+    reg [15:0] GRF_q[15:0];
     reg [2:0]  FSM_q;
     reg        C_q, Z_q, S_q, zero, carry, sign;
     wire predicate = IR_q[P2] ^ (IR_q[P1] ? (IR_q[P0] ? S_q : Z_q) : (IR_q[P0] ? C_q : 1));
     wire predicate_din = din[P2] ^ (din[P1] ? (din[P0] ? S_q : Z_q) : (din[P0] ? C_q : 1));
-    wire [15:0] grf_dout_p2= (IR_q[7:4]==4'hF) ? PC_q: (IR_q[7:4]!=4'h0) ? GRF_q[IR_q[7:4]]:16'b0;// Port 2 always reads source reg
-    wire [15:0] grf_dout= (IR_q[3:0]==4'hF) ? PC_q: (IR_q[3:0]!=4'h0) ? GRF_q[IR_q[3:0]]:16'b0;   // Port 1 always reads dest reg
+    wire [15:0] grf_dout_p2= (IR_q[7:4]==4'hF) ? PC_q: {16{(IR_q[7:4]!=4'h0)}} & GRF_q[IR_q[7:4]];// Port 2 always reads source reg
+    wire [15:0] grf_dout= (IR_q[3:0]==4'hF) ? PC_q: {16{(IR_q[3:0]!=4'h0)}} & GRF_q[IR_q[3:0]];   // Port 1 always reads dest reg
     wire [15:0] operand = (IR_q[IRLEN]||IR_q[IRLD]) ? OR_q : grf_dout_p2;                         // For one word instructions operand comes from GRF
     assign     {rnw, dout, address} = { !(FSM_q==WRMEM), grf_dout, ( FSM_q==WRMEM || FSM_q == RDMEM)? OR_q : PC_q };
     always @( * )
@@ -21,7 +21,7 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
             AND, OR             : {carry, result} = {C_q, (IR_q[8])? (grf_dout & operand) : (grf_dout | operand)};
             ADD, ADC            : {carry, result} = grf_dout + operand + (IR_q[8] & C_q);
             SUB, SBC, CMP, CMPC : {carry, result} = grf_dout + (~operand & 16'hFFFF) + ((IR_q[8])? C_q: 1);
-            XOR, BSWP           : {carry, result} = {C_q, (!IR_q[11])? (grf_dout ^ operand): { operand[7:0], operand[15:8] }};
+            XOR, BSWP           : {carry, result} = {C_q, (!IR_q[11])? (grf_dout ^ operand): {operand[7:0], operand[15:8]}};
             NOT, ROR            : {result, carry} = (IR_q[8]) ? {~operand, C_q} : {C_q, operand} ;
             endcase // case ( IR_q )
             {sign, carry, zero} = (IR_q[IRPUTPSR])? operand[2:0]: (IR_q[3:0]!=4'hF)? {result[15], carry,!(|result)}: {S_q,C_q,Z_q} ; // don't update flags PC dest operations
@@ -35,10 +35,10 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
             FETCH1 : FSM_q <= (!predicate )? FETCH0: ((IR_q[3:0]!=0) || (IR_q[IRLD]) || IR_q[IRSTO]) ? EA_ED : EXEC;
             EA_ED  : FSM_q <= (!predicate )? FETCH0: (IR_q[IRLD]) ? RDMEM : (IR_q[IRSTO]) ? WRMEM : EXEC;
             RDMEM  : FSM_q <= EXEC;
-            EXEC   : FSM_q <= (IR_q[3:0]==4'hF)? FETCH0: (din[IRLEN]) ? FETCH1 :    // go to fetch0 if PC or PSR affected by exec
+            EXEC   : FSM_q <= (IR_q[3:0]==4'hF)? FETCH0: (din[IRLEN]) ? FETCH1 :                    // go to fetch0 if PC or PSR affected by exec
                             ((din[11:8]==LD) || (din[11:8]==STO) ) ? EA_ED :                        // load/store have to go via EA_ED
                             (din[P2] ^ (din[P1] ? (din[P0] ? sign : zero): (din[P0] ? carry : 1))) ? EXEC : EA_ED; // short cut to exec on all predicates
-                            //(din[15:13]==3'b110)? EXEC : EA_ED;                                  // or short cut on always only
+                            //(din[15:13]==3'b110)? EXEC : EA_ED;                                   // or short cut on always only
             default: FSM_q <= FETCH0;
             endcase // case (FSM_q)
     always @(posedge clk)
