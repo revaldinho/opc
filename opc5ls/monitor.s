@@ -30,18 +30,10 @@ ENDMACRO
 ORG 0x0000
 
 monitor:
-    mov     pc, r0, m0
-
-welcome:
-    WORD    0x0D0A
-    BSTRING "OPC5 Monitor"
-
-m0:
     mov     r14, r0, 0x07ff
 
     mov     r1, r0, welcome
     JSR     (print_string)
-    JSR     (osnewl)
 
 m1:
     JSR     (osnewl)
@@ -404,15 +396,12 @@ osnewl:
 # - r1 is the character to output
 #
 # Exit:
-# - all registers preserved
+# - all registers preserved, apart from r13 the scratch register
 
 oswrch:
-    PUSH    (r1)
-oswrch_loop:
-    ld      r1, r0, 0xfe08
-    and     r1, r0, 0x8000
-    nz.mov  pc, r0, oswrch_loop
-    POP     (r1)
+    ld      r13, r0, 0xfe08
+    and     r13, r0, 0x8000
+    nz.mov  pc, r0, oswrch
     sto     r1, r0, 0xfe09
     RTS     ()
 
@@ -608,7 +597,7 @@ dis3:
     add     r2, r0                      # is r2 zero?
     z.mov   pc, r0, dis4
     sub     r2, r0, 0x2000
-    add     r1, r0, 0x0003              # move on to next predicate
+    add     r1, r0, 0x0002              # move on to next predicate
     mov     pc, r0, dis3
 
 dis4:
@@ -703,35 +692,58 @@ pr2:
     add     r1, r0, 0x30
     mov     pc, r0, oswrch
 
+welcome:
+    WORD    0x0D0A
+    BSTRING "OPC5 Monitor"
+    WORD    0x0D0A, 0x0000
+
 predicates:
-    BSTRING " zc."
-    BSTRING "nzc."
-    BSTRING "  c."
-    BSTRING " nc."
-    BSTRING "  z."
-    BSTRING " nz."
+    BSTRING "   "     # Odd no of characters, so BSTRING will pad with 0x00
+    BSTRING " 0."
+    BSTRING " z."
+    BSTRING "nz."
+    BSTRING " c."
+    BSTRING "nc."
+    BSTRING "mi."
+    BSTRING "pl."
 
 four_spaces:
     BSTRING "    "
-    BSTRING "nop."
+    WORD    0x0000
 
 opcodes:
     BSTRING "mov "    #  0000
+    WORD    0x0000
     BSTRING "and "    #  0001
+    WORD    0x0000
     BSTRING "or  "    #  0010
+    WORD    0x0000
     BSTRING "xor "    #  0011
+    WORD    0x0000
     BSTRING "add "    #  0100
+    WORD    0x0000
     BSTRING "adc "    #  0101
+    WORD    0x0000
     BSTRING "sto "    #  0110
+    WORD    0x0000
     BSTRING "ld  "    #  0111
+    WORD    0x0000
     BSTRING "ror "    #  1000
+    WORD    0x0000
     BSTRING "not "    #  1001
+    WORD    0x0000
     BSTRING "sub "    #  1010
+    WORD    0x0000
     BSTRING "sbc "    #  1011
+    WORD    0x0000
     BSTRING "cmp "    #  1100
+    WORD    0x0000
     BSTRING "cmpc"    #  1101
+    WORD    0x0000
     BSTRING "bswp"    #  1110
+    WORD    0x0000
     BSTRING "psr "    #  1111
+    WORD    0x0000
 
 reg_state:
     WORD 0x0000
