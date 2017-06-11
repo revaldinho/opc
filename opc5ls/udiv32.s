@@ -91,27 +91,26 @@ udiv32:
         ld      r3, r1,1
         ld      r2, r1
 
-        mov    r1, r0, 1       # r1 = constant 1
-        mov    r10, r0,-32     # Setup a loop counter
+        mov    r1, r0, 1            # r1 = constant 1
+        mov    r10, r0,-32          # Setup a loop counter
         mov    r11, r0, udiv32_loop # stash inner loop top in a register
-        CLC()                        # ok to clear carry outside loop: will be clear on re-entry from bottom
+        mov    r8, r0, udiv32_next  # stash inner loop label in register
+        CLC()                       # ok to clear carry outside loop: will be clear on re-entry from bottom
 udiv32_loop:
         # shift left the quotient/dividend
         ROL(r2)
         ROL(r3)
         ROL(r4)
         ROL(r5)
-
-        # Speculative subtraction of divisor
-        mov    r8,r4
-        mov    r9,r5
-        sub    r8,r6
-        sbc    r9,r7
-        # If carry set then need to copy the result and update the quotient
-        c.mov  r4,r8
-        c.mov  r5,r9
-        c.or  r2,r1           # set LSB of quotient
-
+        # Check if quotient is larger than divisor
+        cmp    r4,r6
+        cmpc   r5,r7
+        # If carry not set then dont copy the result and dont update the quotient
+        nc.mov  pc,r8         # r8=udiv32_next
+        sub   r4,r6
+        sbc   r5,r7
+        or    r2,r1           # set LSB of quotient
+udiv32_next:
         add   r10, r1          # increment loop counter
         nz.mov pc, r11         # loop again if not finished
         # remainder/quotient in r2,3,4,5

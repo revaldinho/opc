@@ -101,7 +101,12 @@ sqrt:
         mov    r6, r0, 0x4000  # r5,r6 are the 'bit' var starting at 0x40000000
         mov    r5, r0, 0x0000
 
-        mov    r13,r0, sqrt_next # stash most often used label in r13
+        mov    r13,r0, sqrt_next    # stash most often used label in registers
+        mov    r12,r0, sqrt_next2   #
+        mov    r11,r0, sqrt_mmask
+        mov    r10,r0, sqrt_bitloop
+        mov    r9, r0, sqrt_next3
+
         #while (bit > num):
         #    bit >>= 2
 
@@ -118,12 +123,13 @@ sqrt_bitloop:
         CLC     ()
         ror   r6,r6           # rotate bit right (carry clear)
         ror   r5,r5
-        mov    pc,r0,sqrt_bitloop
+        mov    pc,r10         # r10 = sqrt_bitloop
+
 sqrt_next:
         # while (bit != 0):
         mov    r7, r5
         z.mov  r8, r6
-        z.mov  pc,r0, sqrt_next2
+        z.mov  pc,r12
         #    if (num >= res + bit) :
         #        num -= res + bit
         #        res = (res >> 1) + bit
@@ -137,11 +143,11 @@ sqrt_next:
         cmp   r1, r7
         cmpc  r2, r8
         # Greater or equal than means c=1 from subtraction
-        c.mov  pc,r0,sqrt_mmask   # If < just shift root and next iteration
+        c.mov  pc,r11              # If < just shift root and next iteration else goto sqrt_mask
         CLC     ()                 # Clear carry and shift root right
         ror   r4,r4
         ror   r3,r3
-        mov    pc,r0,sqrt_next3
+        mov    pc,r9               # r9 = sqrt_next3
 
 sqrt_mmask:
         # If >= then do substract again into num r1r2, rotate and merge mask into bit
