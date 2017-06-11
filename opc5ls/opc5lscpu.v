@@ -38,7 +38,7 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
             EXEC   : FSM_q <= (IR_q[3:0]==4'hF)? FETCH0: (din[IRLEN]) ? FETCH1 :                    // go to fetch0 if PC or PSR affected by exec
                             ((din[11:8]==LD) || (din[11:8]==STO) ) ? EA_ED :                        // load/store have to go via EA_ED
                             (din[P2] ^ (din[P1] ? (din[P0] ? sign : zero): (din[P0] ? carry : 1))) ? EXEC : EA_ED; // short cut to exec on all predicates
-                            //(din[15:13]==3'b110)? EXEC : EA_ED;                                   // or short cut on always only
+                            //(din[15:13]==3'b000)? EXEC : EA_ED;                                   // or short cut on always only
             default: FSM_q <= FETCH0;
             endcase // case (FSM_q)
     always @(posedge clk)
