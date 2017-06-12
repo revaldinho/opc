@@ -22,7 +22,7 @@ while True:
     regfile[15] += instr_len # EA_ED must be computed after PC is brought up to date
     ea_ed = wordmem[(regfile[source] + operand)&0xFFFF] if rdmem else (regfile[source] + operand)&0xFFFF
     if interrupt and ei==1 and isrv==0 :
-        ( regfile[pcreg], pc_int, psr_int, isrv ) = (0xFFE0, pc_save, (0,ei,s,c,z), 1) # Always clear the swi flag in the saved copy
+        ( regfile[pcreg], pc_int, psr_int, isrv ) = (0x0002, pc_save, (0,ei,s,c,z), 1) # Always clear the swi flag in the saved copy
     else:
         print ("%04x :%s: %-22s :  %d  %d %d %d %d : %s" % (pc_save, mem_str, instr_str, swi,ei, s, c, z, ' '.join(["%04x" % i for i in regfile])))
         if ( bool(p2) ^ (bool(s if p0==1 else z) if p1==1 else bool(c if p0==1 else 1))):

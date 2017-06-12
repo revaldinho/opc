@@ -31,11 +31,13 @@ for (e,s) in zip(emumem,simmem):
     loc += 1
 
 if fails ==0 :
-    print("PASS - Emulation and Simulation results match.")
+    print("PASS - Emulation and Simulation results match.", end="")
 else:
-    print("FAIL - Emulation and Simulation results differ")
+    print("FAIL - Emulation and Simulation results differ", end="")
 
 if (swi_count > 0):
-    print ("took %d Software interrupts" % simmem[swi_count])
+    print (" Took %d Software interrupts" % simmem[swi_count], end="")
 if (hwi_count > 0):
-    print ("took %d hardware interrupts" % simmem[hwi_count])
+    print ("; %d hardware interrupts," % simmem[hwi_count], end="")
+
+print("")

@@ -1,7 +1,7 @@
 module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, output rnw, input clk, input reset_b, input int_b );
-   parameter MOV=4'h0,AND=4'h1,OR=4'h2,XOR=4'h3,ADD=4'h4,ADC=4'h5,STO=4'h6,LD=4'h7,ROR=4'h8,NOT=4'h9,SUB=4'hA,SBC=4'hB,CMP=4'hC,CMPC=4'hD,BSWP=4'hE,PSR=4'hF,RTI=17'h1000F;
+   parameter MOV=4'h0,AND=4'h1,OR=4'h2,XOR=4'h3,ADD=4'h4,ADC=4'h5,STO=4'h6,LD=4'h7,ROR=4'h8,NOT=4'h9,SUB=4'hA,SBC=4'hB,CMP=4'hC,CMPC=4'hD,BSWP=4'hE,PSR=4'hF,RTI=17'h100FF;
    parameter FETCH0=3'h0, FETCH1=3'h1, EA_ED=3'h2, RDMEM=3'h3, EXEC=3'h4, WRMEM=3'h5, INT=3'h6 ;
-   parameter P0=15, P1=14, P2=13, IRLEN=12, IRLD=16, IRSTO=17, IRGETPSR=18, IRPUTPSR=19, IRCMP=20;
+   parameter P0=15, P1=14, P2=13, IRLEN=12, IRLD=16, IRSTO=17, IRGETPSR=18, IRPUTPSR=19, IRCMP=20, INT_VECTOR=16'h0002;
    reg [15:0] OR_q, PC_q, PCI_q, result;
    reg [20:0] IR_q;
    reg [15:0] GRF_q[15:0];
@@ -49,7 +49,7 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
      if ( !reset_b)
        { PC_q, PCI_q, isrv_q, PSRI_q, I_q, SWI_q} <= 39'b0;
      else if ( FSM_q == INT )
-       { PC_q, PCI_q, isrv_q, PSRI_q } <= { 16'hFFE0, PC_q, 1'b1,  I_q, S_q, C_q, Z_q} ;
+       { PC_q, PCI_q, isrv_q, PSRI_q } <= { INT_VECTOR, PC_q, 1'b1,  I_q, S_q, C_q, Z_q} ;
      else if ( FSM_q == FETCH0 || FSM_q == FETCH1 )
        PC_q <= PC_q + 1;
      else if ( FSM_q == EXEC )
