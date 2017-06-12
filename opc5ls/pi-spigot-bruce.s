@@ -37,10 +37,17 @@ ENDMACRO
 	mov r14, r0, 0x2000
 	mov pc, r0, start
 
-	ORG 3 # 359
-ndigits:	
+# 3 digits in 10431 instructions, 26559 cycles
+# 4 digits in 16590 instructions, 42229 cycles
+# 5 digits in 23644 instructions, 60186 cycles
+# 6 digits in 33412 instructions, 85040 cycles
+# 7 digits in 42589 instructions, 108368 cycles
+# 8 digits in 52659 instructions, 133981 cycles
 
-	ORG 41 # 1193
+	ORG 6 # Original target 359 digits
+ndigits:
+
+	ORG 21 # 1193  should be 1+ndigits*10/3
 psize:
 
 	ORG 0x1000
@@ -78,10 +85,10 @@ l2:	mov r1, r2		# txa
 	mov r11, r1		# sta q
 	mov r1, r2		# txa
 	add r1, r1		# asl
-	add r1, r0, -1		# dec
+	mov r1, r1, -1		# dec
 	JSR (div)
 	sto r1, r2, p-1		# sta p-1,x
-	add r2, r0, -1		# dex
+	mov r2, r2, -1		# dex
 	nz.mov pc, r0, l2	# bne l2
 
 	mov r1, r0, 10		# lda #10
@@ -93,7 +100,7 @@ l2:	mov r1, r2		# txa
 	cmp r3, r0, 10		# cpy #10
 	nc.mov pc, r0, l3	# bcc l3
 	mov r3, r0		# ldy #0
-	add r1, r0, 1		# inc
+	mov r1, r1, 1		# inc
 l3:
 	cmp r2, r0, ndigits-1	# cpx #358
 	nc.mov pc, r0, l4	# bcc l4
@@ -109,8 +116,8 @@ l5:	mov r1, r3		# tya
 	c.mov pc, r0, l6	# bcs l6
 				# dey
 				# dey
-	add r3, r0, -3		# dey by 3
-l6:	add r2, r0, -1		# dex
+	mov r3, r3, -3		# dey by 3
+l6:	mov r2, r2, -1		# dex
 	nz.mov pc, r0, l1	# bne l1
 	JSR (oswrch)
  	mov r0, r0, 3142	# RTS()
@@ -121,7 +128,7 @@ init:
 	mov r1, r0, 2		# lda #2
 	mov r2, r0, psize	# was ldx #1192
 i1:	sto r1, r2, p-1		# was sta p,x
-	add r2, r0, -1		# dex
+	mov r2, r2, -1		# dex
 	nz.mov pc, r0, i1	# bne instead of bpl i1
 	RTS()
 
@@ -133,7 +140,7 @@ m1:	add r1, r1		# asl
 	nc.mov pc, r0, m2	# bcc m2
 				# clc
 	add r1, r10		# adc r
-m2:	add r3, r0, -1		# dey
+m2:	mov r3, r3, -1		# dey
 	nz.mov pc, r0, m1	# bne m1
 	RTS()
 
@@ -147,7 +154,7 @@ d1:	adc r1, r1		# rol
 	nc.mov pc, r0, d2	# bcc d2
 	sbc r1, r10		# sbc r
 d2:	adc r11, r11		# rol q
-	add r3, r0, -1		# dey
+	mov r3, r3, -1		# dey
 	nz.mov pc, r0, d1	# bne d1
 	RTS()
 
