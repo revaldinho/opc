@@ -1,5 +1,5 @@
 import sys, re
-op = "mov,and,or,xor,add,adc,sto,ld,ror,not,sub,sbc,cmp,cmpc,bswp,psr,halt".split(',') #halt aliassed to mov (modulo 16)
+op = "mov,and,or,xor,add,adc,sto,ld,ror,not,sub,sbc,cmp,cmpc,bswp,psr,halt".split(',')+[""]*15+["rti"] #halt and rti aliassed to mov (modulo 16)
 symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
 predicates = {"1":0x0000,"0":0x2000,"z":0x4000,"nz":0x6000,"c":0x8000,"nc":0xA000,"mi":0xC000,"pl":0xE000,"":0x0000}
 def expand_macro(line, macro):  # recursively expand macros, passing on instances not (yet) defined
@@ -8,7 +8,7 @@ def expand_macro(line, macro):  # recursively expand macros, passing on instance
         (label,instname,paramstr) = (mobj.groupdict()["label"],mobj.groupdict()["name"],mobj.groupdict()["params"])
         (text, instparams) = (["#%s" % line], [x.strip() for x in paramstr.split(",")])
         if label:
-            text.append("%s%s"% (label, ":" if (label != "" and label != "None") else ""))
+            text.append("%s%s"% (label, ":" if (label != "" and label != "None" and not (label.endswith(":"))) else ""))
         for newline in macro[instname][1]:
             for (s,r) in zip( macro[instname][0], instparams):
                 newline = newline.replace(s,r) if s else newline
