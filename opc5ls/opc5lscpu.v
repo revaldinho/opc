@@ -35,7 +35,7 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
          EA_ED  : FSM_q <= (!predicate )? FETCH0: (IR_q[IRLD]) ? RDMEM : (IR_q[IRSTO]) ? WRMEM : EXEC;
          RDMEM  : FSM_q <= EXEC;
          EXEC   : FSM_q <= ((!int_b || SWI_q) & I_q & !isrv_q ) ? INT :  (IR_q[3:0]==4'hF)? FETCH0: (din[IRLEN]) ? FETCH1 : EA_ED; // Cant interrupt an interrupt ...
-         default: FSM_q <= FETCH0;
+         default: FSM_q <= ((!int_b || SWI_q) & I_q & !isrv_q ) ? INT :  FETCH0;
        endcase // case (FSM_q)
    always @(posedge clk)
      case(FSM_q)
