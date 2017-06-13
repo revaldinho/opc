@@ -7,7 +7,7 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
     reg [15:0] dprf_q[15:0];
     reg [2:0]  FSM_q, PSRI_q; // Only need to store S,C,Z because SWI will be cleared and I must have been 1 on interrupt
     reg        SWI_q, I_q, C_q, Z_q, S_q, zero, carry, sign, swi, isrv_q, enable_int;
-    wire predicate = IR_q[P2] ^ (IR_q[P1] ? (IR_q[P0] ? S_q : Z_q) : (IR_q[P0] ? C_q : 1)); // No need for this if always taking predicates in EXEC and F0?
+    wire predicate = IR_q[P2] ^ (IR_q[P1] ? (IR_q[P0] ? S_q : Z_q) : (IR_q[P0] ? C_q : 1));
     wire predicate_din = din[P2] ^ (din[P1] ? (din[P0] ? S_q : Z_q) : (din[P0] ? C_q : 1));
     wire [15:0] dprf_dout_p2= (IR_q[7:4]==4'hF) ? PC_q: {16{(IR_q[7:4]!=4'h0)}} & dprf_q[IR_q[7:4]];// Port 2 always reads source reg
     wire [15:0] dprf_dout= (IR_q[3:0]==4'hF) ? PC_q: {16{(IR_q[3:0]!=4'h0)}} & dprf_q[IR_q[3:0]];   // Port 1 always reads dest reg
@@ -35,9 +35,9 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
             EA_ED  : FSM_q <= (!predicate )? FETCH0: (IR_q[IRLD]) ? RDMEM : (IR_q[IRSTO]) ? WRMEM : EXEC;
             RDMEM  : FSM_q <= EXEC;
             EXEC   : FSM_q <= ((!int_b || SWI_q) & I_q & !isrv_q ) ? INT : (IR_q[3:0]==4'hF)? FETCH0: (din[IRLEN]) ? FETCH1 : // go to fetch0 if PC or PSR affected by exec
-                            ((din[11:8]==LD) || (din[11:8]==STO) ) ? EA_ED :                        // load/store have to go via EA_ED
+                            ((din[11:8]==LD) || (din[11:8]==STO) ) ? EA_ED :                                       // load/store have to go via EA_ED
                             (din[P2] ^ (din[P1] ? (din[P0] ? sign : zero): (din[P0] ? carry : 1))) ? EXEC : EA_ED; // short cut to exec on all predicates
-                            //(din[15:13]==3'b000)? EXEC : EA_ED;                                   // or short cut on always only
+                            //(din[15:13]==3'b000)? EXEC : EA_ED;                                                  // or short cut on always only
             WRMEM  : FSM_q <= ((!int_b || SWI_q) & I_q & !isrv_q ) ? INT : FETCH0;
             default: FSM_q <= FETCH0;
             endcase // case (FSM_q)
