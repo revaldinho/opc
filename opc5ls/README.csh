@@ -4,9 +4,9 @@ rm -rf #* *~ `ls -1 | egrep -v '(\.v|\.csh|\.ucf|\.py|\.s|spartan|xc95)'`
 
 foreach test ( fib robfib davefib mul32 udiv32 sqrt hello testpsr string sqrt_int )
     # Assemble the test
-    python3 opc5lsasm.py ${test}.s ${test}.hex | tee ${test}.lst
+    python3 opc5lsasm.py ${test}.s ${test}.hex >  ${test}.lst
     # Run the emulator
-    python3 opc5lsemu.py ${test}.hex ${test}.dump | tee ${test}.trace
+    python3 opc5lsemu.py ${test}.hex ${test}.dump > ${test}.trace
     # Test bench expects the hex file to be called 'test.hex'
     cp ${test}.hex test.hex
     # Run icarus verilog to compile the testbench
