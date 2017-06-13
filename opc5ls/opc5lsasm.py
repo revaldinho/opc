@@ -1,15 +1,14 @@
 import sys, re
-op = "mov,and,or,xor,add,adc,sto,ld,ror,not,sub,sbc,cmp,cmpc,bswp,psr,halt".split(',') #halt aliassed to mov (modulo 16)
+op = "mov,and,or,xor,add,adc,sto,ld,ror,not,sub,sbc,cmp,cmpc,bswp,psr,halt".split(',')+[""]*15+["rti"] #halt and rti aliassed to mov (modulo 16)
 symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
 predicates = {"1":0x0000,"0":0x2000,"z":0x4000,"nz":0x6000,"c":0x8000,"nc":0xA000,"mi":0xC000,"pl":0xE000,"":0x0000}
 def expand_macro(line, macro):  # recursively expand macros, passing on instances not (yet) defined
     (text,mobj)=([line],re.match("^(?P<label>\w*\:)?\s*(?P<name>\w+)\s*?\((?P<params>.*)\)",line))
     if mobj and mobj.groupdict()["name"] in macro:
         (label,instname,paramstr) = (mobj.groupdict()["label"],mobj.groupdict()["name"],mobj.groupdict()["params"])
-        instparams = [x.strip() for x in paramstr.split(",")]
-        text = ["#%s" % line]
+        (text, instparams) = (["#%s" % line], [x.strip() for x in paramstr.split(",")])
         if label:
-            text.append("%s%s"% (label, ":" if (label != "" and label != "None") else ""))
+            text.append("%s%s"% (label, ":" if (label != "" and label != "None" and not (label.endswith(":"))) else ""))
         for newline in macro[instname][1]:
             for (s,r) in zip( macro[instname][0], instparams):
                 newline = newline.replace(s,r) if s else newline
@@ -35,8 +34,9 @@ for iteration in range (0,2): # Two pass assembly
         mobj = re.match('^(?:(?P<label>\w+):)?\s*((?:(?P<pred>((pl)|(mi)|(nc)|(nz)|(c)|(z)|(1)|(0)?)?)\.))?(?P<instr>\w+)?\s*(?P<operands>.*)',re.sub("#.*","",line))
         (label, pred, instr,operands) = [ mobj.groupdict()[item] for item in ("label","pred", "instr","operands")]
         (pred, opfields,words, memptr) = ("1" if pred==None else pred, [ x.strip() for x in operands.split(",")],[], nextmem)
-        if label and label != "None":
-            exec ("%s= %d" % (label,nextmem), globals(), symtab )
+        if (label and label != "None") or (instr=="EQU"):
+            exec ("%s= %s" % ((label,str(nextmem)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
+            instr = None if instr == "EQU" else instr ## if instr was EQU then it is handled so no more to do
         if instr in op and iteration < 1:
             nextmem += len(opfields)-1                  # If two operands are provide instruction will be one word
         elif instr=="WORD" and iteration < 1:
@@ -49,7 +49,7 @@ for iteration in range (0,2): # Two pass assembly
                 try:
                     words = [eval( f,globals(), symtab) & 0xFFFF for f in opfields ];
                 except (ValueError, NameError, TypeError,SyntaxError):
-                    sys.exit("Error illegal register name or expression in: %s" % line )
+                    sys.exit("Error illegal register name or expression, or undefined symbol in: %s" % line )
                 if instr in op:
                     (dst,src,val) = (words+[0])[:3]
                     words = [((len(words)==3)<<12)|predicates[pred]|((op.index(instr)&0x0F)<<8)|(src<<4)|dst,val][:len(words)-(len(words)==2)]
