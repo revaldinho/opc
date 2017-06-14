@@ -17,7 +17,7 @@ while True:
     instr_str = "%s%s r%d,r%d" % (pred_dict[p0<<2 | p1<<1 | p2],dis[opcode],dest,source)
     instr_str = re.sub("r0","psr",instr_str,1) if (opcode==op["psr"] and dest!=15) else instr_str
     instr_str = (re.sub("ld","halt",instr_str)) if (opcode==op["mov"] and (dest==source==0)) else instr_str
-    instr_str = (re.sub("psr","rti",instr_str)) if (opcode==op["mov"] and (dest==source==0)) else instr_str
+    instr_str = (re.sub("psr","rti",instr_str)) if (opcode==op["psr"] and (dest==15)) else instr_str
     instr_str += (",0x%04x" % operand) if instr_len==2 else ''
     mem_str = " %04x %4s " % (instr_word, "%04x" % (operand) if instr_len==2 else '')
     regfile[15] += instr_len # EA_ED must be computed after PC is brought up to date
@@ -51,9 +51,9 @@ while True:
                 (c, regfile[dest])  = ( (res>>16) & 1, res & 0xFFFF)
             elif opcode == op["bswp"]:
                 regfile[dest] = (((ea_ed&0xFF00)>>8)|((ea_ed&0x00FF)<<8)) & 0xFFFF
-            elif opcode == (op["psr"]&0xF) and dest==0: # putpsr
+            elif opcode == op["psr"] and dest==0: # putpsr
                 (preserve_flag, flag_save) = (True, ((ea_ed&0x10)>>4,(ea_ed&0x8)>>3,(ea_ed&0x4)>>2,(ea_ed&0x2)>>1,(ea_ed)&1))
-            elif opcode == (op["psr"]&0xF) and dest != 15 and source==0: # getpsr
+            elif opcode == op["psr"] and dest != 15 and source==0: # getpsr
                 regfile[dest] = (swi<<4) | (ei<<3) | (s<<2) | (c<<1) | z
             elif opcode == op["sto"] :
                 (preserve_flag,stdout, wordmem[ea_ed]) = (True, chr(regfile[dest]) if ea_ed==0xfe09 else stdout, regfile[dest])
