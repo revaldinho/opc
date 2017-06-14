@@ -34,8 +34,8 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
          FETCH1 : FSM_q <= (!predicate )? FETCH0: (skip_eaed) ? EXEC : EA_ED;        // Allow FETCH1 to skip through to EXEC
          EA_ED  : FSM_q <= (!predicate )? FETCH0: (IR_q[IRLD]) ? RDMEM : (IR_q[IRSTO]) ? WRMEM : EXEC;
          RDMEM  : FSM_q <= EXEC;
-         EXEC   : FSM_q <= ((!int_b || SWI_q) & I_q & !isrv_q ) ? INT :  (IR_q[3:0]==4'hF)? FETCH0: (din[IRLEN]) ? FETCH1 : EA_ED; // Cant interrupt an interrupt ...
-         WRMEM  : FSM_q <= ((!int_b || SWI_q) & I_q & !isrv_q ) ? INT :  FETCH0;
+         EXEC   : FSM_q <= ((!int_b & I_q )|| SWI_q ) ? INT :  (IR_q[3:0]==4'hF)? FETCH0: (din[IRLEN]) ? FETCH1 : EA_ED; // Cant interrupt an interrupt ...
+         WRMEM  : FSM_q <= ((!int_b & I_q )|| SWI_q ) ? INT :  FETCH0;
          default: FSM_q <= FETCH0;
        endcase // case (FSM_q)
    always @(posedge clk)
@@ -49,7 +49,7 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
         if ( !reset_b)
             { PC_q, PCI_q, isrv_q, PSRI_q, I_q, SWI_q, S_q, C_q, Z_q} <= 41'b0;
         else if ( FSM_q == INT )
-            { PC_q, PCI_q, isrv_q, PSRI_q } <= { INT_VECTOR, PC_q, 1'b1, S_q, C_q, Z_q} ;
+            { PC_q, PCI_q, I_q, isrv_q, PSRI_q } <= { INT_VECTOR, PC_q, 1'b0, 1'b1, S_q, C_q, Z_q} ;
         else if ( FSM_q == FETCH0 || FSM_q == FETCH1 )
             PC_q <= PC_q + 1;
         else if ( FSM_q == EXEC )

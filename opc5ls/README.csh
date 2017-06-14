@@ -2,7 +2,7 @@
 # Remove non primary data files
 rm -rf #* *~ `ls -1 | egrep -v '(\.v|\.csh|\.ucf|\.py|\.s|spartan|xc95)'`
 
-foreach test ( fib robfib davefib mul32 udiv32 sqrt hello testpsr string sqrt_int )
+foreach test ( fib robfib davefib mul32 udiv32 sqrt hello testpsr string davefib_int sqrt_int )
     # Assemble the test
     python3 opc5lsasm.py ${test}.s ${test}.hex >  ${test}.lst
     # Run the emulator
@@ -21,7 +21,7 @@ end
 echo ""
 echo "Comparing memory dumps between emulation and simulation"
 echo "-------------------------------------------------------"
-foreach test ( fib robfib davefib mul32 udiv32 sqrt hello testpsr string sqrt_int  )
+foreach test ( fib robfib davefib mul32 udiv32 sqrt hello testpsr string davefib_int sqrt_int  )
     printf "%12s :" $test
     if "${test}" =~ "*int" then
         python3 ../utils/mdumpcheck.py ${test}.dump  ${test}.vdump 0xF000 0xFFFE 0xFFFF
