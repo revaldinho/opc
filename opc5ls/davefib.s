@@ -9,7 +9,7 @@ fib:
 
         mov     r1, r0    # r1 = 0
         mov     r2, r10   # r2 = 1
-fibLoop: 
+fibLoop:
         add     r1, r2
         c.mov   pc, r5     # r5 = fibEnd
         sto     r1, r4     # r4 = results

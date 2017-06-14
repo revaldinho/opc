@@ -55,7 +55,7 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
         else if ( FSM_q == EXEC )
             begin
                 PC_q <= (IR_q[IRRTI])? PCI_q : (IR_q[3:0]==4'hF) ? result : ((!int_b || SWI_q) & I_q )? PC_q: PC_q + 1 ; //Dont incr PC if taking interrupt
-                { SWI_q, I_q, S_q, C_q, Z_q} <= (IR_q[IRRTI])? {2'b01,PSRI_q}: {swi, enable_int, sign, carry, zero};
+                {SWI_q, I_q, S_q, C_q, Z_q} <= (IR_q[IRRTI])? {2'b01,PSRI_q}: {swi, enable_int, sign, carry, zero};
             end
     always @ (posedge clk)
         if ( FSM_q == EXEC )
