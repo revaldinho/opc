@@ -7,7 +7,7 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
    reg [15:0] sprf_q[15:0];
    reg [2:0]  FSM_q, PSRI_q;
    reg [3:0]  sprf_radr_q;
-   reg        SWI_q, I_q, C_q, Z_q, S_q, zero, carry, sign, swi, isrv_q, enable_int;
+   reg        SWI_q, I_q, C_q, Z_q, S_q, zero, carry, sign, swi, enable_int;
    wire predicate = IR_q[P2] ^ (IR_q[P1] ? (IR_q[P0] ? S_q : Z_q) : (IR_q[P0] ? C_q : 1));
    wire predicate_din = din[P2] ^ (din[P1] ? (din[P0] ? S_q : Z_q) : (din[P0] ? C_q : 1));
    wire [15:0] sprf_dout= (sprf_radr_q==4'hF) ? PC_q: (sprf_q[sprf_radr_q] & { 16{(sprf_radr_q!=4'h0)}});
@@ -47,15 +47,15 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
      endcase
     always @(posedge clk or negedge reset_b)
         if ( !reset_b)
-            { PC_q, PCI_q, isrv_q, PSRI_q, I_q, SWI_q, S_q, C_q, Z_q} <= 41'b0;
+            { PC_q, PCI_q, PSRI_q, I_q, SWI_q, S_q, C_q, Z_q} <= 40'b0;
         else if ( FSM_q == INT )
-            { PC_q, PCI_q, I_q, isrv_q, PSRI_q } <= { INT_VECTOR, PC_q, 1'b0, 1'b1, S_q, C_q, Z_q} ;
+            { PC_q, PCI_q, I_q, PSRI_q } <= { INT_VECTOR, PC_q, 1'b0, S_q, C_q, Z_q} ;
         else if ( FSM_q == FETCH0 || FSM_q == FETCH1 )
             PC_q <= PC_q + 1;
         else if ( FSM_q == EXEC )
             begin
-                PC_q <= (IR_q[IRRTI])? PCI_q : (IR_q[3:0]==4'hF) ? result : ((!int_b || SWI_q) & I_q & !isrv_q )? PC_q: PC_q + 1 ; //Dont incr PC if taking interrupt
-                {isrv_q, SWI_q, I_q, S_q, C_q, Z_q} <= (IR_q[IRRTI])? {3'b001,PSRI_q}: {isrv_q, swi, enable_int, sign, carry, zero};
+                PC_q <= (IR_q[IRRTI])? PCI_q : (IR_q[3:0]==4'hF) ? result : ((!int_b || SWI_q) & I_q )? PC_q: PC_q + 1 ; //Dont incr PC if taking interrupt
+                { SWI_q, I_q, S_q, C_q, Z_q} <= (IR_q[IRRTI])? {2'b01,PSRI_q}: {swi, enable_int, sign, carry, zero};
             end
     always @ (posedge clk)
         if ( FSM_q == EXEC )
