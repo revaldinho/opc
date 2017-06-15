@@ -1,6 +1,6 @@
 #!/bin/tcsh
 # Remove non primary data files
-rm -rf #* *~ `ls -1 | egrep -v '(\.v|\.csh|\.ucf|\.py|\.s|spartan|xc95)'`
+rm -rf *dump # *~ `ls -1 | egrep -v '(\.v|\.csh|\.ucf|\.py|\.s|spartan|xc95)'`
 
 foreach test ( fib robfib davefib mul32 udiv32 sqrt hello testpsr string davefib_int sqrt_int )
     # Assemble the test

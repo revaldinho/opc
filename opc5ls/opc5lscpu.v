@@ -5,25 +5,26 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
    reg [15:0] OR_q, PC_q, PCI_q, result;
    reg [21:0] IR_q; (* RAM_STYLE="DISTRIBUTED" *)
    reg [15:0] sprf_q[15:0];
-   reg [2:0]  FSM_q, PSRI_q;
-   reg [3:0]  sprf_radr_q;
-   reg        SWI_q, I_q, C_q, Z_q, S_q, zero, carry, sign, swi, enable_int;
-   wire predicate = IR_q[P2] ^ (IR_q[P1] ? (IR_q[P0] ? S_q : Z_q) : (IR_q[P0] ? C_q : 1));
-   wire predicate_din = din[P2] ^ (din[P1] ? (din[P0] ? S_q : Z_q) : (din[P0] ? C_q : 1));
+   reg [2:0]  FSM_q;
+   reg [3:0]  sprf_radr_q, swiid;
+   reg [7:0]  PSR_q, PSRI_q;
+   reg        SWI_q, zero, carry, sign, enable_int;
+   wire predicate = IR_q[P2] ^ (IR_q[P1] ? (IR_q[P0] ? PSR_q[2] : PSR_q[0]) : (IR_q[P0] ? PSR_q[1] : 1));
+   wire predicate_din = din[P2] ^ (din[P1] ? (din[P0] ? PSR_q[2] : PSR_q[0]) : (din[P0] ? PSR_q[1] : 1));
    wire [15:0] sprf_dout= (sprf_radr_q==4'hF) ? PC_q: (sprf_q[sprf_radr_q] & { 16{(sprf_radr_q!=4'h0)}});
    wire        skip_eaed = !((sprf_radr_q!=0) || (IR_q[IRLD]) || IR_q[IRSTO]);
    assign      { rnw, dout, address } = { !(FSM_q==WRMEM), sprf_dout, ( FSM_q==WRMEM || FSM_q == RDMEM)? OR_q : PC_q };
    always @( * )
      begin
         case (IR_q[11:8])     // no real need for STO entry but include it so all instructions are covered, no need for default
-          LD, MOV, PSR, STO   : {carry, result} = {C_q, (IR_q[IRGETPSR])? {13'b0, S_q, C_q, Z_q}: OR_q} ;
-          AND, OR             : {carry, result} = {C_q, (IR_q[8])? (sprf_dout & OR_q) : (sprf_dout | OR_q)};
-          ADD, ADC            : {carry, result} = sprf_dout + OR_q + (IR_q[8] & C_q);
-          SUB, SBC, CMP, CMPC : {carry, result} = sprf_dout + (OR_q ^ 16'hFFFF) + ((IR_q[8])? C_q: 1);
-          XOR, BSWP           : {carry, result} = {C_q, (!IR_q[11])? (sprf_dout ^ OR_q): { OR_q[7:0], OR_q[15:8] }};
-          NOT, ROR            : {result, carry} = (IR_q[8]) ? {~OR_q, C_q} : {C_q, OR_q} ;
+          LD, MOV, PSR, STO   : {carry, result} = {PSR_q[1], (IR_q[IRGETPSR])? {8'b0, PSR_q}: OR_q} ;
+          AND, OR             : {carry, result} = {PSR_q[1], (IR_q[8])? (sprf_dout & OR_q) : (sprf_dout | OR_q)};
+          ADD, ADC            : {carry, result} = sprf_dout + OR_q + (IR_q[8] & PSR_q[1]);
+          SUB, SBC, CMP, CMPC : {carry, result} = sprf_dout + (OR_q ^ 16'hFFFF) + ((IR_q[8])? PSR_q[1]: 1);
+          XOR, BSWP           : {carry, result} = {PSR_q[1], (!IR_q[11])? (sprf_dout ^ OR_q): { OR_q[7:0], OR_q[15:8] }};
+          NOT, ROR            : {result, carry} = (IR_q[8]) ? {~OR_q, PSR_q[1]} : {PSR_q[1], OR_q} ;
         endcase // case ( IR_q )
-        {swi,enable_int,sign, carry, zero} = (IR_q[IRPUTPSR])? OR_q[4:0]: (IR_q[3:0]!=4'hF)? {SWI_q,I_q, result[15], carry,!(|result)}: {SWI_q,I_q,S_q,C_q,Z_q} ; // don't update flags PC dest operations
+        {swiid,enable_int,sign,carry,zero} = (IR_q[IRPUTPSR])? OR_q[7:0]: (IR_q[3:0]!=4'hF)? {PSR_q[7:3], result[15], carry,!(|result)}: PSR_q; // don't update flags PC dest operations
      end
    always @(posedge clk or negedge reset_b )
      if (!reset_b)
@@ -34,8 +35,8 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
          FETCH1 : FSM_q <= (!predicate )? FETCH0: (skip_eaed) ? EXEC : EA_ED;        // Allow FETCH1 to skip through to EXEC
          EA_ED  : FSM_q <= (!predicate )? FETCH0: (IR_q[IRLD]) ? RDMEM : (IR_q[IRSTO]) ? WRMEM : EXEC;
          RDMEM  : FSM_q <= EXEC;
-         EXEC   : FSM_q <= ((!int_b & I_q )|| SWI_q ) ? INT :  (IR_q[3:0]==4'hF)? FETCH0: (din[IRLEN]) ? FETCH1 : EA_ED; // Cant interrupt an interrupt ...
-         WRMEM  : FSM_q <= ((!int_b & I_q )|| SWI_q ) ? INT :  FETCH0;
+         EXEC   : FSM_q <= ((!int_b & PSR_q[3] )|| (IR_q[IRPUTPSR] && (|swiid))) ? INT :  (IR_q[3:0]==4'hF)? FETCH0: (din[IRLEN]) ? FETCH1 : EA_ED; // Cant interrupt an interrupt ...
+         WRMEM  : FSM_q <= ((!int_b & PSR_q[3] )|| (IR_q[IRPUTPSR] && (|swiid))) ? INT : FETCH0;
          default: FSM_q <= FETCH0;
        endcase // case (FSM_q)
    always @(posedge clk)
@@ -47,15 +48,16 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
      endcase
     always @(posedge clk or negedge reset_b)
         if ( !reset_b)
-            { PC_q, PCI_q, PSRI_q, I_q, SWI_q, S_q, C_q, Z_q} <= 40'b0;
+            { PC_q, PCI_q, PSRI_q, PSR_q, SWI_q} <= 49'b0;
         else if ( FSM_q == INT )
-            { PC_q, PCI_q, I_q, PSRI_q } <= { INT_VECTOR, PC_q, 1'b0, S_q, C_q, Z_q} ;
+            { PC_q, PCI_q, PSRI_q, SWI_q, PSR_q[3]} <= { INT_VECTOR, PC_q, PSR_q[7:0], 2'b0} ; // Always clear EI and SWI_q on taking interrupt
         else if ( FSM_q == FETCH0 || FSM_q == FETCH1 )
             PC_q <= PC_q + 1;
         else if ( FSM_q == EXEC )
             begin
-                PC_q <= (IR_q[IRRTI])? PCI_q : (IR_q[3:0]==4'hF) ? result : ((!int_b || SWI_q) & I_q )? PC_q: PC_q + 1 ; //Dont incr PC if taking interrupt
-                {SWI_q, I_q, S_q, C_q, Z_q} <= (IR_q[IRRTI])? {2'b01,PSRI_q}: {swi, enable_int, sign, carry, zero};
+                PC_q <= (IR_q[IRRTI])? PCI_q : (IR_q[3:0]==4'hF) ? result : ((!int_b && PSR_q[3]) || SWI_q )? PC_q: PC_q + 1 ; //Dont incr PC if taking interrupt
+                PSR_q <= (IR_q[IRRTI])? PSRI_q : {swiid, enable_int, sign, carry, zero};
+                SWI_q <= (IR_q[IRPUTPSR])?  |swiid : 1'b0;
             end
     always @ (posedge clk)
         if ( FSM_q == EXEC )
