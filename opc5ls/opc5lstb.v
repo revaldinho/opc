@@ -34,7 +34,7 @@ module opc5lstb();
       mem[addr] <= data1;
 
   always @ (posedge int_clk)
-    if ( (($random(seed) %100)> 90) && interrupt_b ==1'b1)
+    if ( (($random(seed) %100)> 85) && interrupt_b ==1'b1)
         interrupt_b = 1'b0;
     else
         interrupt_b = 1'b1;
