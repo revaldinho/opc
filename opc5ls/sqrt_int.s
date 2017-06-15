@@ -30,14 +30,16 @@ INT:
         PUSH   (r12)
         mov     r12,r0,SWI_LOG  # default to SI_LOG
         psr     r13,psr         # get PSR into r13
-        and     r13,r0,0x10     # mask off SWI bit
-        z.mov   r12,r0,HWI_LOG  # if nonzero then point at HI_LOG instead
+        and     r13,r0,0xF0     # mask off SWI bits
+        z.mov   r12,r0,HWI_LOG  # if zero then point at HI_LOG instead
         ld      r13,r12         # get count
         add     r13,r0,1        # increment count
         sto     r13,r12         # write back
         POP     (r12)           # restore registers
         POP     (r13)
         rti     pc,pc
+
+SWI_LOG:  WORD 0                 # software interrupt count
 
 
 codestart:
@@ -212,6 +214,5 @@ STACK:  WORD    0,0,0,0         # Reserve some stack space
         WORD    0,0,0,0
         WORD    0,0,0,0
 
-        ORG 0xFFFE
-SWI_LOG:  WORD 0                 # software interrupt count
+        ORG 0xFFFF
 HWI_LOG:  WORD 0                 # hardware interrupt count
