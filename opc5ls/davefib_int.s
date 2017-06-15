@@ -28,7 +28,6 @@ INT:
         POP     (r13)
         rti     pc,pc
 
-SWI_LOG:  WORD 0                 # software interrupt count
 
 
 codestart:
@@ -66,6 +65,8 @@ fibEnd:
 
         ORG 0x100
 results:
+        ORG 0x500
+SWI_LOG:  WORD 0                 # software interrupt count
 
 
         ORG     0xFF00

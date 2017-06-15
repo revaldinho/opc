@@ -24,7 +24,7 @@ echo "-------------------------------------------------------"
 foreach test ( fib robfib davefib mul32 udiv32 sqrt hello testpsr string davefib_int sqrt_int  )
     printf "%12s :" $test
     if "${test}" =~ "*int" then
-        python3 ../utils/mdumpcheck.py ${test}.dump  ${test}.vdump 0xF000 0xFFFE 0xFFFF
+        python3 ../utils/mdumpcheck.py ${test}.dump  ${test}.vdump 0xF000 0x0500 0xFFFF
     else
         python3 ../utils/mdumpcheck.py ${test}.dump  ${test}.vdump
     endif

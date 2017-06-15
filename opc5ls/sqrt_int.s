@@ -39,7 +39,6 @@ INT:
         POP     (r13)
         rti     pc,pc
 
-SWI_LOG:  WORD 0                 # software interrupt count
 
 
 codestart:
@@ -207,6 +206,11 @@ DATA0:
 
         ORG     0x180
 RESULTS:
+
+        ORG 0x500
+SWI_LOG:  WORD 0                 # software interrupt count
+
+
 
     ORG     0xFF00
 STACK:  WORD    0,0,0,0         # Reserve some stack space
