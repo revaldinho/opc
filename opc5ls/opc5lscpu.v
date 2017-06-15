@@ -12,7 +12,6 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
    wire predicate = IR_q[P2] ^ (IR_q[P1] ? (IR_q[P0] ? PSR_q[2] : PSR_q[0]) : (IR_q[P0] ? PSR_q[1] : 1));
    wire predicate_din = din[P2] ^ (din[P1] ? (din[P0] ? PSR_q[2] : PSR_q[0]) : (din[P0] ? PSR_q[1] : 1));
    wire [15:0] sprf_dout= (sprf_radr_q==4'hF) ? PC_q: (sprf_q[sprf_radr_q] & { 16{(sprf_radr_q!=4'h0)}});
-   wire        skip_eaed = !((sprf_radr_q!=0) || (IR_q[IRLD]) || IR_q[IRSTO]);
    assign      { rnw, dout, address } = { !(FSM_q==WRMEM), sprf_dout, ( FSM_q==WRMEM || FSM_q == RDMEM)? OR_q : PC_q };
    always @( * )
      begin
@@ -32,7 +31,7 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
      else
        case (FSM_q)
          FETCH0 : FSM_q <= (din[IRLEN])? FETCH1 : (!predicate_din )? FETCH0: EA_ED;
-         FETCH1 : FSM_q <= (!predicate )? FETCH0: (skip_eaed) ? EXEC : EA_ED;        // Allow FETCH1 to skip through to EXEC
+         FETCH1 : FSM_q <= (!predicate )? FETCH0: ((sprf_radr_q!=0) || IR_q[IRLD] || IR_q[IRSTO]) ? EA_ED: EXEC;  // Allow FETCH1 to skip through to EXEC
          EA_ED  : FSM_q <= (!predicate )? FETCH0: (IR_q[IRLD]) ? RDMEM : (IR_q[IRSTO]) ? WRMEM : EXEC;
          RDMEM  : FSM_q <= EXEC;
          EXEC   : FSM_q <= ((!int_b & PSR_q[3] )|| (IR_q[IRPUTPSR] && (|swiid))) ? INT :  (IR_q[3:0]==4'hF)? FETCH0: (din[IRLEN]) ? FETCH1 : EA_ED; // Cant interrupt an interrupt ...
@@ -42,7 +41,7 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
    always @(posedge clk)
      case(FSM_q)
        FETCH0, EXEC  : {sprf_radr_q, OR_q } <= {din[7:4], 16'b0};
-       FETCH1        : {sprf_radr_q, OR_q } <= {((skip_eaed)? IR_q[3:0] : IR_q[7:4]), din};
+       FETCH1        : {sprf_radr_q, OR_q } <= {(((sprf_radr_q!=0) || IR_q[IRLD] || IR_q[IRSTO])? IR_q[7:4]: IR_q[3:0]), din};
        EA_ED         : {sprf_radr_q, OR_q } <= {IR_q[3:0], sprf_dout + OR_q};
        default       : {sprf_radr_q, OR_q } <= {IR_q[3:0], din};
      endcase
