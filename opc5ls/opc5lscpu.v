@@ -6,8 +6,8 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
    reg [21:0] IR_q; (* RAM_STYLE="DISTRIBUTED" *)
    reg [15:0] sprf_q[15:0];
    reg [2:0]  FSM_q;
-   reg [3:0]  sprf_radr_q, swiid;
-   reg [7:0]  PSR_q, PSRI_q;
+   reg [3:0]  sprf_radr_q, swiid, PSRI_q;
+   reg [7:0]  PSR_q ;
    reg        zero, carry, sign, enable_int;
    wire predicate = IR_q[P2] ^ (IR_q[P1] ? (IR_q[P0] ? PSR_q[2] : PSR_q[0]) : (IR_q[P0] ? PSR_q[1] : 1));
    wire predicate_din = din[P2] ^ (din[P1] ? (din[P0] ? PSR_q[2] : PSR_q[0]) : (din[P0] ? PSR_q[1] : 1));
@@ -48,15 +48,15 @@ module opc5lscpu( input[15:0] din, output[15:0] dout, output[15:0] address, outp
      endcase
     always @(posedge clk or negedge reset_b)
         if ( !reset_b)
-            { PC_q, PCI_q, PSRI_q, PSR_q} <= 48'b0;
+            { PC_q, PCI_q, PSRI_q, PSR_q} <= 44'b0;
         else if ( FSM_q == INT )
-            { PC_q, PCI_q, PSRI_q, PSR_q[3]} <= { INT_VECTOR, PC_q, PSR_q[7:0], 1'b0} ; // Always clear EI on taking interrupt
+            { PC_q, PCI_q, PSRI_q, PSR_q[3]} <= { INT_VECTOR, PC_q, PSR_q[3:0], 1'b0} ; // Always clear EI on taking interrupt
         else if ( FSM_q == FETCH0 || FSM_q == FETCH1 )
             PC_q <= PC_q + 1;
         else if ( FSM_q == EXEC )
             begin
                 PC_q <= (IR_q[IRRTI])? PCI_q : (IR_q[3:0]==4'hF) ? result : ((!int_b && PSR_q[3]) || (IR_q[IRPUTPSR] && (|swiid)))? PC_q: PC_q + 1 ; //Dont incr PC if taking interrupt
-                PSR_q <= (IR_q[IRRTI])? PSRI_q & 8'h0F : {swiid, enable_int, sign, carry, zero}; // Clear SWI bits on return
+                PSR_q <= (IR_q[IRRTI])? {4'b0,PSRI_q} : {swiid, enable_int, sign, carry, zero}; // Clear SWI bits on return
             end
     always @ (posedge clk)
         if ( FSM_q == EXEC )
