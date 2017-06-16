@@ -21,22 +21,24 @@ module opc5lstb();
         clken = 1'b1;
 `endif
         interrupt_b = 1;
-        #1005 reset_b = 1;
+        #3005 reset_b = 1;
         #500000000 $finish;
     end
 
     always @ (posedge clk or negedge reset_b)
         if ( !reset_b)
-            m1 = 1'b1;
+            m1 = 1'b0;
+        else if (mreq_b == 1)
+            m1 <= 0;
         else
-            m1 <= !mreq_b;
+            m1 <= !m1;
 
 `ifdef POSEDGE_MEMORY
     always @ (negedge clk or negedge reset_b)
         if ( !reset_b)
             clken = 1'b1;
         else
-            clken <= mreq_b | m1 | !reset_b;
+            clken <= (mreq_b | m1 | !reset_b) ;
     always @ (posedge clk)
         if (!rnw && !ceb && oeb && reset_b)
             mem[addr] <= data1;
