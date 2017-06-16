@@ -3,8 +3,7 @@ module opc5lscpu( input[15:0] din, input clk, input reset_b, input int_b, input 
     parameter FETCH0=3'h0,FETCH1=3'h1,EA_ED=3'h2,RDMEM=3'h3,EXEC=3'h4,WRMEM=3'h5,INT=3'h6 ;
     parameter EI=3,S=2,C=1,Z=0,P0=15,P1=14,P2=13,IRLEN=12,IRLD=16,IRSTO=17,IRGETPSR=18,IRPUTPSR=19,IRRTI=20,IRCMP=21,INT_VECTOR=16'h0002;
     reg [15:0] OR_q,PC_q,PCI_q,result;
-    reg [21:0] IR_q;
-    (* RAM_STYLE="DISTRIBUTED" *)
+    reg [21:0] IR_q; (* RAM_STYLE="DISTRIBUTED" *)
     reg [15:0] sprf_q[15:0];
     reg [2:0]  FSM_q;
     reg [3:0]  sprf_radr_q,swiid,PSRI_q;
@@ -27,10 +26,9 @@ module opc5lscpu( input[15:0] din, input clk, input reset_b, input int_b, input 
             endcase // case (IR_q)
             {swiid,enable_int,sign,carry,zero} = (IR_q[IRPUTPSR])?OR_q[7:0]:(IR_q[3:0]!=4'hF)?{PSR_q[7:3],result[15],carry,!(|result)}:PSR_q;
         end
-    always @(negedge clk)       // Make reset input robust wrt posedge of clock
-        {reset_s0_b,reset_s1_b} = { reset_b,reset_s0_b};
     always @(posedge clk)
-        if (clken)
+        if (clken) begin
+            {reset_s0_b,reset_s1_b} <= {reset_b,reset_s0_b};
             if (!reset_s1_b)
                 {PC_q,PCI_q,PSRI_q,PSR_q,FSM_q} <= 0;
             else begin
@@ -63,4 +61,5 @@ module opc5lscpu( input[15:0] din, input clk, input reset_b, input int_b, input 
                 if (FSM_q == FETCH0 || FSM_q == EXEC)
                     IR_q <= {((din[11:8]==CMP)||(din[11:8]==CMPC)),{3{(din[11:8]==PSR)}}&{(din[3:0]==4'hF),(din[3:0]==4'h0),(din[7:4]==4'b0)},(din[11:8]==STO),(din[11:8]==LD),din};
             end
+        end
 endmodule
