@@ -31,7 +31,7 @@ while True:
                 print("Stopped on halt instruction at %04x with halt number 0x%04x" % (regfile[15]-(instr_len), operand) )
                 break
             elif opcode == (op["rti"]&0xF) and (dest==15):
-                (regfile[pcreg], flag_save, preserve_flag ) = (pc_int, (0,psr_int[1],psr_int[2],psr_int[3],psr_int[4]), True ) 
+                (regfile[pcreg], flag_save, preserve_flag ) = (pc_int, (0,psr_int[1],psr_int[2],psr_int[3],psr_int[4]), True )
             elif opcode == op["and"]:
                 regfile[dest] = (regfile[dest] & ea_ed) & 0xFFFF
             elif opcode == op["or"]:
