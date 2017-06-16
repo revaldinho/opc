@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 
-entity CoProOpc5ls is
+entity opc5copro is
     port (
         -- GOP Signals
         fastclk   : in    std_logic;
@@ -29,9 +29,9 @@ entity CoProOpc5ls is
         ram_addr     : out   std_logic_vector (18 downto 0);
         ram_data     : inout std_logic_vector (7 downto 0)
     );
-end CoProOpc5ls;
+end opc5copro;
 
-architecture BEHAVIORAL of CoProOpc5ls is
+architecture BEHAVIORAL of opc5copro is
 
     component opc5lscpu
         port(
