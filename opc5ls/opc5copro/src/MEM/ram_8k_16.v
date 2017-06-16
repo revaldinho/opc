@@ -1,6 +1,6 @@
 module ram ( input[15:0] din, output reg [15:0] dout, input[12:0] address, input rnw, input clk, input cs_b);
 
-   parameter MEM_INIT_FILE = "tuberom.mem";
+   parameter MEM_INIT_FILE = "";
 
    reg [15:0] ram [0:8191];
 

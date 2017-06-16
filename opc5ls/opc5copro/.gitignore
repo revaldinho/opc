@@ -8,3 +8,10 @@ _xmsgs/
 coregen.cgp
 src/Tube/ph_fifo_core_spartan3*
 src/Tube/ph_fifo_core_spartan3/
+CoProOpc5ls_bd.bmm
+CoProOpc5ls.bit
+CoProOpc5ls.cfi
+CoProOpc5ls.mcs
+CoProOpc5ls.prm
+CoProOpc5ls.sig
+_impact.*
