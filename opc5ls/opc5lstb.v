@@ -8,7 +8,7 @@ module opc5lstb();
     wire rnw, sync, mreq_b;
     wire ceb = 1'b0;
     wire oeb = !rnw;
-    wire [15:0]  data0 = mem[addr];
+    reg [15:0]  data0 ;
     wire [15:0]  data1 ;
     integer seed = 10;
     // OPC CPU instantiation
@@ -39,14 +39,14 @@ module opc5lstb();
             clken = 1'b1;
         else
             clken <= (mreq_b | m1 | !reset_b) ;
-    always @ (posedge clk)
-        if (!rnw && !ceb && oeb && reset_b)
-            mem[addr] <= data1;
+    always @ (posedge clk) begin
 `else // Negedge memory
-    always @ (negedge clk)
+    always @ (negedge clk) begin
+`endif
         if (!rnw && !ceb && oeb && reset_b)
             mem[addr] <= data1;
-`endif
+        data0 <= mem[addr];
+    end
 
     always @ (posedge int_clk)
         if ( (($random(seed) %100)> 85) && interrupt_b ==1'b1)
