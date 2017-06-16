@@ -109,7 +109,10 @@ module opc5copro (
       .rnw        (cpu_R_W_n),
       .clk        (clk_cpu),
       .reset_b    (RSTn_sync),
-      .int_b      (cpu_IRQ_n_sync)
+      .int_b      (cpu_IRQ_n_sync),
+      .clken      (1'b1),
+      .mreq_b     (),
+      .sync       ()      
     );
 
    tube inst_tube
