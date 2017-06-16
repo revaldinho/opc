@@ -32,12 +32,15 @@ By using combinations of the zero register and zero operands with the LD and STO
   | Indexed   | \<reg\>    | \<index\> | mem[\<reg\> + \<index\>] |
   | Immediate | R0         | \<immed\> | \<immed\>                |
 
-Processor Flags
----------------
+Processor Status Register
+-------------------------
 
-There are three processor status flags which are set by ALU operations - calculation of the EAD values
-has no effect on these, also any instructions which write to the PC preserve the contents of all flags.
+The processor has an 8 bit processor status register. Included in this arethree processor status flags which 
+are set by ALU operations - calculation of the EAD values has no effect on these - and 5 bits related to interrupt
+handling. 
 
+  * SWI   - 4 bits used to identify a software interrupt. Writing a non-zero value here triggers a SWI.
+  * EI    - used to enable or disable hardware interrupts
   * Carry - set or cleared only on arithmetic operations
   * Zero  - set on every instruction based on the state of the destination register
   * Sign  - set when the MSB of the result is a '1'
@@ -79,5 +82,6 @@ Instruction Set
   | 12 | cmp      |            | 1 1 0 0 | cmp rd, rs   | ED = rs + 0      | cmp rd, rs, imm     | ED = (rs + imm) & 0xFFFF   | {C, r0} <- rd + ~ED + 1    |
   | 13 | cmpc     |            | 1 1 0 1 | cmpc rd, rs  | ED = rs + 0      | cmpc rd, rs, imm    | ED = (rs + imm) & 0xFFFF   | {C, r0} <- rd + ~ED + C    |
   | 14 | bswp     |            | 1 1 1 0 | bswp rd, rs  | ED = rs + 0      | bswp rd, rs, imm    | ED = (rs + imm) & 0xFFFF   | {rd_h,rd_l} <- {ED_l,ED_h} |
-  | 15 | psr      |            | 1 1 1 1 | psr rd,psr   | ED = {14'b0,C,Z} | psr rd,psr,imm      | ED = {13'b0, S, C, Z}      | rd <- ED                   |
-  | 15 | psr      |            | 1 1 1 1 | psr psr,rs   | ED = rs + 0      | psr psr,rs,imm      | ED = (rs + imm) & 0xFFFF   | {S, C, Z} <- ED[2:0]       |  
+  | 15 | psr      |            | 1 1 1 1 | psr rd,psr   | ED = {8'b0,PSR} | psr rd,psr,imm      | ED = {8'b0,PSR}      | rd <- ED                   |
+  | 15 | psr      |            | 1 1 1 1 | psr psr,rs   | ED = rs + 0      | psr psr,rs,imm      | ED = (rs + imm) & 0xFFFF   | {SWI,EI, S, C, Z} <- ED[7:0]       |  
+  | 15 | rti      |            | 1 1 1 1 | rti pc,pc   | ED = pc'      | -      | -   | {EI, S, C, Z} <- {0,S',C',Z'}       |  
