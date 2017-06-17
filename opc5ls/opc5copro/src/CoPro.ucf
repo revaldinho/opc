@@ -18,32 +18,31 @@ NET "ram_addr<16>"  LOC = "P50" | IOSTANDARD = LVCMOS33 ;
 NET "ram_addr<17>"  LOC = "P75" | IOSTANDARD = LVCMOS33 ;
 NET "ram_addr<18>"  LOC = "P74" | IOSTANDARD = LVCMOS33 ;
 
-#NET "ram_data<0>"  LOC = "P2" | IOSTANDARD = LVCMOS33 ;
-#NET "ram_data<1>"  LOC = "P4" | IOSTANDARD = LVCMOS33 ;
-#NET "ram_data<2>"  LOC = "P5" | IOSTANDARD = LVCMOS33 ;
-#NET "ram_data<3>"  LOC = "P8" | IOSTANDARD = LVCMOS33 ;
-#NET "ram_data<4>"  LOC = "P9" | IOSTANDARD = LVCMOS33 ;
-#NET "ram_data<5>"  LOC = "P11" | IOSTANDARD = LVCMOS33 ;
-#NET "ram_data<6>"  LOC = "P12" | IOSTANDARD = LVCMOS33 ;
-#NET "ram_data<7>"  LOC = "P13" | IOSTANDARD = LVCMOS33 ;
+NET "ram_data<0>"   LOC = "P2"  | IOSTANDARD = LVCMOS33 ;
+NET "ram_data<1>"   LOC = "P4"  | IOSTANDARD = LVCMOS33 ;
+NET "ram_data<2>"   LOC = "P5"  | IOSTANDARD = LVCMOS33 ;
+NET "ram_data<3>"   LOC = "P8"  | IOSTANDARD = LVCMOS33 ;
+NET "ram_data<4>"   LOC = "P9"  | IOSTANDARD = LVCMOS33 ;
+NET "ram_data<5>"   LOC = "P11" | IOSTANDARD = LVCMOS33 ;
+NET "ram_data<6>"   LOC = "P12" | IOSTANDARD = LVCMOS33 ;
+NET "ram_data<7>"   LOC = "P13" | IOSTANDARD = LVCMOS33 ;
 
-NET "fastclk"  LOC = "P38" | IOSTANDARD = LVCMOS33 | PERIOD = 20.3450520833;
-NET "ram_cs"  LOC = "P43" | IOSTANDARD = LVCMOS33 ;
-NET "ram_oe"  LOC = "P44" | IOSTANDARD = LVCMOS33 ;
-NET "ram_wr"  LOC = "P64" | IOSTANDARD = LVCMOS33 ;
-NET "fcs"  LOC = "P49" | IOSTANDARD = LVCMOS33 ;
+NET "fastclk"       LOC = "P38" | IOSTANDARD = LVCMOS33 | PERIOD = 20.3450520833;
+NET "ram_cs_b"      LOC = "P43" | IOSTANDARD = LVCMOS33 ;
+NET "ram_oe_b"      LOC = "P44" | IOSTANDARD = LVCMOS33 ;
+NET "ram_we_b"      LOC = "P64" | IOSTANDARD = LVCMOS33 ;
+NET "fcs"           LOC = "P49" | IOSTANDARD = LVCMOS33 ;
 
+#NET "sw<1>"        LOC = "P27" | PULLUP | IOSTANDARD = LVCMOS33 ;
+#NET "sw<2>"        LOC = "P28" | PULLUP | IOSTANDARD = LVCMOS33 ;
 
-#NET "sw<1>"  LOC = "P27" | PULLUP | IOSTANDARD = LVCMOS33 ;
-#NET "sw<2>"  LOC = "P28" | PULLUP | IOSTANDARD = LVCMOS33 ;
-
-NET "tp<2>"  LOC = "P30" | IOSTANDARD = LVCMOS33 ;
-NET "tp<3>"  LOC = "P32" | IOSTANDARD = LVCMOS33 ;
-NET "tp<4>"  LOC = "P34" | IOSTANDARD = LVCMOS33 ;
-NET "tp<5>"  LOC = "P35" | IOSTANDARD = LVCMOS33 ;
-NET "tp<6>"  LOC = "P36" | IOSTANDARD = LVCMOS33 ;
-NET "tp<7>"  LOC = "P37" | IOSTANDARD = LVCMOS33 ;
-NET "tp<8>"  LOC = "P47" | IOSTANDARD = LVCMOS33 ;
+NET "tp<2>"         LOC = "P30" | IOSTANDARD = LVCMOS33 ;
+NET "tp<3>"         LOC = "P32" | IOSTANDARD = LVCMOS33 ;
+NET "tp<4>"         LOC = "P34" | IOSTANDARD = LVCMOS33 ;
+NET "tp<5>"         LOC = "P35" | IOSTANDARD = LVCMOS33 ;
+NET "tp<6>"         LOC = "P36" | IOSTANDARD = LVCMOS33 ;
+NET "tp<7>"         LOC = "P37" | IOSTANDARD = LVCMOS33 ;
+NET "tp<8>"         LOC = "P47" | IOSTANDARD = LVCMOS33 ;
 
 
 # NET "pin1"  LOC = "P89" | IOSTANDARD = LVCMOS33 ;
