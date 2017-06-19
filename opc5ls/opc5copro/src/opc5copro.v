@@ -28,45 +28,42 @@ module opc5copro (
 // clock and reset signals
 // ---------------------------------------------
 
-   wire             clk_fx;
-   wire             clk_cpu;
-   wire             RSTn;
-   reg              RSTn_sync;
+   wire             fx_clk;
+   wire             cpu_clk;
+   wire             rst_b;
+   reg              rst_b_sync;
 
 // ---------------------------------------------
 // parasite wires
 // ---------------------------------------------
 
    wire             p_cs_b;
-   wire [7:0]       p_data_out;
+   wire [7:0]       p_dout;
 
 // ---------------------------------------------
 // internal memory controller wires
 // ---------------------------------------------
 
    wire             int_cs_b;
-   wire [15:0]      int_data_out;
+   wire [15:0]      int_dout;
 
 // ---------------------------------------------
 // external memory controller wires
 // ---------------------------------------------
 
    wire             ext_cs_b;
-   wire             ext_a0;
-   reg              ext_we_b;
-   reg [7:0]        ram_data_last;
-   reg [2:0]        count;
+   wire [15:0]      ext_dout;
 
 // ---------------------------------------------
 // cpu wires
 // ---------------------------------------------
 
-   wire             cpu_R_W_n;
+   wire             cpu_rnw;
    wire [15:0]      cpu_addr;
    wire [15:0]      cpu_din;
    wire [15:0]      cpu_dout;
-   wire             cpu_IRQ_n;
-   reg              cpu_IRQ_n_sync;
+   wire             cpu_irq_b;
+   reg              cpu_irq_b_sync;
    wire             cpu_clken;
    wire             cpu_mreq_b;
 
@@ -74,7 +71,7 @@ module opc5copro (
 // clock generator
 //
 // fastclk = 49.152MHz
-// clk_cpu = fast_clk * CLKFX_MULTIPLY / CLKFX_DIVIDE
+// cpu_clk = fast_clk * CLKFX_MULTIPLY / CLKFX_DIVIDE
 //
 // the minimum output clock speed is 18.00MHz
 //
@@ -94,10 +91,10 @@ module opc5copro (
         .PSINCDEC        (1'b0),
         .PSEN            (1'b0),
         .PSCLK           (1'b0),
-        .CLKFX           (clk_fx)
+        .CLKFX           (fx_clk)
     );
 
-   BUFG inst_bufg (.I(clk_fx), .O(clk_cpu));
+   BUFG inst_bufg (.I(fx_clk), .O(cpu_clk));
 
 // ---------------------------------------------
 // main instantiated components
@@ -106,10 +103,10 @@ module opc5copro (
    ram inst_mem
      (
       .din        (cpu_dout),
-      .dout       (int_data_out),
+      .dout       (int_dout),
       .address    (cpu_addr[12:0]),
-      .rnw        (cpu_R_W_n),
-      .clk        (!clk_cpu),
+      .rnw        (cpu_rnw),
+      .clk        (!cpu_clk),
       .cs_b       (int_cs_b)
       );
 
@@ -118,14 +115,32 @@ module opc5copro (
       .din        (cpu_din),
       .dout       (cpu_dout),
       .address    (cpu_addr),
-      .rnw        (cpu_R_W_n),
-      .clk        (clk_cpu),
-      .reset_b    (RSTn_sync),
-      .int_b      (cpu_IRQ_n_sync),
+      .rnw        (cpu_rnw),
+      .clk        (cpu_clk),
+      .reset_b    (rst_b_sync),
+      .int_b      (cpu_irq_b_sync),
       .clken      (cpu_clken),
       .mreq_b     (cpu_mreq_b),
       .sync       ()
     );
+
+   memory_controller inst_memory_controller
+     (
+      .clock      (cpu_clk),
+      .reset_b    (rst_b_sync),
+      .ext_cs_b   (ext_cs_b),
+      .cpu_rnw    (cpu_rnw),
+      .cpu_clken  (cpu_clken),
+      .cpu_addr   (cpu_addr),
+      .cpu_dout   (cpu_dout),
+      .ext_dout   (ext_dout),
+      .ram_cs_b   (ram_cs_b),
+      .ram_oe_b   (ram_oe_b),
+      .ram_we_b   (ram_we_b),
+      .ram_data   (ram_data),
+      .ram_addr   (ram_addr)
+      );
+
 
    tube inst_tube
      (
@@ -139,12 +154,12 @@ module opc5copro (
       .p_addr     (cpu_addr[2:0]),
       .p_cs_b     (p_cs_b),
       .p_data_in  (cpu_dout[7:0]),
-      .p_data_out (p_data_out),
-      .p_rdnw     (cpu_R_W_n),
-      .p_phi2     (clk_cpu),
-      .p_rst_b    (RSTn),
+      .p_data_out (p_dout),
+      .p_rdnw     (cpu_rnw),
+      .p_phi2     (cpu_clk),
+      .p_rst_b    (rst_b),
       .p_nmi_b    (),
-      .p_irq_b    (cpu_IRQ_n)
+      .p_irq_b    (cpu_irq_b)
     );
 
 // ---------------------------------------------
@@ -160,94 +175,31 @@ module opc5copro (
    // External RAM mapped to 1000:EFFF
    assign ext_cs_b = !(((cpu_addr[15:12] > 4'h0) && (cpu_addr[15:12] < 4'hF)) && !cpu_mreq_b);
 
-// ---------------------------------------------
-// external memory controller
-// ---------------------------------------------
-
-   // The CPU runs at ~50MHz (20ns)
-   //
-   // When accessing byte-wide external memory, sufficient wait states
-   // need to be added to allow two slower memory cycles to happen
-   // (low byte then high byte)
-   //
-   // R1LV0408CSA-5SC RAM timings:
-   // -- Read access time is 55ns
-   //
-   // -- Min write pulse is 40ns, write happens on rising edge
-   // -- Address setup from falling edge of write is 0ns
-   // -- Address hold from rising edge of write is 0ns
-   // -- Data setup from rising edge of write is 25ns
-   // -- Address hold from rising edge of write is 0ns
-   //
-   // To err on the safe side, we allow 4 cycles for each byte access
-   //
-   // So a complete external memory access (both bytes) takes 8 cycles
-   //
-   // Which means the memory controller must insert 7 wait stats
-
-   // Count 0..7 during external memory cycles
-   always @(posedge clk_cpu)
-     if (!RSTn_sync)
-       count <= 0;
-     else if (!ext_cs_b || count > 0)
-       count <= count + 1;
-
-   // Drop clken for 7 cycles during an external memory access
-   assign cpu_clken = !(!ext_cs_b && count < 7);
-
-   // A0 = 0 for count 0,1,2,3 (low byte) and A0 = 1 for count 4,5,6,7 (high byte)
-   assign ext_a0 = count[2];
-
-   // Generate clean write co-incident with cycles 1,2 and 5,6
-   // This gives a cycle of address/data setup and
-   // Important this is a register so it is glitch free
-   always @(posedge clk_cpu)
-      if (!cpu_R_W_n && ((count == 0 && !ext_cs_b) || (count == 1) || count == 4 || count == 5))
-         ext_we_b <= 1'b0;
-      else
-         ext_we_b <= 1'b1;
-
-   // The low byte is registered at the end of cycle 3
-   // The high byte is consumed directly from RAM at the end of cycle 7
-   always @(posedge clk_cpu)
-     if (count == 3)
-        ram_data_last <= ram_data;
-
    // Data multiplexor
-   assign cpu_din  =  !p_cs_b ? p_data_out : !int_cs_b ? int_data_out : {ram_data, ram_data_last};
-
-// ---------------------------------------------
-// external RAM
-// ---------------------------------------------
-
-   assign ram_addr = {2'b0, cpu_addr, ext_a0};
-   assign ram_cs_b = ext_cs_b;
-   assign ram_oe_b = !cpu_R_W_n;
-   assign ram_we_b = ext_we_b;
-   assign ram_data = cpu_R_W_n ? 8'bZ : ext_a0 ? cpu_dout[15:8] : cpu_dout[7:0];
+   assign cpu_din  =  !p_cs_b ? p_dout : !int_cs_b ? int_dout : ext_dout;
 
 // ---------------------------------------------
 // synchronise interrupts
 // ---------------------------------------------
 
-   always @(posedge clk_cpu)
+   always @(posedge cpu_clk)
       begin
-         RSTn_sync      <= RSTn;
-         cpu_IRQ_n_sync <= cpu_IRQ_n;
+         rst_b_sync     <= rst_b;
+         cpu_irq_b_sync <= cpu_irq_b;
       end
 
 // ---------------------------------------------
 // test outputs
 // ---------------------------------------------
 
-   always @(posedge clk_cpu)
+   always @(posedge cpu_clk)
       begin
-         test[6] <= cpu_R_W_n;
+         test[6] <= cpu_rnw;
          test[5] <= (cpu_addr == 16'hFEFF);
-         test[4] <= cpu_IRQ_n_sync;
+         test[4] <= cpu_irq_b_sync;
          test[3] <= p_cs_b;
          test[2] <= (cpu_addr == 16'hFEFE);
-         test[1] <= RSTn;
+         test[1] <= rst_b;
          tp[8]   <= cpu_addr[6];
          tp[7]   <= cpu_addr[5];
          tp[6]   <= cpu_addr[4];
