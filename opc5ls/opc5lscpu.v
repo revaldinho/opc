@@ -1,4 +1,4 @@
-module opc5lscpu( input[15:0] din, input clk, input reset_b, input int_b, input clken, output mreq_b, output sync, output[15:0] dout, output[15:0] address, output rnw);
+module opc5lscpu( input[15:0] din, input clk, input reset_b, input int_b, input clken, output vpa, output vda, output[15:0] dout, output[15:0] address, output rnw);
     parameter MOV=4'h0,AND=4'h1,OR=4'h2,XOR=4'h3,ADD=4'h4,ADC=4'h5,STO=4'h6,LD=4'h7,ROR=4'h8,NOT=4'h9,SUB=4'hA,SBC=4'hB,CMP=4'hC,CMPC=4'hD,BSWP=4'hE,PSR=4'hF;
     parameter FETCH0=3'h0,FETCH1=3'h1,EA_ED=3'h2,RDMEM=3'h3,EXEC=3'h4,WRMEM=3'h5,INT=3'h6 ;
     parameter EI=3,S=2,C=1,Z=0,P0=15,P1=14,P2=13,IRLEN=12,IRLD=16,IRSTO=17,IRGETPSR=18,IRPUTPSR=19,IRRTI=20,IRCMP=21,INT_VECTOR=16'h0002;
@@ -9,11 +9,11 @@ module opc5lscpu( input[15:0] din, input clk, input reset_b, input int_b, input 
     reg [3:0]  sprf_radr_q,swiid,PSRI_q;
     reg [7:0]  PSR_q ;
     reg        zero,carry,sign,enable_int,reset_s0_b,reset_s1_b;
-    wire predicate 	          = IR_q[P2] ^ (IR_q[P1]?(IR_q[P0]?PSR_q[S]:PSR_q[Z]):(IR_q[P0]?PSR_q[C]:1));
+    wire predicate 	      = IR_q[P2] ^ (IR_q[P1]?(IR_q[P0]?PSR_q[S]:PSR_q[Z]):(IR_q[P0]?PSR_q[C]:1));
     wire predicate_din 	      = din[P2] ^ (din[P1]?(din[P0]?PSR_q[S]:PSR_q[Z]):(din[P0]?PSR_q[C]:1));
     wire [15:0] sprf_dout     = (sprf_radr_q==4'hF)?PC_q:(sprf_q[sprf_radr_q] & {16{(sprf_radr_q!=4'h0)}});
     assign {rnw,dout,address} = {!(FSM_q==WRMEM),sprf_dout,(FSM_q==WRMEM || FSM_q == RDMEM)?OR_q:PC_q };
-    assign {mreq_b,sync}      = {(FSM_q==INT || FSM_q==EA_ED),(FSM_q==FETCH0 || FSM_q==EXEC) };
+    assign {vpa,vda}          = {((FSM_q==FETCH0)||(FSM_q==FETCH1)||(FSM_q==EXEC)),((FSM_q==RDMEM)||(FSM_q==WRMEM)) };
     always @(*)
         begin
             case (IR_q[11:8])    // no real need for STO entry but include it so all instructions are covered,no need for default
