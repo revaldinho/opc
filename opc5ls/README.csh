@@ -2,6 +2,12 @@
 # Remove non primary data files
 rm -rf *~ `ls -1 | egrep -v '(\.v|\.csh|\.ucf|\.py|\.s|spartan|xc95)'`
 
+set vpath = ""
+if ( $1 == xp) then
+    set vpath = ../opc5ls-xp/
+endif
+
+
 foreach test ( fib robfib davefib mul32 udiv32 sqrt hello testpsr string davefib_int sqrt_int pi-spigot-bruce )
     # Assemble the test
     python3 opc5lsasm.py ${test}.s ${test}.hex >  ${test}.lst
@@ -12,12 +18,12 @@ foreach test ( fib robfib davefib mul32 udiv32 sqrt hello testpsr string davefib
     # Run icarus verilog to compile the testbench
 
     foreach option ( NEGEDGE_MEMORY POSEDGE_MEMORY )
-        iverilog -D_simulation=1 -D${option}=1 opc5lstb.v opc5lscpu.v
+        iverilog -D_simulation=1 -D${option}=1 opc5lstb.v ${vpath}opc5lscpu.v
         # Execute the test bench
-        ./a.out | tee ${test}_${option}.sim
+        ./a.out | tee ${vpath}${test}_${option}.sim
         # Save the results
-        mv dump.vcd ${test}_${option}.vcd
-        mv test.vdump ${test}_${option}.vdump
+        mv dump.vcd ${vpath}${test}_${option}.vcd
+        mv test.vdump ${vpath}${test}_${option}.vdump
     end
 end
 
@@ -28,9 +34,9 @@ foreach test ( fib robfib davefib mul32 udiv32 sqrt hello testpsr string pi-spig
     foreach option ( NEGEDGE_MEMORY POSEDGE_MEMORY )
         printf "%32s :" ${test}_${option}
         if "${test}" =~ "*int" then
-            python3 ../utils/mdumpcheck.py ${test}.dump  ${test}_${option}.vdump 0xF000 0x0500 0xFFFF
+            python3 ../utils/mdumpcheck.py ${test}.dump  ${vpath}${test}_${option}.vdump 0xF000 0x0500 0xFFFF
         else
-            python3 ../utils/mdumpcheck.py ${test}.dump  ${test}_${option}.vdump
+            python3 ../utils/mdumpcheck.py ${test}.dump  ${vpath}${test}_${option}.vdump
         endif
     end
 end
