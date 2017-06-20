@@ -16,13 +16,14 @@ module opc5lscpu( input[15:0] din, input clk, input reset_b, input int_b, input 
     assign {vpa,vda}          = {((FSM_q==FETCH0)||(FSM_q==FETCH1)||(FSM_q==EXEC)),((FSM_q==RDMEM)||(FSM_q==WRMEM)) };
     always @(*)
         begin
-            case (IR_q[11:8])    // no real need for STO entry but include it so all instructions are covered,no need for default
+            case ({(FSM_q==EA_ED),IR_q[11:8]})    // no real need for STO entry but include it so all instructions are covered,no need for default
                 LD,MOV,PSR,STO   :{carry,result} = {PSR_q[C],(IR_q[IRGETPSR])?{8'b0,PSR_q}:OR_q} ;
                 AND,OR           :{carry,result} = {PSR_q[C],(IR_q[8])?(sprf_dout & OR_q):(sprf_dout | OR_q)};
                 ADD,ADC          :{carry,result} = sprf_dout + OR_q + (IR_q[8] & PSR_q[C]);
                 SUB,SBC,CMP,CMPC :{carry,result} = sprf_dout + (OR_q ^ 16'hFFFF) + ((IR_q[8])?PSR_q[C]:1);
                 XOR,BSWP         :{carry,result} = {PSR_q[C],(!IR_q[11])?(sprf_dout ^ OR_q):{OR_q[7:0],OR_q[15:8] }};
                 NOT,ROR          :{result,carry} = (IR_q[8])?{~OR_q,PSR_q[C]}:{PSR_q[C],OR_q} ;
+                default          :{carry,result} = sprf_dout + OR_q; // hit this on EAED when carry is a dont care
             endcase // case (IR_q)
             {swiid,enable_int,sign,carry,zero} = (IR_q[IRPUTPSR])?OR_q[7:0]:(IR_q[3:0]!=4'hF)?{PSR_q[7:3],result[15],carry,!(|result)}:PSR_q;
         end
@@ -45,7 +46,7 @@ module opc5lscpu( input[15:0] din, input clk, input reset_b, input int_b, input 
                 case(FSM_q)
                     FETCH0,EXEC:{sprf_radr_q,OR_q } <= {din[7:4],16'b0};
                     FETCH1     :{sprf_radr_q,OR_q } <= {(((sprf_radr_q!=0) || IR_q[IRLD] || IR_q[IRSTO])?IR_q[7:4]:IR_q[3:0]),din};
-                    EA_ED      :{sprf_radr_q,OR_q } <= {IR_q[3:0],sprf_dout + OR_q};
+                    EA_ED      :{sprf_radr_q,OR_q } <= {IR_q[3:0],result}; // use ALU to compute effective address/data
                     default    :{sprf_radr_q,OR_q } <= {IR_q[3:0],din};
                 endcase // case (FSM_q)
 
