@@ -28,7 +28,6 @@ module opc5lscpu( input[15:0] din, input clk, input reset_b, input int_b, input 
             endcase // case ( IR_q )
             {swiid,enable_int,sign,carry,zero} = (IR_q[IRPUTPSR])?operand[7:0]:(IR_q[3:0]!=4'hF)?{PSR_q[7:3],result[15],carry,!(|result)}:PSR_q;
         end // always @ ( * )
-
     always @(posedge clk)
         if (clken) begin
             {reset_s0_b,reset_s1_b} <= {reset_b,reset_s0_b};
@@ -55,7 +54,8 @@ module opc5lscpu( input[15:0] din, input clk, input reset_b, input int_b, input 
                 else if ( FSM_q == EXEC ) begin
                     PC_q <= (IR_q[IRRTI])?PCI_q:(IR_q[3:0]==4'hF)?result:((!int_b && PSR_q[EI]) || (IR_q[IRPUTPSR] && (|swiid)))?PC_q:PC_q + 1;
                     PSR_q <= (IR_q[IRRTI])?{4'b0,PSRI_q}:{swiid,enable_int,sign,carry,zero}; // Clear SWI bits on return
-                    dprf_q[(IR_q[IRCMP])?4'b0:IR_q[3:0]] <= result ;
+                    if (!IR_q[IRCMP])
+                        dprf_q[IR_q[3:0]] <= result ;
                 end
                 if ( FSM_q == FETCH0 || FSM_q == EXEC)
                     IR_q <= {((din[11:8]==CMP)||(din[11:8]==CMPC)),{3{(din[11:8]==PSR)}}&{(din[3:0]==4'hF),(din[3:0]==4'h0),(din[7:4]==4'b0)},(din[11:8]==STO),(din[11:8]==LD),din};
