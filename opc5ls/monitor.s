@@ -6,31 +6,28 @@
 # (c) 2017 David Banks
 
 MACRO JSR( _address_)
-   mov      r13, pc, 0x0005
-   sto      r13, r14
-   mov      r14, r14, 0xffff
-   mov      pc,  r0, _address_
+    mov     r13, pc, 0x0002
+    mov     pc,  r0, _address_
 ENDMACRO
 
 MACRO RTS()
-    mov     r14, r14, 0x0001
-    ld      pc, r14
+    mov     pc, r13
 ENDMACRO
 
 MACRO   PUSH( _data_)
-    sto     _data_, r14
-    mov     r14, r14, 0xffff
+    mov     r14, r14, -1
+    sto     _data_, r14, 1
 ENDMACRO
 
 MACRO   POP( _data_ )
-    mov     r14, r14, 0x0001
-    ld      _data_, r14
+    ld      _data_, r14, 1
+    mov     r14, r14, 1
 ENDMACRO
 
 ORG 0x0000
 
 monitor:
-    mov     r14, r0, 0x07ff
+    mov     r14, r0, 0x3fff
 
     mov     r1, r0, welcome
     JSR     (print_string)
@@ -38,6 +35,8 @@ monitor:
     mov     r11, r0        # enable local echo
 
 mon1:
+
+    mov     r14, r0, 0x3fff
 
     and     r11, r11       # don't output prompt if echo off
     nz.mov  pc, r0, mon2
@@ -198,9 +197,11 @@ toggle_echo:
 
 go:
     sto     r5, r0, go2
+    PUSH    (r11)          # save echo state
     JSR     (load_regs)
     JSR     (go1)
     JSR     (save_regs)
+    POP     (r11)          # restore echo state
     mov     pc, r0, mon1
 
 go1:
@@ -343,6 +344,7 @@ regs:
     mov     pc, r0, mon1           # back to the - prompt
 
 print_state:
+    PUSH    (r13)
     JSR     (osnewl)
     mov     r1, r4                 # display the next instruction
     JSR     (disassemble)
@@ -355,7 +357,9 @@ pad1:
 
 pad2:
     JSR     (print_delim)
-    # fall through into print_regs
+    JSR     (print_regs)
+    POP     (r13)
+    RTS     ()
 
 # --------------------------------------------------------------
 #
@@ -368,37 +372,42 @@ pad2:
 
 print_regs:
 
-    ld       r1, r0, reg_state_psr # extract S flag
-    ror      r1, r1
-    ror      r1, r1
-    JSR      (print_flag)
+    PUSH    (r13)
+    ld      r1, r0, reg_state_psr # extract S flag
+    ror     r1, r1
+    ror     r1, r1
+    JSR     (print_flag)
 
-    ld       r1, r0, reg_state_psr # extract C flag
-    ror      r1, r1
-    JSR      (print_flag)
+    ld      r1, r0, reg_state_psr # extract C flag
+    ror     r1, r1
+    JSR     (print_flag)
 
-    ld       r1, r0, reg_state_psr # extract Z flag
-    JSR      (print_flag)
+    ld      r1, r0, reg_state_psr # extract Z flag
+    JSR     (print_flag)
 
-    mov      r1, r0, 0x3A          # ":"
-    JSR      (oswrch)
+    mov     r1, r0, 0x3A          # ":"
+    JSR     (oswrch)
 
-    mov      r2, r0
-    mov      r3, r0, 16
+    mov     r2, r0
+    mov     r3, r0, 16
 dr_loop:
-    ld       r1, r2, reg_state
-    JSR      (print_sp)
-    JSR      (print_hex4)          # "1234"
-    add      r2, r0, 1
-    sub      r3, r0, 1
-    nz.mov   pc, r0, dr_loop
-    RTS      ()
+    ld      r1, r2, reg_state
+    JSR     (print_sp)
+    JSR     (print_hex4)          # "1234"
+    add     r2, r0, 1
+    sub     r3, r0, 1
+    nz.mov  pc, r0, dr_loop
+    POP     (r13)
+    RTS     ()
 
 print_flag:
-    and      r1, r0, 1
-    add      r1, r0, 0x30
-    JSR      (oswrch)              # "0" or "1"
-    mov      pc, r0, print_sp      # " "
+    PUSH    (r13)
+    and     r1, r0, 1
+    add     r1, r0, 0x30
+    JSR     (oswrch)              # "0" or "1"
+    JSR     (print_sp)            # " "
+    POP     (r13)
+    RTS     ()
 
 # --------------------------------------------------------------
 #
@@ -412,11 +421,13 @@ print_flag:
 # - r1 trashed
 
 osnewl:
+    PUSH    (r13)
     mov     r1, r0, 0x0a
     JSR     (oswrch)
-
     mov     r1, r0, 0x0d
-    # fall through to oswrch
+    JSR     (oswrch)
+    POP     (r13)
+    RTS     ()
 
 # --------------------------------------------------------------
 #
@@ -428,18 +439,20 @@ osnewl:
 # - r1 is the character to output
 # Exit:
 # - r12 is the horizontal position
-# - r13 (the scratch register) is trashed
 # - all other registers preserved
 
 oswrch:
+    PUSH    (r13)
+oswrch_loop:
     ld      r13, r0, 0xfe08
     and     r13, r0, 0x8000
-    nz.mov  pc, r0, oswrch
+    nz.mov  pc, r0, oswrch_loop
     sto     r1, r0, 0xfe09
     mov     r12, r12, 1       # increment the horizontal position
     mov     r13, r1           #
     xor     r13, r0, 13       # test for <cr> without corrupting x
     z.mov   r12, r0           # reset horizontal position
+    POP     (r13)
     RTS     ()
 
 # --------------------------------------------------------------
@@ -473,6 +486,7 @@ osrdch:
 # - all other registers preserved
 
 print_string:
+    PUSH    (r13)
     PUSH    (r2)
     mov     r2, r1
 
@@ -491,6 +505,7 @@ ps_loop:
 
 ps_exit:
     POP     (r1)
+    POP     (r13)
     RTS     ()
 
 
@@ -508,6 +523,7 @@ ps_exit:
 
 print_hex4:
 
+    PUSH    (r13)
     PUSH    (r1)            # preserve working registers
     PUSH    (r2)
     PUSH    (r3)
@@ -539,6 +555,7 @@ ph_loop:
     POP     (r3)            # restore working registers
     POP     (r2)
     POP     (r1)
+    POP     (r13)
 
     RTS     ()
 
@@ -555,8 +572,11 @@ ph_loop:
 # - all registers preserved
 
 print_hex4_sp:
+     PUSH   (r13)
      JSR    (print_hex4)
-     # fall through to...
+     JSR    (print_sp)
+     POP    (r13)
+     RTS    ()
 
 # --------------------------------------------------------------
 #
@@ -570,10 +590,12 @@ print_hex4_sp:
 # - all registers preserved
 
 print_sp:
+     PUSH   (r13)
      PUSH   (r1)
      mov    r1, r0, 0x20
      JSR    (oswrch)
      POP    (r1)
+     POP    (r13)
      RTS    ()
 
 # --------------------------------------------------------------
@@ -588,12 +610,14 @@ print_sp:
 # - all registers preserved
 
 print_delim:
+     PUSH   (r13)
      PUSH   (r1)
      mov    r1, r0, 0x3a
      JSR    (oswrch)
      mov    r1, r0, 0x20
      JSR    (oswrch)
      POP    (r1)
+     POP    (r13)
      RTS    ()
 
 # --------------------------------------------------------------
@@ -611,6 +635,7 @@ print_delim:
 
 disassemble:
 
+    PUSH   (r13)
     PUSH   (r3)
     PUSH   (r4)
     PUSH   (r5)
@@ -716,10 +741,12 @@ dis7:
     POP     (r5)
     POP     (r4)
     POP     (r3)
+    POP     (r13)
     RTS     ()
 
 print_reg:
 
+    PUSH    (r13)
     and     r1, r0, 0x0F
 
     PUSH    (r1)
@@ -739,7 +766,9 @@ print_reg:
 
 print_reg_num:
     add     r1, r0, 0x30
-    mov     pc, r0, oswrch
+    JSR     (oswrch)
+    POP     (r13)
+    RTS     ()
 
 welcome:
     WORD    0x0D0A
@@ -899,7 +928,6 @@ fibRes:
         ;; r9  stands for s
         ;; r10 stands for r
         ;; r11 stands for q
-        ;; r12 stands for p (a pointer)
 
 # 3 digits in 10431 instructions, 26559 cycles
 # 4 digits in 16590 instructions, 42229 cycles
@@ -916,6 +944,7 @@ psize:
 
         ORG 0x1000
 start:
+        PUSH(r13)
         ;; trivial banner
         mov r1, r0, 0x4f
         JSR(oswrch)
@@ -985,6 +1014,7 @@ l6:     mov r2, r2, -1          # dex
         nz.mov pc, r0, l1       # bne l1
         JSR (oswrch)
         mov r0, r0, 3142        # RTS()
+        POP(r13)
         RTS()
 done:   mov pc, r0, done
 
