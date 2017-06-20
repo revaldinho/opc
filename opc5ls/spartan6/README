@@ -49,7 +49,6 @@ else
     
     par -w \
         -ol high \
-        -t 10 \
         ${project_name}_map.ncd \
         ${project_name}.ncd \
         ${project_name}.pcf
