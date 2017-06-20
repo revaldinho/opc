@@ -6,72 +6,84 @@
 # (c) 2017 David Banks
 
 MACRO JSR( _address_)
-   mov      r13, pc, 0x0005
-   sto      r13, r14
-   mov      r14, r14, 0xffff
-   mov      pc,  r0, _address_
+    mov     r13, pc, 0x0002
+    mov     pc,  r0, _address_
 ENDMACRO
 
 MACRO RTS()
-    mov     r14, r14, 0x0001
-    ld      pc, r14
+    mov     pc, r13
 ENDMACRO
 
 MACRO   PUSH( _data_)
-    sto     _data_, r14
-    mov     r14, r14, 0xffff
+    mov     r14, r14, -1
+    sto     _data_, r14, 1
 ENDMACRO
 
 MACRO   POP( _data_ )
-    mov     r14, r14, 0x0001
-    ld      _data_, r14
+    ld      _data_, r14, 1
+    mov     r14, r14, 1
 ENDMACRO
 
 ORG 0x0000
 
 monitor:
-    mov     r14, r0, 0x07ff
+    mov     r14, r0, 0x3fff
 
     mov     r1, r0, welcome
     JSR     (print_string)
 
-m1:
+    mov     r11, r0        # enable local echo
+
+mon1:
+
+    mov     r14, r0, 0x3fff
+
+    and     r11, r11       # don't output prompt if echo off
+    nz.mov  pc, r0, mon2
+
     JSR     (osnewl)
     mov     r1, r0, 0x2D
     JSR     (oswrch)
 
-m2:
+mon2:
     mov     r5, r0          # r5 == NUMBER
     mov     r1, r0
 
-m3:
+mon3:
     and     r1, r0, 0x0F
 
-m4:
+mon4:
     add     r5, r5          # accumulate digit
     add     r5, r5
     add     r5, r5
     add     r5, r5
     or      r5, r1
 
-m6:
+mon6:
     JSR     (osrdch)
 
     cmp     r1, r0, 0x0D
-    z.mov   pc, r0, m1
+    z.mov   pc, r0, mon1
 
 #
 # Insert additional commands for characters (e.g. control characters)
 # outside the range $20 (space) to $7E (tilde) here
 #
 
+    and     r11, r11      # don't output if echo off
+    nz.mov  pc, r0, echo_off
+
     cmp     r1, r0, 0x20  # don't output if < 0x20
-    nc.mov  pc, r0, m6
+    nc.mov  pc, r0, mon6
 
     cmp     r1, r0, 0x7F  # don't output if >= 07F
-    c.mov   pc, r0, m6
+    c.mov   pc, r0, mon6
 
     JSR     (oswrch)
+
+echo_off:
+    cmp     r1, r0, 0x23
+    z.mov   pc, r0, toggle_echo
 
     cmp     r1, r0, 0x2c
     z.mov   pc, r0, comma
@@ -87,7 +99,7 @@ m6:
 
 
     cmp     r1, r0, 0x0A
-    nc.mov  pc, r0, m4
+    nc.mov  pc, r0, mon4
     or      r1, r0, 0x20
     sub     r1, r0, 0x77
 #
@@ -100,7 +112,7 @@ m6:
     z.mov   pc, r0, go
 
     cmp     r1, r0, 0xfffa
-    c.mov   pc, r0, m3
+    c.mov   pc, r0, mon3
 
 #
 # Insert additional commands for (case-insensitive) letters here
@@ -116,7 +128,7 @@ m6:
     z.mov   pc, r0, step
 
     cmp     r1, r0, 0xfff1   # x
-    nz.mov  pc, r0, m6
+    nz.mov  pc, r0, mon6
 
 dump:
     mov     r3, r0
@@ -128,7 +140,7 @@ d0:
     add     r1, r3
     JSR     (print_hex4_sp)
 
-d1:
+dump1:
     mov     r1, r5
     add     r1, r3
     ld      r1, r1
@@ -138,53 +150,59 @@ d1:
 
     mov     r2, r3
     and     r2, r0, 0x07
-    nz.mov  pc, r0, d1
+    nz.mov  pc, r0, dump1
 
     sub     r3, r0, 0x08
 
-d2:
+dump2:
     mov     r1, r5
     add     r1, r3
     ld      r1, r1
     and     r1, r0, 0x7F
 
     cmp     r1, r0, 0x20
-    nc.mov  pc, r0, d3
+    nc.mov  pc, r0, dump3
     cmp     r1, r0, 0x7F
-    nc.mov  pc, r0, d4
+    nc.mov  pc, r0, dump4
 
-d3:
+dump3:
     mov      r1, r0, 0x2E
 
-d4:
+dump4:
     JSR     (oswrch)
     add     r3, r0, 1
     mov     r2, r3
     and     r2, r0, 0x07
-    nz.mov  pc, r0, d2
+    nz.mov  pc, r0, dump2
 
     cmp     r3, r0, 0x80
     nc.mov  pc, r0, d0
 
     add     r5, r3
 
-    mov     pc, r0, m6
+    mov     pc, r0, mon6
 
 comma:
     sto     r5, r4
     add     r4, r0, 1
-    mov     pc, r0, m2
+    mov     pc, r0, mon2
 
 at:
     mov     r4, r5
-    mov     pc, r0, m2
+    mov     pc, r0, mon2
+
+toggle_echo:
+    xor     r11, r0, 1
+    mov     pc, r0, mon2
 
 go:
     sto     r5, r0, go2
+    PUSH    (r11)          # save echo state
     JSR     (load_regs)
     JSR     (go1)
     JSR     (save_regs)
-    mov     pc, r0, m1
+    POP     (r11)          # restore echo state
+    mov     pc, r0, mon1
 
 go1:
     WORD    0x100F   # mov pc, r0, ...
@@ -236,7 +254,7 @@ dis_loop:
     sub     r3, r0, 1
     nz.mov  pc, r0, dis_loop
 
-    mov     pc, r0, m6
+    mov     pc, r0, mon6
 
 
 # Single Step Command
@@ -318,14 +336,15 @@ operand:
 
     JSR     (print_state)          # print the final state
 
-    mov     pc, r0, m1             # back to the - prompt
+    mov     pc, r0, mon1           # back to the - prompt
 
 regs:
     JSR     (osnewl)
     JSR     (print_regs)
-    mov     pc, r0, m1             # back to the - prompt
+    mov     pc, r0, mon1           # back to the - prompt
 
 print_state:
+    PUSH    (r13)
     JSR     (osnewl)
     mov     r1, r4                 # display the next instruction
     JSR     (disassemble)
@@ -338,7 +357,9 @@ pad1:
 
 pad2:
     JSR     (print_delim)
-    # fall through into print_regs
+    JSR     (print_regs)
+    POP     (r13)
+    RTS     ()
 
 # --------------------------------------------------------------
 #
@@ -351,37 +372,42 @@ pad2:
 
 print_regs:
 
-    ld       r1, r0, reg_state_psr # extract S flag
-    ror      r1, r1
-    ror      r1, r1
-    JSR      (print_flag)
+    PUSH    (r13)
+    ld      r1, r0, reg_state_psr # extract S flag
+    ror     r1, r1
+    ror     r1, r1
+    JSR     (print_flag)
 
-    ld       r1, r0, reg_state_psr # extract C flag
-    ror      r1, r1
-    JSR      (print_flag)
+    ld      r1, r0, reg_state_psr # extract C flag
+    ror     r1, r1
+    JSR     (print_flag)
 
-    ld       r1, r0, reg_state_psr # extract Z flag
-    JSR      (print_flag)
+    ld      r1, r0, reg_state_psr # extract Z flag
+    JSR     (print_flag)
 
-    mov      r1, r0, 0x3A          # ":"
-    JSR      (oswrch)
+    mov     r1, r0, 0x3A          # ":"
+    JSR     (oswrch)
 
-    mov      r2, r0
-    mov      r3, r0, 16
+    mov     r2, r0
+    mov     r3, r0, 16
 dr_loop:
-    ld       r1, r2, reg_state
-    JSR      (print_sp)
-    JSR      (print_hex4)          # "1234"
-    add      r2, r0, 1
-    sub      r3, r0, 1
-    nz.mov   pc, r0, dr_loop
-    RTS      ()
+    ld      r1, r2, reg_state
+    JSR     (print_sp)
+    JSR     (print_hex4)          # "1234"
+    add     r2, r0, 1
+    sub     r3, r0, 1
+    nz.mov  pc, r0, dr_loop
+    POP     (r13)
+    RTS     ()
 
 print_flag:
-    and      r1, r0, 1
-    add      r1, r0, 0x30
-    JSR      (oswrch)              # "0" or "1"
-    mov      pc, r0, print_sp      # " "
+    PUSH    (r13)
+    and     r1, r0, 1
+    add     r1, r0, 0x30
+    JSR     (oswrch)              # "0" or "1"
+    JSR     (print_sp)            # " "
+    POP     (r13)
+    RTS     ()
 
 # --------------------------------------------------------------
 #
@@ -395,11 +421,13 @@ print_flag:
 # - r1 trashed
 
 osnewl:
+    PUSH    (r13)
     mov     r1, r0, 0x0a
     JSR     (oswrch)
-
     mov     r1, r0, 0x0d
-    # fall through to oswrch
+    JSR     (oswrch)
+    POP     (r13)
+    RTS     ()
 
 # --------------------------------------------------------------
 #
@@ -411,18 +439,20 @@ osnewl:
 # - r1 is the character to output
 # Exit:
 # - r12 is the horizontal position
-# - r13 (the scratch register) is trashed
 # - all other registers preserved
 
 oswrch:
+    PUSH    (r13)
+oswrch_loop:
     ld      r13, r0, 0xfe08
     and     r13, r0, 0x8000
-    nz.mov  pc, r0, oswrch
+    nz.mov  pc, r0, oswrch_loop
     sto     r1, r0, 0xfe09
     mov     r12, r12, 1       # increment the horizontal position
     mov     r13, r1           #
     xor     r13, r0, 13       # test for <cr> without corrupting x
     z.mov   r12, r0           # reset horizontal position
+    POP     (r13)
     RTS     ()
 
 # --------------------------------------------------------------
@@ -456,6 +486,7 @@ osrdch:
 # - all other registers preserved
 
 print_string:
+    PUSH    (r13)
     PUSH    (r2)
     mov     r2, r1
 
@@ -474,6 +505,7 @@ ps_loop:
 
 ps_exit:
     POP     (r1)
+    POP     (r13)
     RTS     ()
 
 
@@ -491,6 +523,7 @@ ps_exit:
 
 print_hex4:
 
+    PUSH    (r13)
     PUSH    (r1)            # preserve working registers
     PUSH    (r2)
     PUSH    (r3)
@@ -522,6 +555,7 @@ ph_loop:
     POP     (r3)            # restore working registers
     POP     (r2)
     POP     (r1)
+    POP     (r13)
 
     RTS     ()
 
@@ -538,8 +572,11 @@ ph_loop:
 # - all registers preserved
 
 print_hex4_sp:
+     PUSH   (r13)
      JSR    (print_hex4)
-     # fall through to...
+     JSR    (print_sp)
+     POP    (r13)
+     RTS    ()
 
 # --------------------------------------------------------------
 #
@@ -553,10 +590,12 @@ print_hex4_sp:
 # - all registers preserved
 
 print_sp:
+     PUSH   (r13)
      PUSH   (r1)
      mov    r1, r0, 0x20
      JSR    (oswrch)
      POP    (r1)
+     POP    (r13)
      RTS    ()
 
 # --------------------------------------------------------------
@@ -571,12 +610,14 @@ print_sp:
 # - all registers preserved
 
 print_delim:
+     PUSH   (r13)
      PUSH   (r1)
      mov    r1, r0, 0x3a
      JSR    (oswrch)
      mov    r1, r0, 0x20
      JSR    (oswrch)
      POP    (r1)
+     POP    (r13)
      RTS    ()
 
 # --------------------------------------------------------------
@@ -594,6 +635,7 @@ print_delim:
 
 disassemble:
 
+    PUSH   (r13)
     PUSH   (r3)
     PUSH   (r4)
     PUSH   (r5)
@@ -699,10 +741,12 @@ dis7:
     POP     (r5)
     POP     (r4)
     POP     (r3)
+    POP     (r13)
     RTS     ()
 
 print_reg:
 
+    PUSH    (r13)
     and     r1, r0, 0x0F
 
     PUSH    (r1)
@@ -722,7 +766,9 @@ print_reg:
 
 print_reg_num:
     add     r1, r0, 0x30
-    mov     pc, r0, oswrch
+    JSR     (oswrch)
+    POP     (r13)
+    RTS     ()
 
 welcome:
     WORD    0x0D0A
@@ -824,6 +870,11 @@ reg_state_pc:
 reg_state_psr:
     WORD 0x0000
 
+# Limit check to precent code running into next block...
+
+Limit1:
+    EQU dummy, 0 if (Limit1 < 0x0800) else limit1_error
+
 # ----------------------------------------------------
 # Some test code (fastfib)
 
@@ -854,3 +905,154 @@ fibEnd:
         ORG     0x780
 
 fibRes:
+
+# ----------------------------------------------------
+# Some test code (pi)
+
+        ;;  pi program by Bruce Clark as seen on 6502.org
+        ;;  ported from 65816 to 65Org16 and then to OPC5ls
+        ;;  see http://forum.6502.org/viewtopic.php?p=15708#p15708
+
+        ;; r15 is pc
+        ;; r14 is stack pointer
+        ;; r13 is temporary used by JSR
+
+        ;; r1  will be used as a was in 65org16
+        ;; r2  will be used as x was in 65org16
+        ;; r3  will be used as y was in 65org16
+
+        ;; r4 is the stacked value of a
+        ;; r5 is the stacked value of x
+        ;; r6 is the stacked value of y
+
+        ;; r9  stands for s
+        ;; r10 stands for r
+        ;; r11 stands for q
+
+# 3 digits in 10431 instructions, 26559 cycles
+# 4 digits in 16590 instructions, 42229 cycles
+# 5 digits in 23644 instructions, 60186 cycles
+# 6 digits in 33412 instructions, 85040 cycles
+# 7 digits in 42589 instructions, 108368 cycles
+# 8 digits in 52659 instructions, 133981 cycles
+
+        ORG 359 # Original target 359 digits
+ndigits:
+
+        ORG 1193 # 1193  should be 1+ndigits*10/3
+psize:
+
+        ORG 0x1000
+start:
+        PUSH(r13)
+        ;; trivial banner
+        mov r1, r0, 0x4f
+        JSR(oswrch)
+        mov r1, r0, 0x6b
+        JSR(oswrch)
+        mov r1, r0, 0x20
+        JSR(oswrch)
+
+
+        ;; mov r14, r0, stack   ; initialise stack pointer
+        JSR( init)
+        mov r2, r0, ndigits     # ldx #359
+        mov r3, r0, psize       # ldy #1193
+l1:
+        mov r6, r3              # phy
+        mov r4, r1              # pha
+        mov r5, r2              # phx
+        mov r11, r0             # stz q
+        mov r1, r3              # tya
+        mov r2, r1              # tax
+
+l2:     mov r1, r2              # txa
+        JSR (mul)
+        mov r9, r1              # sta s
+        mov r1, r0, 10          # lda #10
+        mov r11, r1             # sta q
+        ld  r1, r2, p-1         # lda p-1,x
+        JSR (mul)
+                                # clc
+        add r1, r9              # adc s
+        mov r11, r1             # sta q
+        mov r1, r2              # txa
+        add r1, r1              # asl
+        mov r1, r1, -1          # dec
+        JSR (div)
+        sto r1, r2, p-1         # sta p-1,x
+        mov r2, r2, -1          # dex
+        nz.mov pc, r0, l2       # bne l2
+
+        mov r1, r0, 10          # lda #10
+        JSR (div)
+        sto r1, r0, p           # sta p
+        mov r2, r5              # plx
+        mov r1, r4              # pla
+        mov r3, r11             # ldy q
+        cmp r3, r0, 10          # cpy #10
+        nc.mov pc, r0, l3       # bcc l3
+        mov r3, r0              # ldy #0
+        mov r1, r1, 1           # inc
+l3:
+        cmp r2, r0, ndigits-1   # cpx #358
+        nc.mov pc, r0, l4       # bcc l4
+        nz.mov pc, r0, l5       # bne l5
+        JSR (oswrch)
+        mov r1, r0, 46          # lda #46
+l4:
+        JSR (oswrch)
+l5:     mov r1, r3              # tya
+        xor r1, r0, 48          # eor #48
+        mov r3, r6              # ply
+        cmp r2, r0, ndigits-1   # cpx #358
+        c.mov pc, r0, l6        # bcs l6
+                                # dey
+                                # dey
+        mov r3, r3, -3          # dey by 3
+l6:     mov r2, r2, -1          # dex
+        nz.mov pc, r0, l1       # bne l1
+        JSR (oswrch)
+        mov r0, r0, 3142        # RTS()
+        POP(r13)
+        RTS()
+done:   mov pc, r0, done
+
+init:
+        mov r1, r0, 2           # lda #2
+        mov r2, r0, psize       # was ldx #1192
+i1:     sto r1, r2, p-1         # was sta p,x
+        mov r2, r2, -1          # dex
+        nz.mov pc, r0, i1       # bne instead of bpl i1
+        RTS()
+
+mul:                            # uses y as loop counter
+        mov r10, r1             # sta r
+        mov r3, r0, 16          # ldy #16
+m1:     add r1, r1              # asl
+        add r11, r11            # asl q
+        nc.mov pc, r0, m2       # bcc m2
+                                # clc
+        add r1, r10             # adc r
+m2:     mov r3, r3, -1          # dey
+        nz.mov pc, r0, m1       # bne m1
+        RTS()
+
+div:                            # uses y as loop counter
+        mov r10, r1             # sta r
+        mov r3, r0, 16          # ldy #16
+        mov r1, r0, 0           # lda #0
+        add r11, r11            # asl q
+d1:     adc r1, r1              # rol
+        cmp r1, r10             # cmp r
+        nc.mov pc, r0, d2       # bcc d2
+        sbc r1, r10             # sbc r
+d2:     adc r11, r11            # rol q
+        mov r3, r3, -1          # dey
+        nz.mov pc, r0, d1       # bne d1
+        RTS()
+
+base:   WORD 0,0,0,0,0,0,0,0,0  # reserve some stack space
+stack:  WORD 0
+p:      WORD 0  # needs 1193 words but there's nothing beyond
+

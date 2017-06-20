@@ -38,6 +38,6 @@ setCable -port auto
 Identify -inferir 
 identifyMPM 
 attachflash -position 1 -spi "W25Q64BV"
-assignfiletoattachedflash -position 1 -file "/home/dmb/atom/opc/opc5/opc5system/xc6slx9_starter/opc5system.mcs"
+assignfiletoattachedflash -position 1 -file "opc5system.mcs"
 Program -p 1 -dataWidth 1 -spionly -e -v -loadfpga 
 quit
