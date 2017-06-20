@@ -66,6 +66,8 @@ module opc5copro (
    reg              cpu_irq_b_sync;
    wire             cpu_clken;
    wire             cpu_mreq_b;
+   wire             vpa;
+   wire             vda;
 
 // ---------------------------------------------
 // clock generator
@@ -120,8 +122,8 @@ module opc5copro (
       .reset_b    (rst_b_sync),
       .int_b      (cpu_irq_b_sync),
       .clken      (cpu_clken),
-      .mreq_b     (cpu_mreq_b),
-      .sync       ()
+      .vpa        (vpa),
+      .vda        (vda)
     );
 
    memory_controller inst_memory_controller
@@ -165,6 +167,8 @@ module opc5copro (
 // ---------------------------------------------
 // address decode logic
 // ---------------------------------------------
+
+   assign cpu_mreq_b = !(vpa | vda);   
 
    // Tube mapped to FEF8-FEFF
    assign p_cs_b   = !((cpu_addr[15:3] == 13'b1111111011111) && !cpu_mreq_b);
