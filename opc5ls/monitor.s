@@ -35,30 +35,30 @@ monitor:
     mov     r1, r0, welcome
     JSR     (print_string)
 
-m1:
+mon1:
     JSR     (osnewl)
     mov     r1, r0, 0x2D
     JSR     (oswrch)
 
-m2:
+mon2:
     mov     r5, r0          # r5 == NUMBER
     mov     r1, r0
 
-m3:
+mon3:
     and     r1, r0, 0x0F
 
-m4:
+mon4:
     add     r5, r5          # accumulate digit
     add     r5, r5
     add     r5, r5
     add     r5, r5
     or      r5, r1
 
-m6:
+mon6:
     JSR     (osrdch)
 
     cmp     r1, r0, 0x0D
-    z.mov   pc, r0, m1
+    z.mov   pc, r0, mon1
 
 #
 # Insert additional commands for characters (e.g. control characters)
@@ -66,10 +66,10 @@ m6:
 #
 
     cmp     r1, r0, 0x20  # don't output if < 0x20
-    nc.mov  pc, r0, m6
+    nc.mov  pc, r0, mon6
 
     cmp     r1, r0, 0x7F  # don't output if >= 07F
-    c.mov   pc, r0, m6
+    c.mov   pc, r0, mon6
 
     JSR     (oswrch)
 
@@ -87,7 +87,7 @@ m6:
 
 
     cmp     r1, r0, 0x0A
-    nc.mov  pc, r0, m4
+    nc.mov  pc, r0, mon4
     or      r1, r0, 0x20
     sub     r1, r0, 0x77
 #
@@ -100,7 +100,7 @@ m6:
     z.mov   pc, r0, go
 
     cmp     r1, r0, 0xfffa
-    c.mov   pc, r0, m3
+    c.mov   pc, r0, mon3
 
 #
 # Insert additional commands for (case-insensitive) letters here
@@ -116,7 +116,7 @@ m6:
     z.mov   pc, r0, step
 
     cmp     r1, r0, 0xfff1   # x
-    nz.mov  pc, r0, m6
+    nz.mov  pc, r0, mon6
 
 dump:
     mov     r3, r0
@@ -128,7 +128,7 @@ d0:
     add     r1, r3
     JSR     (print_hex4_sp)
 
-d1:
+dump1:
     mov     r1, r5
     add     r1, r3
     ld      r1, r1
@@ -138,53 +138,53 @@ d1:
 
     mov     r2, r3
     and     r2, r0, 0x07
-    nz.mov  pc, r0, d1
+    nz.mov  pc, r0, dump1
 
     sub     r3, r0, 0x08
 
-d2:
+dump2:
     mov     r1, r5
     add     r1, r3
     ld      r1, r1
     and     r1, r0, 0x7F
 
     cmp     r1, r0, 0x20
-    nc.mov  pc, r0, d3
+    nc.mov  pc, r0, dump3
     cmp     r1, r0, 0x7F
-    nc.mov  pc, r0, d4
+    nc.mov  pc, r0, dump4
 
-d3:
+dump3:
     mov      r1, r0, 0x2E
 
-d4:
+dump4:
     JSR     (oswrch)
     add     r3, r0, 1
     mov     r2, r3
     and     r2, r0, 0x07
-    nz.mov  pc, r0, d2
+    nz.mov  pc, r0, dump2
 
     cmp     r3, r0, 0x80
     nc.mov  pc, r0, d0
 
     add     r5, r3
 
-    mov     pc, r0, m6
+    mov     pc, r0, mon6
 
 comma:
     sto     r5, r4
     add     r4, r0, 1
-    mov     pc, r0, m2
+    mov     pc, r0, mon2
 
 at:
     mov     r4, r5
-    mov     pc, r0, m2
+    mov     pc, r0, mon2
 
 go:
     sto     r5, r0, go2
     JSR     (load_regs)
     JSR     (go1)
     JSR     (save_regs)
-    mov     pc, r0, m1
+    mov     pc, r0, mon1
 
 go1:
     WORD    0x100F   # mov pc, r0, ...
@@ -236,7 +236,7 @@ dis_loop:
     sub     r3, r0, 1
     nz.mov  pc, r0, dis_loop
 
-    mov     pc, r0, m6
+    mov     pc, r0, mon6
 
 
 # Single Step Command
@@ -318,12 +318,12 @@ operand:
 
     JSR     (print_state)          # print the final state
 
-    mov     pc, r0, m1             # back to the - prompt
+    mov     pc, r0, mon1           # back to the - prompt
 
 regs:
     JSR     (osnewl)
     JSR     (print_regs)
-    mov     pc, r0, m1             # back to the - prompt
+    mov     pc, r0, mon1           # back to the - prompt
 
 print_state:
     JSR     (osnewl)
