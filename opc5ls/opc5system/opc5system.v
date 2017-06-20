@@ -36,8 +36,8 @@ module opc5system ( input clk, input[7:0] sw, output[7:0] led, input rxd, output
       .reset_b(reset_b),
       .int_b(1'b1),
       .clken(1'b1),
-      .mreq_b(),
-      .sync(),
+      .vpa(),
+      .vda(),
       .dout(cpu_dout),
       .address(address),
       .rnw(rnw)
