@@ -35,7 +35,13 @@ monitor:
     mov     r1, r0, welcome
     JSR     (print_string)
 
+    mov     r11, r0        # enable local echo
+
 mon1:
+
+    and     r11, r11       # don't output prompt if echo off
+    nz.mov  pc, r0, mon2
+
     JSR     (osnewl)
     mov     r1, r0, 0x2D
     JSR     (oswrch)
@@ -65,6 +71,9 @@ mon6:
 # outside the range $20 (space) to $7E (tilde) here
 #
 
+    and     r11, r11      # don't output if echo off
+    nz.mov  pc, r0, echo_off
+
     cmp     r1, r0, 0x20  # don't output if < 0x20
     nc.mov  pc, r0, mon6
 
@@ -72,6 +81,10 @@ mon6:
     c.mov   pc, r0, mon6
 
     JSR     (oswrch)
+
+echo_off:
+    cmp     r1, r0, 0x23
+    z.mov   pc, r0, toggle_echo
 
     cmp     r1, r0, 0x2c
     z.mov   pc, r0, comma
@@ -177,6 +190,10 @@ comma:
 
 at:
     mov     r4, r5
+    mov     pc, r0, mon2
+
+toggle_echo:
+    xor     r11, r0, 1
     mov     pc, r0, mon2
 
 go:
