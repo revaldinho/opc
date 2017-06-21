@@ -1,0 +1,95 @@
+NET "ram_addr<0>"   LOC = "P40" | IOSTANDARD = LVCMOS33 ;
+NET "ram_addr<1>"   LOC = "P63" | IOSTANDARD = LVCMOS33 ;
+NET "ram_addr<2>"   LOC = "P48" | IOSTANDARD = LVCMOS33 ;
+NET "ram_addr<3>"   LOC = "P65" | IOSTANDARD = LVCMOS33 ;
+NET "ram_addr<4>"   LOC = "P42" | IOSTANDARD = LVCMOS33 ;
+NET "ram_addr<5>"   LOC = "P68" | IOSTANDARD = LVCMOS33 ;
+NET "ram_addr<6>"   LOC = "P71" | IOSTANDARD = LVCMOS33 ;
+NET "ram_addr<7>"   LOC = "P79" | IOSTANDARD = LVCMOS33 ;
+NET "ram_addr<8>"   LOC = "P72" | IOSTANDARD = LVCMOS33 ;
+NET "ram_addr<9>"   LOC = "P80" | IOSTANDARD = LVCMOS33 ;
+NET "ram_addr<10>"  LOC = "P67" | IOSTANDARD = LVCMOS33 ;
+NET "ram_addr<11>"  LOC = "P81" | IOSTANDARD = LVCMOS33 ;
+NET "ram_addr<12>"  LOC = "P1"  | IOSTANDARD = LVCMOS33 ;
+NET "ram_addr<13>"  LOC = "P96" | IOSTANDARD = LVCMOS33 ;
+NET "ram_addr<14>"  LOC = "P97" | IOSTANDARD = LVCMOS33 ;
+NET "ram_addr<15>"  LOC = "P53" | IOSTANDARD = LVCMOS33 ;
+NET "ram_addr<16>"  LOC = "P50" | IOSTANDARD = LVCMOS33 ;
+NET "ram_addr<17>"  LOC = "P75" | IOSTANDARD = LVCMOS33 ;
+NET "ram_addr<18>"  LOC = "P74" | IOSTANDARD = LVCMOS33 ;
+
+NET "ram_data<0>"   LOC = "P2"  | IOSTANDARD = LVCMOS33 ;
+NET "ram_data<1>"   LOC = "P4"  | IOSTANDARD = LVCMOS33 ;
+NET "ram_data<2>"   LOC = "P5"  | IOSTANDARD = LVCMOS33 ;
+NET "ram_data<3>"   LOC = "P8"  | IOSTANDARD = LVCMOS33 ;
+NET "ram_data<4>"   LOC = "P9"  | IOSTANDARD = LVCMOS33 ;
+NET "ram_data<5>"   LOC = "P11" | IOSTANDARD = LVCMOS33 ;
+NET "ram_data<6>"   LOC = "P12" | IOSTANDARD = LVCMOS33 ;
+NET "ram_data<7>"   LOC = "P13" | IOSTANDARD = LVCMOS33 ;
+
+NET "fastclk"       LOC = "P38" | IOSTANDARD = LVCMOS33 | PERIOD = 20.3450520833;
+NET "ram_cs_b"      LOC = "P43" | IOSTANDARD = LVCMOS33 ;
+NET "ram_oe_b"      LOC = "P44" | IOSTANDARD = LVCMOS33 ;
+NET "ram_we_b"      LOC = "P64" | IOSTANDARD = LVCMOS33 ;
+NET "fcs"           LOC = "P49" | IOSTANDARD = LVCMOS33 ;
+
+#NET "sw<1>"        LOC = "P27" | PULLUP | IOSTANDARD = LVCMOS33 ;
+#NET "sw<2>"        LOC = "P28" | PULLUP | IOSTANDARD = LVCMOS33 ;
+
+NET "tp<2>"         LOC = "P30" | IOSTANDARD = LVCMOS33 ;
+NET "tp<3>"         LOC = "P32" | IOSTANDARD = LVCMOS33 ;
+NET "tp<4>"         LOC = "P34" | IOSTANDARD = LVCMOS33 ;
+NET "tp<5>"         LOC = "P35" | IOSTANDARD = LVCMOS33 ;
+NET "tp<6>"         LOC = "P36" | IOSTANDARD = LVCMOS33 ;
+NET "tp<7>"         LOC = "P37" | IOSTANDARD = LVCMOS33 ;
+NET "tp<8>"         LOC = "P47" | IOSTANDARD = LVCMOS33 ;
+
+
+# NET "pin1"  LOC = "P89" | IOSTANDARD = LVCMOS33 ;
+# NET "pin2"  LOC = "P90" | IOSTANDARD = LVCMOS33 ;
+# NET "pin3"  LOC = "P92" | IOSTANDARD = LVCMOS33 ;
+# NET "pin4"  LOC = "P91" | IOSTANDARD = LVCMOS33 ;
+# NET "pin5"  LOC = "P16" | IOSTANDARD = LVCMOS33 ;
+# NET "pin6"  LOC = "P14" | IOSTANDARD = LVCMOS33 ;
+# NET "pin7"  LOC = "P17" | IOSTANDARD = LVCMOS33 ;
+# NET "pin8"  LOC = "P15" | IOSTANDARD = LVCMOS33 ;
+# NET "pin9"  LOC = "P21" | IOSTANDARD = LVCMOS33 ;
+# NET "pin10"  LOC = "P22" | IOSTANDARD = LVCMOS33 ;
+# NET "pin11"  LOC = "P23" | IOSTANDARD = LVCMOS33 ;
+# NET "pin13"  LOC = "P39" | IOSTANDARD = LVCMOS33 ;
+# NET "pin14"  LOC = "P54" | IOSTANDARD = LVCMOS33 ;
+# NET "pin15"  LOC = "P55" | IOSTANDARD = LVCMOS33 ;
+# NET "pin16"  LOC = "P62" | IOSTANDARD = LVCMOS33 ;
+# NET "pin17"  LOC = "P60" | IOSTANDARD = LVCMOS33 ;
+# NET "pin18"  LOC = "P61" | IOSTANDARD = LVCMOS33 ;
+# NET "pin19"  LOC = "P59" | IOSTANDARD = LVCMOS33 ;
+# NET "pin20"  LOC = "P85" | IOSTANDARD = LVCMOS33 ;
+# NET "pin21"  LOC = "P87" | IOSTANDARD = LVCMOS33 ;
+# NET "pin22"  LOC = "P86" | IOSTANDARD = LVCMOS33 ;
+# NET "pin23"  LOC = "P88" | IOSTANDARD = LVCMOS33 ;
+
+
+NET "h_phi2"       LOC = "P39" | IOSTANDARD = LVCMOS33 | PERIOD = 500;
+NET "h_addr<2>"    LOC = "P91" | IOSTANDARD = LVCMOS33 ;
+NET "h_addr<1>"    LOC = "P85" | IOSTANDARD = LVCMOS33 ;
+NET "h_addr<0>"    LOC = "P16" | IOSTANDARD = LVCMOS33 ;
+NET "h_data<7>"    LOC = "P59" | IOSTANDARD = LVCMOS33 ;
+NET "h_data<6>"    LOC = "P14" | IOSTANDARD = LVCMOS33 ;
+NET "h_data<5>"    LOC = "P61" | IOSTANDARD = LVCMOS33 ;
+NET "h_data<4>"    LOC = "P17" | IOSTANDARD = LVCMOS33 ;
+NET "h_data<3>"    LOC = "P60" | IOSTANDARD = LVCMOS33 ;
+NET "h_data<2>"    LOC = "P15" | IOSTANDARD = LVCMOS33 ;
+NET "h_data<1>"    LOC = "P62" | IOSTANDARD = LVCMOS33 ;
+NET "h_data<0>"    LOC = "P21" | IOSTANDARD = LVCMOS33 ;
+NET "h_rdnw"       LOC = "P23" | IOSTANDARD = LVCMOS33 ;
+NET "h_cs_b"       LOC = "P22" | IOSTANDARD = LVCMOS33 ;
+NET "h_rst_b"      LOC = "P55" | IOSTANDARD = LVCMOS33 ;
+NET "h_irq_b"      LOC = "P54" | IOSTANDARD = LVCMOS33 ;
+
+
+NET "test<1>"  LOC = "P89" | IOSTANDARD = LVCMOS33 ;
+NET "test<2>"  LOC = "P90" | IOSTANDARD = LVCMOS33 ;
+NET "test<3>"  LOC = "P92" | IOSTANDARD = LVCMOS33 ;
+NET "test<4>"  LOC = "P87" | IOSTANDARD = LVCMOS33 ;
+NET "test<5>"  LOC = "P86" | IOSTANDARD = LVCMOS33 ;
+NET "test<6>"  LOC = "P88" | IOSTANDARD = LVCMOS33 ;
