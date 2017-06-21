@@ -1,0 +1,44 @@
+setMode -pff
+setMode -pff
+addConfigDevice  -name "#TARGET#" -path "."
+setSubmode -pffserial
+setAttribute -configdevice -attr multibootBpiType -value ""
+addDesign -version 0 -name "0"
+setAttribute -configdevice -attr compressed -value "FALSE"
+setAttribute -configdevice -attr compressed -value "FALSE"
+setAttribute -configdevice -attr autoSize -value "FALSE"
+setAttribute -configdevice -attr fileFormat -value "mcs"
+setAttribute -configdevice -attr fillValue -value "FF"
+setAttribute -configdevice -attr swapBit -value "FALSE"
+setAttribute -configdevice -attr dir -value "UP"
+setAttribute -configdevice -attr multiboot -value "FALSE"
+setAttribute -configdevice -attr multiboot -value "FALSE"
+setAttribute -configdevice -attr spiSelected -value "FALSE"
+setAttribute -configdevice -attr spiSelected -value "FALSE"
+addPromDevice -p 1 -size 0 -name #PROM#
+setMode -pff
+setMode -pff
+setSubmode -pffserial
+setMode -pff
+addDeviceChain -index 0
+setMode -pff
+setMode -pff
+setMode -pff
+addDeviceChain -index 0
+addDevice -p 1 -file "#TARGET#.bit"
+setMode -pff
+setSubmode -pffserial
+generate
+setCurrentDesign -version 0
+setMode -bs
+setMode -bs
+setMode -bs
+setMode -bs
+setCable -port auto
+Identify -inferir 
+identifyMPM 
+deleteDevice -position 2
+addDevice -p 2 -sprom "xcf01s" -file "#TARGET#.mcs"
+setAttribute -position 2 -attr packageName -value ""
+Program -p 2 -e -v 
+quit
