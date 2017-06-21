@@ -5,8 +5,11 @@ PROJECT = opc5system
 TARGET  = opc5system
 
 # Papilio cable specific - location of programmer bscan file
-BSCAN   = ../common/bscan_spi_xc3s500e.bit
+BSCAN   = ../../common/bscan_spi_xc3s500e.bit
+
+# Use the default CPU
+CPU     = default
 
 # Common include files
-include ../common/Makefile.inc
-include ../common/Makefile_papilio_cable.inc
+include ../../common/Makefile.inc
+include ../../common/Makefile_papilio_cable.inc

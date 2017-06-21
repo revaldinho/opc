@@ -1,0 +1,26 @@
+ADDRESS_MAP opcmap PPC405 0
+
+    ADDRESS_SPACE rom_code RAMB16 [0x00000000:0x00007fff]
+
+        BUS_BLOCK
+            RAM/Mram_ram16 [15];
+            RAM/Mram_ram15 [14];
+            RAM/Mram_ram14 [13];
+            RAM/Mram_ram13 [12];
+            RAM/Mram_ram12 [11];
+            RAM/Mram_ram11 [10];
+            RAM/Mram_ram10 [9];
+            RAM/Mram_ram9 [8];
+            RAM/Mram_ram8 [7];
+            RAM/Mram_ram7 [6];
+            RAM/Mram_ram6 [5];
+            RAM/Mram_ram5 [4];
+            RAM/Mram_ram4 [3];
+            RAM/Mram_ram3 [2];
+            RAM/Mram_ram2 [1];
+            RAM/Mram_ram1 [0];
+        END_BUS_BLOCK;
+
+    END_ADDRESS_SPACE;
+
+END_ADDRESS_MAP;

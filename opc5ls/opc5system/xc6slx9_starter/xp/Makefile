@@ -7,6 +7,9 @@ TARGET  = opc5system
 # Xilinx cable specific - the prom type
 PROM    = W25Q64BV
 
+# Use the xp flavour CPU
+CPU     = xp
+
 # Common include files
-include ../common/Makefile.inc
-include ../common/Makefile_xilinx_cable.inc
+include ../../common/Makefile.inc
+include ../../common/Makefile_xilinx_cable.inc
