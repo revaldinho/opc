@@ -4,13 +4,7 @@ XILINX      ?= /opt/Xilinx/14.7
 PAPILIO     ?= /opt/GadgetFactory/papilio-loader/programmer
 
 PATH       := $(PATH):${XILINX}/ISE_DS/ISE/bin/lin:${PAPILIO}/linux32
-
-ifeq ( $(shell uname -m), i686 )
-LD_PRELOAD := "$(LD_PRELOAD):$(PWD)/$(COMMON)/libusb-driver.so"
-SHELL      := env LD_PRELOAD=$(LD_PRELOAD) PATH=$(PATH) /bin/sh
-else
 SHELL      := env PATH=$(PATH) /bin/sh
-endif
 
 # Default name of assembler program
 PROG         = monitor
