@@ -2,6 +2,6 @@ setMode -bs
 setCable -port auto
 Identify -inferir 
 identifyMPM 
-assignFile -p 1 -file "opc5system.bit"
+assignFile -p 1 -file "#TARGET#.bit"
 Program -p 1 
 quit
