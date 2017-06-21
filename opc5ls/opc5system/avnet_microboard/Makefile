@@ -1,32 +1,12 @@
-# Paths that will need changing
+# The project .bit file produced by the Xilinx .xise project
+PROJECT = opc5wrapper
 
-PAPILIO_LOADER=/opt/GadgetFactory/papilio-loader/programmer
-XILINX=/opt/Xilinx/14.7
-DATA2MEM=${XILINX}/ISE_DS/ISE/bin/lin/data2mem
-IMPACT=${XILINX}/ISE_DS/ISE/bin/lin/impact
+# The target .bit file to be generated including the monitor program
+TARGET  = opc5system
 
-# Shouldn't need to make changes below this point
+# Xilinx cable specific - the prom type
+PROM    = N25Q128
 
-BIT_FILE=working/opc5wrapper.bit
-BMM_FILE=opc5system_bd.bmm
-
-build: opc5system.bit
-
-deploy: opc5system.bit
-	$(IMPACT) -batch deploy.batch
-
-program: opc5system.bit
-	$(IMPACT) -batch program.batch
-
-opc5system.bit: monitor.mem $(BIT_FILE)
-	$(DATA2MEM) -bm $(BMM_FILE) -bd monitor.mem -bt $(BIT_FILE) -o b opc5system.bit
-
-monitor.mem : ../../monitor.s
-	python ../../opc5lsasm.py ../../monitor.s monitor.hex
-	tr " " "\n" <monitor.hex | head -16384 > monitor.mem
-
-.phony: clean
-
-clean:
-	rm -f opc5system.bit monitor.mem monitor.hex
-	rm -f opc5system.cfi opc5system.mcs opc5system.prm
+# Common include files
+include ../common/Makefile.inc
+include ../common/Makefile_xilinx_cable.inc
