@@ -32,26 +32,26 @@ working/$(PROJECT).bit:
 	# clean up
 	rm -f tmp.xise
 
-$(TARGET).bit: ${PROG}.mem working/$(PROJECT).bit
-	data2mem -bm $(BMM_FILE) -bd ${PROG}.mem -bt working/$(PROJECT).bit -o b $(TARGET).bit
+$(TARGET).bit: $(PROG).mem working/$(PROJECT).bit
+	data2mem -bm $(BMM_FILE) -bd $(PROG).mem -bt working/$(PROJECT).bit -o b $(TARGET).bit
 
-${PROG}.hex: ../../${PROG}.s
-	python ../../../opc5lsasm.py ../../${PROG}.s ${PROG}.hex
+$(PROG).hex: ../../$(PROG).s
+	python ../../../opc5lsasm.py ../../$(PROG).s $(PROG).hex
 
 # This is for use in the FPGA
-${PROG}.mem: ${PROG}.hex
-	tr " " "\n" < ${PROG}.hex | tail -8192 > ${PROG}.mem
+$(PROG).mem: $(PROG).hex
+	tr " " "\n" < $(PROG).hex | tail -8192 > $(PROG).mem
 
 # This is for use in PiTubeDirect
-${PROG}.c: ${PROG}.hex
-	echo '#include "${PROG}.h"' > ${PROG}.c
-	echo 'uint16_t ${PROG}_opc5ls[0x800] = {' >> ${PROG}.c
-	tr " " "\n" < ${PROG}.hex | tail -2048 | awk '{print "0x" $$1 ","}' >> ${PROG}.c
-	echo '};' >> ${PROG}.c
+$(PROG).c: $(PROG).hex
+	echo '#include "$(PROG).h"' > $(PROG).c
+	echo 'uint16_t $(PROG)_opc5ls[0x800] = {' >> $(PROG).c
+	tr " " "\n" < $(PROG).hex | tail -2048 | awk '{print "0x" $$1 ","}' >> $(PROG).c
+	echo '};' >> $(PROG).c
 
 clean:
 	rm -f deploy.batch program.batch tmp.xise
-	rm -f ${PROG}.hex ${PROG}.mem ${PROG}.c
+	rm -f $(PROG).hex $(PROG).mem $(PROG).c
 	rm -f $(TARGET).bit $(TARGET).cfi $(TARGET).mcs $(TARGET).prm
 	rm -f _impactbatch.log
 
