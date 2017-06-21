@@ -1,11 +1,16 @@
 COMMON      = ../../common
 
-XILINX      = /opt/Xilinx/14.7
-PAPILIO     = /opt/GadgetFactory/papilio-loader/programmer
+XILINX      ?= /opt/Xilinx/14.7
+PAPILIO     ?= /opt/GadgetFactory/papilio-loader/programmer
 
-PATH       := "$(PATH):${XILINX}/ISE_DS/ISE/bin/lin:${PAPILIO}/linux32"
+PATH       := $(PATH):${XILINX}/ISE_DS/ISE/bin/lin:${PAPILIO}/linux32
+
+ifeq ( $(shell uname -m), i686 )
 LD_PRELOAD := "$(LD_PRELOAD):$(PWD)/$(COMMON)/libusb-driver.so"
 SHELL      := env LD_PRELOAD=$(LD_PRELOAD) PATH=$(PATH) /bin/sh
+else
+SHELL      := env PATH=$(PATH) /bin/sh
+endif
 
 # Path of the back anotated block memory map file
 BMM_FILE    = opc5system_bd.bmm
