@@ -1,21 +1,13 @@
-\#*
-*~
-not_in_git/
-iseconfig/*
-working/*
-tmp/
-_xmsgs/
-coregen.cgp
-src/Tube/ph_fifo_core_spartan3*
-src/Tube/ph_fifo_core_spartan3/
-opc5copro_bd.bmm
+iseconfig/
+working/
+tuberom.mem
 opc5copro.bit
+opc5copro_bd.bmm
 opc5copro.cfi
 opc5copro.mcs
 opc5copro.prm
 opc5copro.sig
-_impact.*
-tuberom.c
-tuberom.hex
+_impact.cmd
+
 
 

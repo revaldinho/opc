@@ -1,6 +1,6 @@
 setMode -pff
 setMode -pff
-addConfigDevice  -name "opc5copro.mcs" -path "."
+addConfigDevice  -name "#TARGET#" -path "."
 setSubmode -pffserial
 setAttribute -configdevice -attr multibootBpiType -value ""
 addDesign -version 0 -name "0"
@@ -15,7 +15,7 @@ setAttribute -configdevice -attr multiboot -value "FALSE"
 setAttribute -configdevice -attr multiboot -value "FALSE"
 setAttribute -configdevice -attr spiSelected -value "FALSE"
 setAttribute -configdevice -attr spiSelected -value "FALSE"
-addPromDevice -p 1 -size 0 -name xcf01s
+addPromDevice -p 1 -size 0 -name #PROM#
 setMode -pff
 setMode -pff
 setSubmode -pffserial
@@ -25,7 +25,7 @@ setMode -pff
 setMode -pff
 setMode -pff
 addDeviceChain -index 0
-addDevice -p 1 -file "opc5copro.bit"
+addDevice -p 1 -file "#TARGET#.bit"
 setMode -pff
 setSubmode -pffserial
 generate
@@ -38,7 +38,7 @@ setCable -port auto
 Identify -inferir 
 identifyMPM 
 deleteDevice -position 2
-addDevice -p 2 -sprom "xcf01s" -file "opc5copro.mcs"
+addDevice -p 2 -sprom "xcf01s" -file "#TARGET#.mcs"
 setAttribute -position 2 -attr packageName -value ""
 Program -p 2 -e -v 
 quit

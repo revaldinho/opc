@@ -15,69 +15,69 @@
   <version xil_pn:ise_version="14.7" xil_pn:schema_version="2"/>
 
   <files>
-    <file xil_pn:name="src/opc5copro.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../src/opc5copro.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="18"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="15"/>
     </file>
-    <file xil_pn:name="src/Tube/hp_byte.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../src/Tube/hp_byte.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="6"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="8"/>
     </file>
-    <file xil_pn:name="src/Tube/hp_bytequad.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../src/Tube/hp_bytequad.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="9"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="10"/>
     </file>
-    <file xil_pn:name="src/Tube/hp_reg3.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../src/Tube/hp_reg3.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="5"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="7"/>
     </file>
-    <file xil_pn:name="src/Tube/ph_byte.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../src/Tube/ph_byte.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="4"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="6"/>
     </file>
-    <file xil_pn:name="src/Tube/ph_bytequad.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../src/Tube/ph_bytequad.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="8"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="9"/>
     </file>
-    <file xil_pn:name="src/Tube/ph_flag_m.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../src/Tube/ph_flag_m.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="1"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="1"/>
     </file>
-    <file xil_pn:name="src/Tube/ph_reg3.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../src/Tube/ph_reg3.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="3"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="4"/>
     </file>
-    <file xil_pn:name="src/Tube/tube.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../src/Tube/tube.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="12"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="12"/>
     </file>
-    <file xil_pn:name="src/Tube/ph_fifo.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../src/Tube/ph_fifo.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="107"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="5"/>
     </file>
-    <file xil_pn:name="src/Tube/ph_fifo_core_spartan3.xco" xil_pn:type="FILE_COREGEN">
+    <file xil_pn:name="../../src/Tube/ph_fifo_core_spartan3.xco" xil_pn:type="FILE_COREGEN">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="106"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="2"/>
     </file>
-    <file xil_pn:name="src/Tube/hp_flag_m.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../src/Tube/hp_flag_m.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="54"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="3"/>
     </file>
-    <file xil_pn:name="../opc5lscpu.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../../opc5lscpu.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="87"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="11"/>
     </file>
-    <file xil_pn:name="src/ram_8k_16.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../src/ram_8k_16.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="62"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="13"/>
     </file>
     <file xil_pn:name="opc5copro.bmm" xil_pn:type="FILE_BMM">
       <association xil_pn:name="Implementation" xil_pn:seqID="0"/>
     </file>
-    <file xil_pn:name="src/CoPro.ucf" xil_pn:type="FILE_UCF">
+    <file xil_pn:name="../opc5copro.ucf" xil_pn:type="FILE_UCF">
       <association xil_pn:name="Implementation" xil_pn:seqID="0"/>
     </file>
-    <file xil_pn:name="src/memory_controller.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../src/memory_controller.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="72"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="14"/>
     </file>
@@ -276,7 +276,7 @@
     <property xil_pn:name="ROM Extraction" xil_pn:value="true" xil_pn:valueState="default"/>
     <property xil_pn:name="ROM Style" xil_pn:value="Auto" xil_pn:valueState="default"/>
     <property xil_pn:name="Read Cores" xil_pn:value="true" xil_pn:valueState="default"/>
-    <property xil_pn:name="Regenerate Core" xil_pn:value="Under Current Project Setting" xil_pn:valueState="default"/>
+    <property xil_pn:name="Regenerate Core" xil_pn:value="true" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Register Balancing" xil_pn:value="No" xil_pn:valueState="default"/>
     <property xil_pn:name="Register Duplication" xil_pn:value="Off" xil_pn:valueState="default"/>
     <property xil_pn:name="Register Duplication Xst" xil_pn:value="true" xil_pn:valueState="default"/>
@@ -391,7 +391,7 @@
 
   <bindings>
     <binding xil_pn:location="/opc5copro" xil_pn:name="opc5copro.bmm"/>
-    <binding xil_pn:location="/opc5copro" xil_pn:name="src/CoPro.ucf"/>
+    <binding xil_pn:location="/opc5copro" xil_pn:name="../opc5copro.ucf"/>
   </bindings>
 
   <libraries>
@@ -405,7 +405,7 @@
     <!-- Do not hand-edit this section, as it will be overwritten when the    -->
     <!-- project is analyzed based on files automatically identified as       -->
     <!-- include files.                                                       -->
-    <file xil_pn:name="src/Tube/gen_flag_v3.v" xil_pn:type="FILE_VERILOG"/>
+    <file xil_pn:name="../../src/Tube/gen_flag_v3.v" xil_pn:type="FILE_VERILOG"/>
   </autoManagedFiles>
 
 </project>
