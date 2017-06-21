@@ -12,6 +12,9 @@ else
 SHELL      := env PATH=$(PATH) /bin/sh
 endif
 
+# Default name of assembler program
+PROG         = monitor
+
 # Path of the back anotated block memory map file
 BMM_FILE    = opc5system_bd.bmm
 
@@ -35,16 +38,16 @@ working/$(PROJECT).bit:
 	# clean up
 	rm -f tmp.xise
 
-$(TARGET).bit: monitor.mem working/$(PROJECT).bit
-	data2mem -bm $(BMM_FILE) -bd monitor.mem -bt working/$(PROJECT).bit -o b $(TARGET).bit
+$(TARGET).bit: $(PROG).mem working/$(PROJECT).bit
+	data2mem -bm $(BMM_FILE) -bd $(PROG).mem -bt working/$(PROJECT).bit -o b $(TARGET).bit
 
-monitor.mem : ../../../monitor.s
-	python ../../../opc5lsasm.py ../../../monitor.s monitor.hex
-	tr " " "\n" <monitor.hex | head -16384 > monitor.mem
+$(PROG).mem : ../../../$(PROG).s
+	python ../../../opc5lsasm.py ../../../$(PROG).s $(PROG).hex
+	tr " " "\n" <$(PROG).hex | head -16384 > $(PROG).mem
 
 clean:
 	rm -f deploy.batch program.batch tmp.xise
-	rm -f monitor.mem monitor.hex
+	rm -f $(PROG).mem $(PROG).hex
 	rm -f $(TARGET).bit $(TARGET).cfi $(TARGET).mcs $(TARGET).prm
 	rm -f _impactbatch.log
 
