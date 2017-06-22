@@ -38,8 +38,8 @@ ENDMACRO
 # r3..r5 = local registers
 # r1,r2  = temporary registers, parameters and return registers
 
-        EQU     digits,   6
-        EQU     cols,     1+(6*10//3)            # 1 + (digits * 10/3)
+        EQU     digits,   64
+        EQU     cols,     1+(64*10//3)            # 1 + (digits * 10/3)
 
         mov     r14,r0,0xFFFF           # STACK ptr
         mov     r10,r0,1                # CONSTANT 1
@@ -63,7 +63,7 @@ L1:     sto     r2,r7                   # store remainder value to pointer
         cmp     r3,r5                   # reached top of range ?
         nz.mov  pc,r0,L1
 
-        mov     r9,r0                   # zero outer loop counter
+        mov     r9,r0,digits            # set up outer loop counter
 L3:     mov     r11,r0                  # r11 = Q
         #
         # All loop counters count down from
@@ -95,27 +95,27 @@ L4:
         # r2 = predigit pointer
         # r1 = temp store/predigit value
         #
-        add     r8,r10                  # pre-incr pi digit pointer (to avoid disturbing Z later)
-        cmp     r11,r0,10               # is Q==10 and needing correction?
-        nz.sto  r11,r8,-1               # Save digit (preserve Z) if not
-        z.sto   r0,r8,-1                # ..or 0 if Q=10 (preserve Z)
-        nz.mov  pc,r0, L5               # if no correction needed then continue else start corrections
-        mov     r2,r8,-1                # r2 is predigit pointer, -1 is current digit
+        sto     r11,r8                  # Save digit, assuming Q <10
+        cmp     r11,r0,10               # check if Q==10 and needing correction?
+        z.mov   pc,r0, correction       # if no correction needed then continue else start corrections
+L5:     add     r8,r10                  # incr pi digit pointer
+        sub     r9,r10                  # dec loop counter
+        nz.mov  pc,r0,L3
+
+        halt    r0,r0
+
+correction:
+        sto     r0,r8                   # overwrite 0 if Q=10
+        mov     r2,r8                   # r2 is predigit pointer, start at current digit
 pdcloop:
-        sub     r2,r0,1                 # update pointer to next predigit
+        sub     r2,r10                  # update pointer to next predigit
         ld      r1,r2                   # get next predigit
         cmp     r1,r0,9                 # is predigit=9 (ie would it overflow if incremented?)
         z.sto   r0,r2                   # store 0 to predigit if yes (preserve Z)
         z.mov   pc,r0,pdcloop           # loop again to correct next predigit
         add     r1,r0,1                 # if predigit wasnt 9 fall thru to here and add 1
         sto     r1,r2                   # store it
-
-L5:
-        add     r9,r10                 # inc loop counter
-        cmp     r9,r0,digits           # reached end ?
-        nz.mov  pc,r0,L3
-
-        halt    r0,r0
+        mov     pc,r0,L5                # return to execution
 
         # --------------------------------------------------------------
         #
