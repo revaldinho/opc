@@ -71,16 +71,22 @@ L3:     mov     r11,r0                  # r11 = Q
         #
         mov     r12,r0,cols-1           # r4 inner loop counter
         mov     r7,r0,remain+(cols*2)-2
-
-L4:     mov     r2,r12,1                # r2 = i+1
+        mov     r2,r12,1                # r2 = i+1
+L4:
         JSR     (mul16)                 # r11=Q * i+1 -> result in r11
         ld      r2,r7                   # r2 <- *remptr
-        JSR     (mul10)                 # r1 <- 10 * rem[i]
+        mov     r1,r0                   # Compute 16b result for r2 * 10
+        ASL     (r2)
+        add     r1,r2
+        ASL     (r2)
+        ASL     (r2)
+        add     r1,r2
         add     r11,r1                  # add second term
-        ld      r3,r7,1                 # r2 <- *denomptr
+        ld      r3,r7,1                 # r3 <- *denomptr
         JSR     (udiv16)                # r11 <- quo, r2 <- rem
         sto     r2, r7                  # rem[i] <- r2
         sub     r7,r0,2                 # dec rem/denom ptr
+        mov     r2,r12                  # get loop ctr into r2 before decr so it's r12+1 on next iter
         sub     r12,r10                 # decr loop counter
         c.mov   pc,r0,L4                # loop if >=0
 
@@ -187,57 +193,6 @@ mulstep16:
         ror     r3,r3
         ror     r11,r11
         mov     pc,r13                  # and return
-
-
-        # --------------------------------------------------------------
-        #
-        # mul10
-        #
-        # Multiply  16 bit number by const 10 to yield a 32b result
-        #
-        # Entry:
-        #       r2    16 bit number (A)
-        #       r13   holds return address
-        #       r14   is global stack pointer
-        #       r10   is constant 1
-        # Exit
-        #       r6    upwards preserved
-        #       r3,r5 uses as workspace registers and trashed
-        #       r1,r2 holds 32b result (LSB in r1)
-        #
-        #
-        #   A = |___r3___|____r1____|  (lsb)
-        #   B = |___r2___|____0_____|  (lsb)
-        #
-        #   NB no need to actually use a zero word for LSW of B - just skip
-        #   additions of A_L + B_L and use R2 in addition of A_H + B_H
-        # --------------------------------------------------------------
-mul10:
-        mov     r1,r0                   # zero r1 because we don't need to check bits for a 1010b const
-        mov     r3,r0                   # Get A into [r3,r1]
-        mov     r4,r0,-13               # Setup a loop counter
-        add     r0,r0                   # Clear carry outside of loop - reentry from bottom will always have carry clear
-        ror     r3,r3                   # Shift right A
-        ror     r1,r1
-        ror     r3,r3                   # Shift right A
-        ror     r1,r1
-        add     r3,r2                   # Add
-        ror     r3,r3                   # Shift right A
-        ror     r1,r1
-        ror     r3,r3                   # Shift right A
-        ror     r1,r1
-        add     r3,r2                   # Add
-mul10loop:
-        ror     r3,r3                   # Shift right A
-        ror     r1,r1
-        add     r4,r10                   # increment counter
-        nz.mov  pc,r0,mul10loop         # next iteration if not zero
-        add     r0,r0                   # final shift needs clear carry
-        mov     pc,r13                  # and return
-
-
-
-
 
 loopctr:   WORD   0x00
 
