@@ -15,26 +15,26 @@
   <version xil_pn:ise_version="14.7" xil_pn:schema_version="2"/>
 
   <files>
-    <file xil_pn:name="../../opc5lscpu.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../../opc5lscpu.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="1"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="1"/>
     </file>
-    <file xil_pn:name="../opc5system.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../opc5system.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="3"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="5"/>
     </file>
-    <file xil_pn:name="opc5system.ucf" xil_pn:type="FILE_UCF">
+    <file xil_pn:name="../opc5system.ucf" xil_pn:type="FILE_UCF">
       <association xil_pn:name="Implementation" xil_pn:seqID="0"/>
     </file>
-    <file xil_pn:name="../../../opc5/opc5system/sevenseg.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../../../opc5/opc5system/sevenseg.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="7"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="3"/>
     </file>
-    <file xil_pn:name="../../../opc5/opc5system/uart.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../../../opc5/opc5system/uart.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="8"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="2"/>
     </file>
-    <file xil_pn:name="../../../opc5/opc5system/ram_16k_16.v" xil_pn:type="FILE_VERILOG">
+    <file xil_pn:name="../../../../opc5/opc5system/ram_16k_16.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="56"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="4"/>
     </file>
