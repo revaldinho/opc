@@ -75,13 +75,12 @@ L3:     mov     r11,r0                  # r11 = Q
 L4:
         JSR     (mul16)                 # r11=Q * i+1 -> result in r11
         ld      r2,r7                   # r2 <- *remptr
-        mov     r1,r0                   # Compute 16b result for r2 * 10
+        ASL     (r2)                    # Compute 16b result for r2 * 10
+        mov     r1,r2
+        ASL     (r2)
         ASL     (r2)
         add     r1,r2
-        ASL     (r2)
-        ASL     (r2)
-        add     r1,r2
-        add     r11,r1                  # add second term
+        add     r11,r1                  # add it to Q as second term
         ld      r3,r7,1                 # r3 <- *denomptr
         JSR     (udiv16)                # r11 <- quo, r2 <- rem
         sto     r2, r7                  # rem[i] <- r2
