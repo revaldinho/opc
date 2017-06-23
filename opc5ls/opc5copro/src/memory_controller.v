@@ -69,6 +69,12 @@ module memory_controller
    wire         tag_match = cache_valid & (cache_tag == addr_tag);
    wire         cache_hit = vpa & tag_match;
    
+   integer i;
+   
+   initial
+     for (i = 0; i < 64; i = i + 1)
+       cache[i] = 0;
+
    always @(posedge clock)
       if (count == 7)
          if (cpu_rnw) begin
