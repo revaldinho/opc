@@ -30,6 +30,7 @@ module memory_controller
 
    // CPU Signals
    input         ext_cs_b,
+   input         vpa,
    input         cpu_rnw,
    output        cpu_clken,
    input [15:0]  cpu_addr,
@@ -50,15 +51,45 @@ module memory_controller
    reg [7:0]     ram_data_last;
    reg [2:0]     count;
 
+
+   // Simple 64-entry direct mapped instruction cache:
+   // bits 15..0  == data (16 bits)
+   // bits 16     == valid
+   // bits 26..17 == tag (10 bits)
+   reg [26:0] cache [0:63];  (* RAM_STYLE="DISTRIBUTED" *)
+
+   wire [5:0]  addr_index = cpu_addr[5:0];
+   wire [15:6] addr_tag   = cpu_addr[15:6];
+
+   wire [26:0]  cache_out = cache[addr_index];
+
+   wire [15:0] cache_dout = cache_out[15:0];
+   wire       cache_valid = cache_out[16];
+   wire [9:0]   cache_tag = cache_out[26:17];
+   wire         tag_match = cache_valid & (cache_tag == addr_tag);
+   wire         cache_hit = vpa & tag_match;
+   
+   always @(posedge clock)
+      if (count == 7)
+         if (cpu_rnw) begin
+            // Populate the cache at end of an instruction fetch from external memory
+            if (vpa) 
+               cache[addr_index] <= {addr_tag, 1'b1, ext_dout};
+         end else begin
+            // Update the cache for consistecy if a cached instruction is overwritten
+            if (tag_match)
+               cache[addr_index] <= {addr_tag, 1'b1, cpu_dout};
+         end
+   
    // Count 0..7 during external memory cycles
    always @(posedge clock)
      if (!reset_b)
        count <= 0;
-     else if (!ext_cs_b || count > 0)
+     else if (!ext_cs_b && !cache_hit || count > 0)
        count <= count + 1;
 
    // Drop clken for 7 cycles during an external memory access
-   assign cpu_clken = !(!ext_cs_b && count < 7);
+   assign cpu_clken = !(!ext_cs_b && !cache_hit && count < 7);
 
    // A0 = 0 for count 0,1,2,3 (low byte) and A0 = 1 for count 4,5,6,7 (high byte)
    assign ext_a0 = count[2];
@@ -78,7 +109,7 @@ module memory_controller
      if (count == 3)
         ram_data_last <= ram_data;
 
-   assign ext_dout = { ram_data, ram_data_last };
+   assign ext_dout = cache_hit ? cache_dout : { ram_data, ram_data_last };
 
 // ---------------------------------------------
 // external RAM
