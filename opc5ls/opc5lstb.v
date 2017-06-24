@@ -10,7 +10,7 @@ module opc5lstb();
    wire        oeb = !rnw;
    reg [15:0]  data0 ;
    wire          mreq_b = !(vda||vpa);
-   integer       seed = 10; 
+   integer       seed = 10;
    // OPC CPU instantiation
    opc5lscpu  dut0_u (.address(addr), .din(data0), .dout(data1), .rnw(rnw), .clk(clk), .reset_b(reset_b), .int_b(interrupt_b), .clken(clken), .vpa(vpa), .vda(vda));
    initial begin
