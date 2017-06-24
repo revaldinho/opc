@@ -1,18 +1,29 @@
 #!/bin/tcsh
 # Remove non primary data files
-rm -rf *~ `ls -1 | egrep -v '(\.v|\.csh|\.ucf|\.py|\.s|spartan|xc95)'`
+rm -rf *~ `ls -1 | egrep -v '(\.v$|\.csh|\.ucf|\.py|\.s$|spartan|xc95|opc5system|opc5copro)'`
 
 set vpath = ""
 if ( $1 == xp) then
     set vpath = ../opc5ls-xp/
+    pushd $vpath
+    rm -rf `ls -1 | egrep -v '(\.v$|\.csh|\.ucf|\.py|\.s$|spartan|xc95|opc5system|opc5copro)'`
+    popd
 endif
 
 
-foreach test ( fib robfib davefib mul32 udiv32 sqrt hello testpsr string davefib_int sqrt_int pi-spigot-bruce )
+#Check for pypy3
+pypy3 --version > /dev/null
+if ( $status) then
+    set pyexec = python3
+else
+    set pyexec = pypy3
+endif
+
+foreach test ( fib robfib davefib mul32 udiv32 sqrt hello testpsr string davefib_int sqrt_int pi-spigot-bruce pi-spigot-rev)
     # Assemble the test
     python3 opc5lsasm.py ${test}.s ${test}.hex >  ${test}.lst
     # Run the emulator
-    python3 opc5lsemu.py ${test}.hex ${test}.dump > ${test}.trace
+    ${pyexec} opc5lsemu.py ${test}.hex ${test}.dump > ${test}.trace
     # Test bench expects the hex file to be called 'test.hex'
     cp ${test}.hex test.hex
     # Run icarus verilog to compile the testbench
@@ -30,7 +41,7 @@ end
 echo ""
 echo "Comparing memory dumps between emulation and simulation"
 echo "-------------------------------------------------------"
-foreach test ( fib robfib davefib mul32 udiv32 sqrt hello testpsr string pi-spigot-bruce davefib_int sqrt_int  )
+foreach test ( fib robfib davefib mul32 udiv32 sqrt hello testpsr string davefib_int sqrt_int pi-spigot-bruce pi-spigot-rev)
     foreach option ( NEGEDGE_MEMORY POSEDGE_MEMORY )
         printf "%32s :" ${test}_${option}
         if "${test}" =~ "*int" then
