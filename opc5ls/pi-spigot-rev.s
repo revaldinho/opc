@@ -113,10 +113,26 @@ L4:
         nz.sto  r11,r8                  # Save digit if Q <10
         z.mov   pc,r0, correction       # if no correction needed then continue else start corrections
 L5:     add     r8,r10                  # incr pi digit pointer
-        mov     r1,r11,48               # Convert (uncorrected) number to ASCII
+
+        cmp     r8,r0,4+mypi            # allow buffer of 4 chars for corrections
+        nc.mov  pc,r0,L6
+        ld      r1,r8,-4                # Get digit 3 places back from latest
+        JSR     (oswrdig)
+        cmp     r8,r0,4+mypi              # Emit decimal point after first digit
+        nz.mov  pc,r0,L6
+        mov      r1,r0,46
         JSR     (oswrch)
+L6:
         sub     r9,r10                  # dec loop counter
         nz.mov  pc,r0,L3
+
+        # empty the buffer
+        mov     r9,r8,-3
+L7:     ld      r1,r9
+        JSR     (oswrdig)
+        add     r9,r10
+        cmp     r9,r8
+        nz.mov  pc,r0,L7
 
         halt    r0,r0
 
@@ -185,16 +201,10 @@ udiv16_loop:
         #       r11   holds 16b result
         # --------------------------------------------------------------
 mul16s:
-        ## swap r11 and r2 if r2 is smaller
-        cmp     r11,r2
-        c.mov   r3,r11
-        c.mov   r11,r2
-        c.mov   r2,r3
         mov     r3,r0
         mov     r5,r0,mul16s_loop0
         CLC     ()
         ror     r11,r11                 # shift right multiplier
-
 mul16s_loop0:
         c.add   r3,r2                   # add copy of multiplicand into accumulator if carry
         ASL     (r2)                    # shift left multiplicand
@@ -217,6 +227,7 @@ mul16s_loop0:
         #
         # exit:
         # - r2 used as temporary
+oswrdig: mov     r1,r1,48                # Convert digit number to ASCII
 oswrch:
 oswrch_loop:
         ld      r2, r0, 0xfe08
