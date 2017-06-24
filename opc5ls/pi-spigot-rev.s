@@ -7,11 +7,11 @@
 
 
 MACRO   CLC()
-        add r0,r0
+        c.add r0,r0
 ENDMACRO
 
 MACRO   SEC()
-        ror     r0,r0,1
+        nc.ror     r0,r0,1
 ENDMACRO
 
 MACRO   ASL( _reg_ )
@@ -27,6 +27,11 @@ MACRO   JSR( _addr_ )
         mov     pc,r0,_addr_
 ENDMACRO
 
+
+MACRO   RTS ()
+        mov     pc,r13
+ENDMACRO
+
 # r14 = stack pointer
 # r13 = link register
 # r12 = inner loop counter
@@ -38,12 +43,21 @@ ENDMACRO
 # r3..r5 = local registers
 # r1,r2  = temporary registers, parameters and return registers
 
-        EQU     digits,   64
-        EQU     cols,     1+(64*10//3)            # 1 + (digits * 10/3)
+        EQU     digits,   6
+        EQU     cols,     1+(6*10//3)            # 1 + (digits * 10/3)
 
         mov     r14,r0,0xFFFF           # STACK ptr
         mov     r10,r0,1                # CONSTANT 1
         mov     r8,r0,mypi
+
+        ;; trivial banner
+        mov     r1, r0, 0x4f
+        JSR     (oswrch)
+        mov     r1, r0, 0x6b
+        JSR     (oswrch)
+        mov     r1, r0, 0x20
+        JSR     (oswrch)
+
 
                                         # Initialise remainder/denominator array using temp vars
         mov     r2,r0,2                 # value to be written to remainder array
@@ -73,7 +87,7 @@ L3:     mov     r11,r0                  # r11 = Q
         mov     r7,r0,remain+(cols*2)-2
         mov     r2,r12,1                # r2 = i+1
 L4:
-        JSR     (mul16)                 # r11=Q * i+1 -> result in r11
+        JSR     (mul16s)                # r11=Q * i+1 -> result in r11
         ld      r2,r7                   # r2 <- *remptr
         ASL     (r2)                    # Compute 16b result for r2 * 10
         mov     r1,r2
@@ -95,12 +109,30 @@ L4:
         # r2 = predigit pointer
         # r1 = temp store/predigit value
         #
-        sto     r11,r8                  # Save digit, assuming Q <10
         cmp     r11,r0,10               # check if Q==10 and needing correction?
+        nz.sto  r11,r8                  # Save digit if Q <10
         z.mov   pc,r0, correction       # if no correction needed then continue else start corrections
 L5:     add     r8,r10                  # incr pi digit pointer
+
+        cmp     r8,r0,4+mypi            # allow buffer of 4 chars for corrections
+        nc.mov  pc,r0,L6
+        ld      r1,r8,-4                # Get digit 3 places back from latest
+        JSR     (oswrdig)
+        cmp     r8,r0,4+mypi              # Emit decimal point after first digit
+        nz.mov  pc,r0,L6
+        mov      r1,r0,46
+        JSR     (oswrch)
+L6:
         sub     r9,r10                  # dec loop counter
         nz.mov  pc,r0,L3
+
+        # empty the buffer
+        mov     r9,r8,-3
+L7:     ld      r1,r9
+        JSR     (oswrdig)
+        add     r9,r10
+        cmp     r9,r8
+        nz.mov  pc,r0,L7
 
         halt    r0,r0
 
@@ -150,50 +182,60 @@ udiv16_loop:
         c.adc   r11,r0                  # ... set LSB of quotient using (new) carry
         add     r5,r10                  # increment loop counter zeroing carry
         nz.mov  pc,r4                   # loop again if not finished (r5=udiv16_loop)
-        mov     pc,r13                  # and return with quotient/remainder in r1/r2
+        RTS     ()                      # and return with quotient/remainder in r1/r2
 
         # --------------------------------------------------------------
         #
-        # mul16 - special pi version with registers rejigged to avoid
-        # swapping around on every called
+        # mul16s
         #
-        # Multiply 2 16 bit numbers to yield a 32b result
+        # Multiply 2 16 bit numbers to yield only a 16b result
         #
         # Entry:
         #       r11    16 bit multiplier (A)
         #       r2    16 bit multiplicand (B)
         #       r13   holds return address
         #       r14   is global stack pointer
-        #       r10   const 1
         # Exit
         #       r6    upwards preserved
         #       r3,r5 uses as workspace registers and trashed
-        #       r11,r2 holds 32b result (LSB in r1)
-        #
-        #
-        #   A = |___r3___|____r11____|  (lsb)
-        #   B = |___r2___|____0_____|  (lsb)
-        #
-        #   NB no need to actually use a zero word for LSW of B - just skip
-        #   additions of A_L + B_L and use R2 in addition of A_H + B_H
+        #       r11   holds 16b result
         # --------------------------------------------------------------
-mul16:
-                                        # Get B into [r2,-]
-        mov     r3,r0                   # Get A into [r3,r11]
-        mov     r4,r0,-16               # Setup a loop counter
-        add     r0,r0                   # Clear carry outside of loop - reentry from bottom will always have carry clear
-mulstep16:
-        ror     r3,r3                   # Shift right A
-        ror     r11,r11
-        c.add   r3,r2                   # Add [r2,-] + [r3,r1] if carry
-        add     r4,r10                  # increment counter
-        nz.mov  pc,r0,mulstep16         # next iteration if not zero
-        add     r0,r0                   # final shift needs clear carry
-        ror     r3,r3
-        ror     r11,r11
-        mov     pc,r13                  # and return
+mul16s:
+        mov     r3,r0
+        mov     r5,r0,mul16s_loop0
+        CLC     ()
+        ror     r11,r11                 # shift right multiplier
+mul16s_loop0:
+        c.add   r3,r2                   # add copy of multiplicand into accumulator if carry
+        ASL     (r2)                    # shift left multiplicand
+        CLC     ()
+        ror     r11,r11                 # shift right multiplier
+        nz.mov  pc,r5                   # no need for loop counter - just stop when r1 is empty
 
-loopctr:   WORD   0x00
+        c.add   r3,r2                   # add last copy of multiplicand into accumulator if carry
+        mov     r11,r3
+        RTS     ()
+
+        # --------------------------------------------------------------
+        #
+        # oswrch
+        #
+        # output a single ascii character to the uart
+        #
+        # entry:
+        # - r1 is the character to output
+        #
+        # exit:
+        # - r2 used as temporary
+oswrdig: mov     r1,r1,48                # Convert digit number to ASCII
+oswrch:
+oswrch_loop:
+        ld      r2, r0, 0xfe08
+        and     r2, r0, 0x8000
+        nz.mov  pc, r0, oswrch_loop
+        sto     r1, r0, 0xfe09
+        RTS     ()
+
 
 mypi:      WORD 0                         # Space for pi digit storage
 
