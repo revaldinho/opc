@@ -63,9 +63,8 @@ start:
         mov     r1, r0, 0x20
         JSR     (oswrch)
 
-
                                         # Initialise remainder/denominator array using temp vars
-        mov     r2,r0,2                 # value to be written to remainder array
+        mov     r2,r0,2                 # r2=const 2 for initialisation, used as data for rem[] and increment val
         mov     r1,r0,10                # store 10 in first column of denominator array
         mov     r7,r0,remain            # point at start of array
         sto     r2,r7                   # store first remainder
@@ -77,7 +76,7 @@ L1:     sto     r2,r7                   # store remainder value to pointer
         mov     r4,r3
         add     r4,r4,1                 # r4 = (i*2)+1
         sto     r4,r7,1                 # store denominator value to pointer
-        add     r7,r0,2                 # update pointer
+        add     r7,r2                   # update pointer by 2
         add     r3,r10                  # increment loop counter
         cmp     r3,r5                   # reached top of range ?
         nz.mov  pc,r0,L1
