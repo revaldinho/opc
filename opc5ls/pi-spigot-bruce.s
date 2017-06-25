@@ -4,7 +4,7 @@
 
 	;; r15 is pc
 	;; r14 is stack pointer
-	;; r13 is temporary used by JSR
+	;; r8 is temporary
 
 	;; r1  will be used as a was in 65org16
 	;; r2  will be used as x was in 65org16
@@ -28,7 +28,6 @@ ENDMACRO
 MACRO   RTS ()
         mov     pc,r13
 ENDMACRO
-
 
 # preamble for a bootable program
 # remove this for a monitor-friendly loadable program
