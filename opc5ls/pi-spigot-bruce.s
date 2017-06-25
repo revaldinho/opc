@@ -19,17 +19,16 @@
 	;; r11 stands for q
 	;; r12 stands for p (a pointer)
 
-MACRO JSR( _address_)
-   mov      r13, pc, 0x0005
-   sto      r13, r14
-   mov      r14, r14, 0xffff
-   mov      pc,  r0, _address_
+MACRO   JSR( _addr_ )
+        mov     r13,pc,2
+        mov     pc,r0,_addr_
 ENDMACRO
 
-MACRO RTS()
-    mov     r14, r14, 0x0001
-    ld      pc, r14
+
+MACRO   RTS ()
+        mov     pc,r13
 ENDMACRO
+
 
 # preamble for a bootable program
 # remove this for a monitor-friendly loadable program
@@ -59,7 +58,7 @@ start:
 	JSR(oswrch)
 	mov r1, r0, 0x20
 	JSR(oswrch)
-	
+
 
 	;; mov r14, r0, stack	; initialise stack pointer
 	JSR( init)
@@ -147,7 +146,7 @@ m2:	mov r3, r3, -1		# dey
 div:				# uses y as loop counter
 	mov r10, r1		# sta r
 	mov r3, r0, 16		# ldy #16
-	mov r1, r0, 0		# lda #0
+	mov r1, r0 		# lda #0
 	add r11, r11		# asl q
 d1:	adc r1, r1		# rol
 	cmp r1, r10		# cmp r
@@ -168,12 +167,12 @@ d2:	adc r11, r11		# rol q
 # - r1 is the character to output
 #
 # exit:
-# - r13 used as temporary
+# - r8 used as temporary
 
 oswrch:
 oswrch_loop:
-    ld      r13, r0, 0xfe08
-    and     r13, r0, 0x8000
+    ld      r8, r0, 0xfe08
+    and     r8, r0, 0x8000
     nz.mov  pc, r0, oswrch_loop
     sto     r1, r0, 0xfe09
     RTS     ()
@@ -181,4 +180,3 @@ oswrch_loop:
 base:   WORD 0,0,0,0,0,0,0,0,0  # reserve some stack space
 stack:	WORD 0
 p:	WORD 0  # needs 1193 words but there's nothing beyond
-
