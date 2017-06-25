@@ -5,7 +5,6 @@
 #
 #
 
-
 MACRO   CLC()
         c.add r0,r0
 ENDMACRO
@@ -27,7 +26,6 @@ MACRO   JSR( _addr_ )
         mov     pc,r0,_addr_
 ENDMACRO
 
-
 MACRO   RTS ()
         mov     pc,r13
 ENDMACRO
@@ -46,7 +44,14 @@ ENDMACRO
         EQU     digits,   6
         EQU     cols,     1+(6*10//3)            # 1 + (digits * 10/3)
 
-        mov     r14,r0,0xFFFF           # STACK ptr
+# preamble for a bootable program
+# remove this for a monitor-friendly loadable program
+    	ORG 0
+    	mov r14, r0, 0xFFFF
+    	mov pc, r0, start
+
+        ORG 0x1000
+start:
         mov     r10,r0,1                # CONSTANT 1
         mov     r8,r0,mypi
 
