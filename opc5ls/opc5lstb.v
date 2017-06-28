@@ -22,7 +22,7 @@ module opc5lstb();
 `endif
       interrupt_b = 1;
       #3005 reset_b = 1;
-      #500000000 $finish;
+      #50000000000 $finish;
    end
    always @ (posedge clk or negedge reset_b)
      if ( !reset_b)
