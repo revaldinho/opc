@@ -130,6 +130,7 @@ module opc5copro (
      (
       .clock      (cpu_clk),
       .reset_b    (rst_b_sync),
+      .vpa        (vpa),
       .ext_cs_b   (ext_cs_b),
       .cpu_rnw    (cpu_rnw),
       .cpu_clken  (cpu_clken),
