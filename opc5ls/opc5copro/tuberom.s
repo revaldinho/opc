@@ -1,5 +1,5 @@
 EQU        BASE, 0xE000
-EQU        CODE, 0xFC00
+EQU        CODE, 0xF800
 
 EQU       STACK, CODE - 1
 EQU     MEM_BOT, 0x0400
@@ -88,7 +88,7 @@ MACRO ERROR (_address_)
     mov     r1, r0, _address_
     psr     psr, r0, SWI0_MASK
 ENDMACRO
-                
+
 # -----------------------------------------------------------------------------
 # 8K Rom Start
 # -----------------------------------------------------------------------------
@@ -277,6 +277,15 @@ Byte82:                         # Return &0000 as memory high word
 
 osCLI:
     PUSH    (r13)
+    PUSH    (r2)
+
+    PUSH    (r1)                    # save the string pointer
+    JSR     (cmdLocal)              # try to handle the command locally
+    cmp     r1, r0                  # was command handled locally? (r1 = 0)
+    z.mov   pc, r0, dontEnterCode   # yes, then nothing more to do
+    POP     (r1)                    # restore the string pointer
+
+    PUSH    (r1)                    # save the string pointer
     mov     r2, r1
     mov     r1, r0, 0x02            # Send command &02 - OSCLI
     JSR     (SendByteR2)
@@ -290,11 +299,337 @@ osCLI_Ack:
     JSR     (enterCode)
 
 dontEnterCode:
+    POP     (r1)
+
+    POP     (r2)
     POP     (r13)
     RTS     ()
 
 enterCode:
     ld      pc, r0, ADDR
+
+# --------------------------------------------------------------
+# Local Command Processor
+#
+# On Entry:
+# - r1 points to the user command
+#
+# On Exit:
+# - r1 == 0 if command successfully processed locally
+# - r1 != 0 if command should be
+#
+# Register usage:
+# r1 points to start of user command
+# r2 points within command table
+# r3 points within user command
+# r4 is current character in command table
+# r5 is current character in user command
+
+cmdLocal:
+    PUSH    (r2)
+    PUSH    (r3)
+    PUSH    (r4)
+    PUSH    (r5)
+    PUSH    (r13)
+
+    JSR     (SkipSpaces)
+
+    mov     r2, r0, cmdTable-1      # initialize command table pointer (to char before)
+
+cmdLoop1:
+    mov     r3, r1, 0xffff          # initialize user command pointer (to char before)
+
+cmdLoop2:
+    add     r2, r0, 1               # increment command table pointer
+    add     r3, r0, 1               # increment user command pointer
+    ld      r4, r2                  # read next character from command table
+    mi.mov  pc, r0, cmdExec         # if an address, then we are done
+    ld      r5, r3                  # read next character from user command
+    or      r5, r0, 0x20            # convert to lower case
+    cmp     r5, r4                  # compare the characters
+    z.mov   pc, r0, cmdLoop2        # if a match, loop back for more
+
+    sub     r2, r0, 1
+cmdLoop3:                           # skip to the end of the command in the table
+    add     r2, r0, 1
+    ld      r4, r2
+    pl.mov  pc, r0, cmdLoop3
+
+    cmp     r5, r0, 0x2e            # was the mis-match a '.'
+    nz.mov  pc, r0, cmdLoop1        # no, then start again with next command
+
+cmdExec:
+
+    mov     r1, r3                  # r1 = the command pointer to the params
+    mov     r2, r4                  # r2 = the execution address
+
+    JSR     (cmdExecR2)
+
+    POP     (r13)
+    POP     (r5)
+    POP     (r4)
+    POP     (r3)
+    POP     (r2)
+    RTS     ()
+
+# --------------------------------------------------------------
+
+cmdGo:
+    PUSH   (r13)
+    JSR    (ReadHex)
+    JSR    (cmdExecR2)
+    mov    r1, r0
+    POP    (r13)
+    RTS    ()
+
+# --------------------------------------------------------------
+
+cmdMem:
+    PUSH    (r13)
+    JSR     (ReadHex)
+    mov     r5, r2
+    mov     r3, r0
+
+cmdMem0:
+    JSR     (OSNEWL)
+
+    cmp     r3, r0, 0x80
+    c.mov   pc, r0, cmdMem5
+
+    mov     r1, r5
+    add     r1, r3
+    JSR     (PrintHexSp)
+
+cmdMem1:
+    mov     r1, r5
+    add     r1, r3
+    ld      r1, r1
+    JSR     (PrintHexSp)
+
+    add     r3, r0, 1
+
+    mov     r2, r3
+    and     r2, r0, 0x07
+    nz.mov  pc, r0, cmdMem1
+
+    sub     r3, r0, 0x08
+
+cmdMem2:
+    mov     r1, r5
+    add     r1, r3
+    ld      r1, r1
+    and     r1, r0, 0x7F
+
+    cmp     r1, r0, 0x20
+    nc.mov  pc, r0, cmdMem3
+    cmp     r1, r0, 0x7F
+    nc.mov  pc, r0, cmdMem4
+
+cmdMem3:
+    mov     r1, r0, 0x2E
+
+cmdMem4:
+    JSR     (OSWRCH)
+    add     r3, r0, 1
+    mov     r2, r3
+    and     r2, r0, 0x07
+    nz.mov  pc, r0, cmdMem2
+    mov     pc, r0, cmdMem0
+
+cmdMem5:
+    mov    r1, r0
+    POP    (r13)
+    RTS    ()
+
+# --------------------------------------------------------------
+
+cmdHelp:
+    PUSH   (r13)
+    mov    r1, r0, msgHelp
+    JSR    (PrintString)
+    mov    r1, r0, 1
+    POP    (r13)
+    RTS    ()
+
+msgHelp:
+    STRING   "OPC5LS 0.50"
+    WORD     10, 13, 0
+
+# --------------------------------------------------------------
+
+cmdEnd:
+    mov    r1, r0, 1
+    RTS    ()
+
+# --------------------------------------------------------------
+
+cmdExecR2:
+    mov    pc, r2
+
+# --------------------------------------------------------------
+
+cmdTable:
+    STRING  "."
+    WORD    cmdEnd
+    STRING  "go"
+    WORD    cmdGo
+    STRING  "mem"
+    WORD    cmdMem
+    STRING  "help"
+    WORD    cmdHelp
+    WORD    cmdEnd
+
+# --------------------------------------------------------------
+# Skip Spaces
+#
+# Entry:
+# - r1 is the address of the string
+#
+# Exit:
+# - r1 is updated to skip and spaces
+# - all other registers preserved
+
+SkipSpaces:
+    PUSH    (r2)
+    sub     r1, r0, 1
+skipSpcLoop:
+    add     r1, r0, 1
+    ld      r2, r1
+    cmp     r2, r0, 0x20
+    z.mov   pc, r0, skipSpcLoop
+    POP     (r2)
+    RTS     ()
+
+# --------------------------------------------------------------
+#
+# ReadHex
+#
+# Read a 4-digit hex value, terminated by a non hex character
+#
+# Entry:
+# - r1 is the address of the hex string
+#
+# Exit:
+# - r1 is updated after processing the string
+# - r2 contains the hex value
+#
+# - all registers preserved
+
+ReadHex:
+
+    PUSH    (r13)
+    PUSH    (r3)
+
+    JSR     (SkipSpaces)
+
+    mov     r2, r0          # r2 is will contain the hex value
+
+rh_loop:
+    ld      r3, r1
+    cmp     r3, r0, 0x30
+    nc.mov  pc, r0, rh_invalid
+    cmp     r3, r0, 0x3A
+    nc.mov  pc, r0, rh_valid
+    and     r3, r0, 0xdf
+    sub     r3, r0, 0x07
+    nc.mov  pc, r0, rh_invalid
+    cmp     r3, r0, 0x40
+    c.mov   pc, r0, rh_invalid
+
+rh_valid:
+    add     r2, r2
+    add     r2, r2
+    add     r2, r2
+    add     r2, r2
+
+    and     r3, r0, 0x0F
+    add     r2, r3
+
+    add     r1, r0, 1
+    mov     pc, r0, rh_loop
+
+rh_invalid:
+    POP     (r3)
+    POP     (r13)
+    RTS     ()
+
+# --------------------------------------------------------------
+#
+# PrintHexSp
+#
+# Prints a 4-digit hex value followed by a space
+#
+# Entry:
+# - r1 is the value to be printed
+#
+# Exit:
+# - all registers preserved
+
+PrintHexSp:
+    PUSH    (r13)
+    JSR     (PrintHex)
+    JSR     (PrintSpc)
+    POP     (r13)
+    RTS     ()
+
+PrintSpc:
+    PUSH    (r13)
+    PUSH    (r1)
+    mov     r1, r0, 0x20
+    JSR     (OSWRCH)
+    POP     (r1)
+    POP     (r13)
+    RTS     ()
+
+# --------------------------------------------------------------
+#
+# PrintHex
+#
+# Prints a 4-digit hex value
+#
+# Entry:
+# - r1 is the value to be printed
+#
+# Exit:
+# - all registers preserved
+
+PrintHex:
+
+    PUSH    (r13)
+    PUSH    (r1)            # preserve working registers
+    PUSH    (r2)
+    PUSH    (r3)
+
+    mov     r2, r1          # r2 is now the value to be printed
+
+    mov     r3, r0, 0x04    # r3 is a loop counter for 4 digits
+
+ph_loop:
+    add     r2, r2          # shift the upper nibble of r2
+    adc     r1, r1          # into the lower nibble of r1
+    add     r2, r2          # one bit at a time
+    adc     r1, r1
+    add     r2, r2          # add   rd, rd is the same as ASL
+    adc     r1, r1          # adc   rd, rd is the same as ROL
+    add     r2, r2
+    adc     r1, r1
+
+    and     r1, r0, 0x0F    # mask off everything but the bottom nibble
+    cmp     r1, r0, 0x0A    # set the carry if r1 >= 0x0A
+    c.add   r1, r0, 0x07    # 'A' - '9' + 1
+    add     r1, r0, 0x30    # '0'
+
+    JSR     (osWRCH)        # output R1
+
+    sub     r3, r0, 1       # decrement the loop counter
+    nz.mov  pc, r0, ph_loop # loop back for four digits
+
+    POP     (r3)            # restore working registers
+    POP     (r2)
+    POP     (r1)
+    POP     (r13)
+
+    RTS     ()
 
 # --------------------------------------------------------------
 
@@ -651,7 +986,7 @@ SWIHandler:
     ld      r1, r0, TMP_R1       # restore R1 from tmp location
     sto     r1, r0, LAST_ERR     # save the address of the last error
     EI      ()                   # re-enable interrupts
-    ld      pc, r0, BRKV         # invoke the BRK handler  
+    ld      pc, r0, BRKV         # invoke the BRK handler
 
 # Limit check to precent code running into next block...
 
