@@ -332,7 +332,12 @@ cmdLocal:
     PUSH    (r5)
     PUSH    (r13)
 
-    JSR     (SkipSpaces)
+    sub     r1, r0, 1
+cmdLoop0:
+    add     r1, r0, 1
+    JSR     (SkipSpaces)            # skip leading spaces
+    cmp     r2, r0, ord('*')        # also skip leading *
+    z.mov   pc, r0, cmdLoop0
 
     mov     r2, r0, cmdTable-1      # initialize command table pointer (to char before)
 
@@ -499,17 +504,15 @@ cmdSrec:
     mov     r4, r0, 0xffff          # initialize address to 0xffff meaning not yet set
 
 cmdSrecLineLoop:
-# read a line of input into INPBUF
     mov     r1, r0
     mov     r2, r0, osword0_param_block
-    JSR     (OSWORD)
+    JSR     (OSWORD)                # read a line of input into INPBUF
     c.mov   pc, r0, CmdOSEscape
 
     mov     r1, r0, INPBUF
 
-    JSR     (SkipSpaces)            # remove leading spaces
+    JSR     (SkipSpaces)            # remove leading spaces, last char read in r2
 
-    ld      r2, r1                  # test for S
     cmp     r2, r0, ord('S')
     nz.mov  pc, r0, cmdSrecExit
     add     r1, r0, 1
@@ -518,7 +521,6 @@ cmdSrecLineLoop:
     cmp     r2, r0, ord('1')
     nz.mov  pc, r0, cmdSrecError
     add     r1, r0, 1
-
 
     JSR     (ReadHex2)              # r2 = LL
     c.mov   pc, r0, cmdSrecError
@@ -621,17 +623,16 @@ cmdTable:
 #
 # Exit:
 # - r1 is updated to skip and spaces
+# - r2 is non-space character
 # - all other registers preserved
 
 SkipSpaces:
-    PUSH    (r2)
     sub     r1, r0, 1
 skipSpcLoop:
     add     r1, r0, 1
     ld      r2, r1
     cmp     r2, r0, 0x20
     z.mov   pc, r0, skipSpcLoop
-    POP     (r2)
     RTS     ()
 
 # --------------------------------------------------------------
