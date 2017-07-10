@@ -1,4 +1,4 @@
-# python3 opc3emu.py <filename.hex> [<filename.memdump>]
+# python3 opc5emu.py <filename.hex> [<filename.memdump>]
 import sys, re
 op = {"ld.i":0, "add.i":0x1, "and.i":0x2, "or.i":0x3, "xor.i":0x4, "ror.i":0x5, "adc.i":0x6, "ld":0x8, "sto":0x7,
     "add":0x9, "and":0xA, "or":0xB, "xor": 0xC, "ror":0xD, "adc":0xE, "halt" :0x0 }
