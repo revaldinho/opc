@@ -22,10 +22,17 @@ MACRO   ROL( _reg_ )
 ENDMACRO
 
 MACRO   JSR( _addr_ )
-        mov     r13,pc,2
-        mov     pc,r0,_addr_
+#        mov     r13,pc,2
+#        mov     pc,r0,_addr_
+        jsr     r13,r0,_addr_
 ENDMACRO
 
+MACRO   LSR( _reg_ )
+#        c.add r0,r0     # Clear Carry
+#        ror   _reg_, _reg_        
+         lsr _reg_, _reg_
+ENDMACRO
+        
 MACRO   RTS ()
         mov     pc,r13
 ENDMACRO
@@ -207,13 +214,11 @@ udiv16_loop:
 mul16s:
         mov     r3,r0
         mov     r5,r0,mul16s_loop0
-        CLC     ()
-        ror     r11,r11                 # shift right multiplier
+        LSR     ( r11 )                 # shift right multiplier
 mul16s_loop0:
         c.add   r3,r2                   # add copy of multiplicand into accumulator if carry
         ASL     (r2)                    # shift left multiplicand
-        CLC     ()
-        ror     r11,r11                 # shift right multiplier
+        LSR     ( r11 )                 # shift right multiplier
         nz.mov  pc,r5                   # no need for loop counter - just stop when r1 is empty
 
         c.add   r3,r2                   # add last copy of multiplicand into accumulator if carry
@@ -234,10 +239,10 @@ mul16s_loop0:
 oswrdig: mov     r1,r1,48                # Convert digit number to ASCII
 oswrch:
 oswrch_loop:
-        ld      r2, r0, 0xfe08
-        and     r2, r0, 0x8000
-        nz.mov  pc, r0, oswrch_loop
-        sto     r1, r0, 0xfe09
+#        in      r2, r0, 0xfe08
+#        and     r2, r0, 0x8000
+#        nz.mov  pc, r0, oswrch_loop
+        out     r1, r0, 0xfe09
         RTS     ()
 
 

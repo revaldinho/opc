@@ -48,7 +48,7 @@ while True:
             elif opcode == op["bswp"]:
                 regfile[dest] = (((ea_ed&0xFF00)>>8)|((ea_ed&0x00FF)<<8)) & 0xFFFF
             elif opcode == op["jsr"]:
-                (preserve_flag,regfile[dest],regfile[pcreg]) = (True,pc,ea_ed) 
+                (preserve_flag,regfile[dest],regfile[pcreg]) = (True,regfile[pcreg],ea_ed) 
             elif opcode == op["putpsr"] and dest==0: # putpsr
                 (preserve_flag, flag_save, interrupt) = (True, ((ea_ed&0xF0)>>4,(ea_ed&0x8)>>3,(ea_ed&0x4)>>2,(ea_ed&0x2)>>1,(ea_ed)&1), (ea_ed&0xF0)!=0)
             elif opcode == op["getpsr"] and dest != 15 and source==0: # getpsr
@@ -56,9 +56,9 @@ while True:
             elif opcode in ( op["sto"], op["out"]) :
                 if opcode == op["sto"]:
                     (preserve_flag,stdout, wordmem[ea_ed]) = (True, chr(regfile[dest]) if ea_ed==0xfe09 else stdout, regfile[dest])
-                    if ea_ed==0xfe09: ## should swap to IO space !
-                        print (stdout)
                 else:
+                    if ea_ed==0xfe09: ## swap to IO space !
+                        print (stdout)
                     (preserve_flag,stdout, iomem[ea_ed]) = (True, chr(regfile[dest]) if ea_ed==0xfe09 else stdout, regfile[dest])                    
             (swiid,ei,s,c,z) = flag_save if (preserve_flag or dest==0xF ) else (swiid,ei, (regfile[dest]>>15) & 1, c, 1 if (regfile[dest]==0) else 0)
 if len(sys.argv) > 2:                       # Dump memory for inspection if required

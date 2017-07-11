@@ -170,10 +170,10 @@ d2:	adc r11, r11		# rol q
 
 oswrch:
 oswrch_loop:
-    ld      r8, r0, 0xfe08
-    and     r8, r0, 0x8000
-    nz.mov  pc, r0, oswrch_loop
-    sto     r1, r0, 0xfe09
+#    in      r8, r0, 0xfe08
+#    and     r8, r0, 0x8000
+#    nz.mov  pc, r0, oswrch_loop
+    out     r1, r0, 0xfe09
     RTS     ()
 
 base:   WORD 0,0,0,0,0,0,0,0,0  # reserve some stack space

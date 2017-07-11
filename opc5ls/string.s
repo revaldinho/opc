@@ -20,13 +20,13 @@ printbstr:  ld      r1,r10
         mov     r2,r1
         and     r2,r0,0xFF
         z.mov   pc, r0, ret
-        sto     r2,r0,0xfe09
+        out     r2,r0,0xfe09
         sto     r2, r11
         add     r11,r0,1
         bswp    r2,r1
         and     r2,r0,0xFF
         z.mov   pc, r0, ret
-        sto     r2,r0,0xfe09
+        out     r2,r0,0xfe09
         sto     r2, r11
         add     r11,r0,1
         add     r10,r0,1
@@ -38,7 +38,7 @@ printwstr:  ld      r1,r10
         mov     r2,r1
         and     r2,r0,0xFF
         z.mov   pc, r0, wret
-        sto     r2,r0,0xfe09
+        out     r2,r0,0xfe09
         sto     r2, r11
         add     r11,r0,1
         add     r10,r0,1
