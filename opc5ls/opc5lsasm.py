@@ -1,7 +1,7 @@
 import sys, re
-op = "mov,and,or,xor,add,adc,sto,ld,ror,not,sub,sbc,cmp,cmpc,bswp,psr,halt".split(',')+[""]*14+["rti"] #halt aliassed to mov, rti to psr (modulo 16)
+op = "mov,and,or,xor,add,adc,sto,ld,ror,jsr,sub,sbc,cmp,cmpc,lsr,asr,halt,bswp,putpsr,getpsr,rti,not,out,in".split(",") 
 symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
-predicates = {"1":0x0000,"0":0x2000,"z":0x4000,"nz":0x6000,"c":0x8000,"nc":0xA000,"mi":0xC000,"pl":0xE000,"":0x0000}
+predicates = {"1":0x0000,"z":0x4000,"nz":0x6000,"c":0x8000,"nc":0xA000,"mi":0xC000,"pl":0xE000,"":0x0000} ##0x2000 reseved for non-predicated instructions
 def expand_macro(line, macro):  # recursively expand macros, passing on instances not (yet) defined
     (text,mobj)=([line],re.match("^(?P<label>\w*\:)?\s*(?P<name>\w+)\s*?\((?P<params>.*?)\)",line))
     if mobj and mobj.groupdict()["name"] in macro:
@@ -31,7 +31,7 @@ for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
 for iteration in range (0,2): # Two pass assembly
     nextmem = 0
     for line in newtext:
-        mobj = re.match('^(?:(?P<label>\w+):)?\s*((?:(?P<pred>((pl)|(mi)|(nc)|(nz)|(c)|(z)|(1)|(0)?)?)\.))?(?P<instr>\w+)?\s*(?P<operands>.*)',re.sub("#.*","",line))
+        mobj = re.match('^(?:(?P<label>\w+):)?\s*((?:(?P<pred>((pl)|(mi)|(nc)|(nz)|(c)|(z)|(1)?)?)\.))?(?P<instr>\w+)?\s*(?P<operands>.*)',re.sub("#.*","",line))
         (label, pred, instr,operands) = [ mobj.groupdict()[item] for item in ("label","pred", "instr","operands")]
         (pred, opfields,words, memptr) = ("1" if pred==None else pred, [ x.strip() for x in operands.split(",")],[], nextmem)
         if (label and label != "None") or (instr=="EQU"):
@@ -52,7 +52,7 @@ for iteration in range (0,2): # Two pass assembly
                     sys.exit("Error illegal register name or expression, or undefined symbol in: %s" % line )
                 if instr in op:
                     (dst,src,val) = (words+[0])[:3]
-                    words = [((len(words)==3)<<12)|predicates[pred]|((op.index(instr)&0x0F)<<8)|(src<<4)|dst,val][:len(words)-(len(words)==2)]
+                    words = [((len(words)==3)<<12)|(predicates[pred] if ((op.index(instr)&0x10)==0) else 0x2000)|((op.index(instr)&0x0F)<<8)|(src<<4)|dst,val][:len(words)-(len(words)==2)]
             (wordmem[nextmem:nextmem+len(words)], nextmem )  = (words, nextmem+len(words))
         elif instr == "ORG":
             nextmem = eval(operands,globals(),symtab)
