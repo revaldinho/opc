@@ -239,9 +239,9 @@ mul16s_loop0:
 oswrdig: mov     r1,r1,48                # Convert digit number to ASCII
 oswrch:
 oswrch_loop:
-#        in      r2, r0, 0xfe08
-#        and     r2, r0, 0x8000
-#        nz.mov  pc, r0, oswrch_loop
+        in      r2, r0, 0xfe08
+        and     r2, r0, 0x8000
+        nz.mov  pc, r0, oswrch_loop
         out     r1, r0, 0xfe09
         RTS     ()
 

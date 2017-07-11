@@ -20,8 +20,9 @@
 	;; r12 stands for p (a pointer)
 
 MACRO   JSR( _addr_ )
-        mov     r13,pc,2
-        mov     pc,r0,_addr_
+#        mov     r13,pc,2
+#        mov     pc,r0,_addr_
+        jsr     r13,r0,_addr_
 ENDMACRO
 
 
@@ -118,9 +119,7 @@ l5:	mov r1, r3		# tya
 l6:	mov r2, r2, -1		# dex
 	nz.mov pc, r0, l1	# bne l1
 	JSR (oswrch)
- 	mov r0, r0, 3142	# RTS()
-	RTS()
-done:	mov pc, r0, done
+ 	halt r0, r0, 0x3142    	# RTS()
 
 init:
 	mov r1, r0, 2		# lda #2
@@ -170,9 +169,9 @@ d2:	adc r11, r11		# rol q
 
 oswrch:
 oswrch_loop:
-#    in      r8, r0, 0xfe08
-#    and     r8, r0, 0x8000
-#    nz.mov  pc, r0, oswrch_loop
+    in      r8, r0, 0xfe08
+    and     r8, r0, 0x8000
+    nz.mov  pc, r0, oswrch_loop
     out     r1, r0, 0xfe09
     RTS     ()
 

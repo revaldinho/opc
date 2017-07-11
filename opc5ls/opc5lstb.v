@@ -2,7 +2,7 @@
 `define HALT 10'b00_0000_0000
 `define EXEC 3'b100
 module opc5lstb();
-   reg [15:0] mem [ 65535:0 ];
+   reg [15:0] mem [ 65535:0 ], iomem[65535:0];
    reg        clk, reset_b, interrupt_b, int_clk, m1, clken;
    wire [15:0] addr, data1;
    wire        rnw, vda, vpa, vio;
@@ -16,6 +16,7 @@ module opc5lstb();
    initial begin
       $dumpvars;
       $readmemh("test.hex", mem); // Problems with readmemb - use readmemh for now
+      iomem[16'hfe08] = 16'b0; 
       { clk, int_clk, reset_b}  = 0;
 `ifndef POSEDGE_MEMORY
       clken = 1'b1;
@@ -42,8 +43,11 @@ module opc5lstb();
    always @ (negedge clk) begin
 `endif
       if (!rnw && !ceb && oeb && reset_b)
-        mem[addr] <= data1;
-      data0 <= mem[addr];
+        if ( !mreq_b)
+          mem[addr] <= data1;
+        else 
+          iomem[addr]<= data1;      
+       data0 <= (!mreq_b) ? mem[addr]: iomem[addr]; 
    end
    always @ (posedge int_clk)
      if ( (($random(seed) %100)> 85) && interrupt_b ==1'b1)

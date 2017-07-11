@@ -55,7 +55,7 @@ module opc5lscpu( input[15:0] din, input clk, input reset_b, input[1:0] int_b, i
                 else if ( FSM_q == EXEC ) begin
                     PC_q <= (full_opcode==RTI)?PCI_q: ( (IR_q[3:0]==4'hF) || (full_opcode==JSR))?result:(((!(&int_b)) && PSR_q[EI])||((full_opcode==PUTPSR)&&(|swiid)))?PC_q:PC_q + 1;
                     PSR_q <= (full_opcode==RTI)?{4'b0,PSRI_q}:{swiid,enable_int,sign,carry,zero}; // Clear SWI bits on return
-                    if (! ((full_opcode==CMP)||(full_opcode==CMP)))
+                    if (! ((full_opcode==CMP)||(full_opcode==CMPC)))
                         dprf_q[IR_q[3:0]] <= (full_opcode==JSR)? PC_q : result ;
                 end
                 if ((FSM_q==FETCH0)||(FSM_q==EXEC))
