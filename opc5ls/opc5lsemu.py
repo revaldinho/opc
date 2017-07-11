@@ -24,8 +24,7 @@ while True:
         print ("%04x :%s: %-22s :  %1X  %d %d %d %d : %s" % (pc_save, mem_str, instr_str, swiid ,ei, s, c, z, ' '.join(["%04x" % i for i in regfile])))
         if ( ( (p0,p1,p2)==(0,0,1) )  or  (bool(p2) ^ (bool(s if p0==1 else z) if p1==1 else bool(c if p0==1 else 1)))):
             if opcode == (op["halt"]):
-                print("Stopped on halt instruction at %04x with halt number 0x%04x" % (regfile[15]-(instr_len), operand) )
-                break
+                exit("Stopped on halt instruction at %04x with halt number 0x%04x" % (regfile[15]-(instr_len), operand) )
             elif opcode == (op["rti"]) and (dest==15):
                 (regfile[pcreg], flag_save, preserve_flag ) = (pc_int, (0,psr_int[1],psr_int[2],psr_int[3],psr_int[4]), True )
             elif opcode == op["and"]:
@@ -55,11 +54,11 @@ while True:
                 regfile[dest] = ((swiid&0xF)<<4) | (ei<<3) | (s<<2) | (c<<1) | z
             elif opcode in ( op["sto"], op["out"]) :
                 if opcode == op["sto"]:
-                    (preserve_flag,stdout, wordmem[ea_ed]) = (True, chr(regfile[dest]) if ea_ed==0xfe09 else stdout, regfile[dest])
+                    (preserve_flag,wordmem[ea_ed]) = (True,regfile[dest])
                 else:
+                    (preserve_flag,stdout, iomem[ea_ed]) = (True, chr(regfile[dest]) if ea_ed==0xfe09 else stdout, regfile[dest])                    
                     if ea_ed==0xfe09: ## swap to IO space !
                         print (stdout)
-                    (preserve_flag,stdout, iomem[ea_ed]) = (True, chr(regfile[dest]) if ea_ed==0xfe09 else stdout, regfile[dest])                    
             (swiid,ei,s,c,z) = flag_save if (preserve_flag or dest==0xF ) else (swiid,ei, (regfile[dest]>>15) & 1, c, 1 if (regfile[dest]==0) else 0)
 if len(sys.argv) > 2:                       # Dump memory for inspection if required
     with open(sys.argv[2],"w" ) as f:
