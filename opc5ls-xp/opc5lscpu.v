@@ -1,21 +1,22 @@
-module opc5lscpu( input[15:0] din, input clk, input reset_b, input[1:0] int_b, input clken, output vpa, output vda, output via,output[15:0] dout, output[15:0] address, output rnw);
+module opc5lscpu( input[15:0] din, input clk, input reset_b, input[1:0] int_b, input clken, output vpa, output vda, output vio,output[15:0] dout, output[15:0] address, output rnw);
     parameter MOV=5'h0,AND=5'h1,OR=5'h2,XOR=5'h3,ADD=5'h4,ADC=5'h5,STO=5'h6,LD=5'h7,ROR=5'h8,JSR=5'h9,SUB=5'hA,SBC=5'hB,CMP=5'hC,CMPC=5'hD,LSR=5'hE,ASR=5'hF;
     parameter HLT=5'h10,BSWP=5'h11,PUTPSR=5'h12,GETPSR=5'h13,RTI=5'h14,NOT=5'h15,OUT=5'h16,IN=5'h17,FETCH0=3'h0,FETCH1=3'h1,EA_ED=3'h2,RDMEM=3'h3,EXEC=3'h4,WRMEM=3'h5,INT=3'h6;
-    parameter EI=3,S=2,C=1,Z=0,P0=15,P1=14,P2=13,IRLEN=12,IRLD=16,IRSTO=17,IRNPRED=18,INT_VECTOR0=16'h0002,INT_VECTOR1=16'h00020;
+    parameter EI=3,S=2,C=1,Z=0,P0=15,P1=14,P2=13,IRLEN=12,IRLD=16,IRSTO=17,IRNPRED=18,INT_VECTOR0=16'h0002,INT_VECTOR1=16'h0020;
     reg [15:0] OR_q, PC_q, PCI_q, result;
     reg [18:0] IR_q; (* RAM_STYLE="DISTRIBUTED" *)
     reg [15:0] dprf_q[15:0];
     reg [2:0]  FSM_q;
     reg [3:0]  swiid,PSRI_q;
     reg [7:0]  PSR_q ;
-    reg        zero,carry,sign,enable_int,reset_s0_b,reset_s1_b,predicate_q;
-    wire predicate_d 		= (&din[15:13]) || (din[P2] ^ (din[P1] ? (din[P0] ? sign : zero): (din[P0] ? carry : 1))); // New data, new flags (in exec/fetch)
-    wire predicate_din 	        = (&din[15:13]) || (din[P2] ^ (din[P1]?(din[P0]?PSR_q[S]:PSR_q[Z]):(din[P0]?PSR_q[C]:1)));  // New data, old flags (in fetch0)
+    reg        zero,carry,sign,enable_int,reset_s0_b,reset_s1_b;
+    wire predicate_d 		= (din[15:13]==3'b001) || (din[P2] ^ (din[P1] ? (din[P0] ? sign : zero): (din[P0] ? carry : 1))); // New data, new flags (in exec/fetch)
+    wire predicate_q            = IR_q[IRNPRED] || (IR_q[P2] ^ (IR_q[P1] ? (IR_q[P0] ? PSR_q[S] : PSR_q[Z]) : (IR_q[P0] ? PSR_q[C] : 1))); // IR reg, old flags (in fetch1,EA)
+    wire predicate_din 	        = (din[15:13]==3'b001) || (din[P2] ^ (din[P1]?(din[P0]?PSR_q[S]:PSR_q[Z]):(din[P0]?PSR_q[C]:1)));  // New data, old flags (in fetch0)
     wire [15:0] dprf_dout_p2    = (IR_q[7:4]==4'hF) ? PC_q: {16{(IR_q[7:4]!=4'h0)}} & dprf_q[IR_q[7:4]];  // Port 2 always reads source reg
     wire [15:0] dprf_dout       = (IR_q[3:0]==4'hF) ? PC_q: {16{(IR_q[3:0]!=4'h0)}} & dprf_q[IR_q[3:0]];  // Port 1 always reads dest reg
     wire [15:0] operand         = (IR_q[IRLEN]||IR_q[IRLD]) ? OR_q : dprf_dout_p2;                        // For one word instructions operand comes from dprf
     assign {rnw, dout, address} = { !(FSM_q==WRMEM), dprf_dout, (FSM_q==WRMEM || FSM_q == RDMEM)? OR_q : PC_q };
-    assign {vpa,vda,via}        = {((FSM_q==FETCH0)||(FSM_q==FETCH1)||(FSM_q==EXEC)),({2{(FSM_q==RDMEM)||(FSM_q==WRMEM)}} & {!IR_q[IRNPRED],IR_q[IRNPRED]}) };
+    assign {vpa,vda,vio}        = {((FSM_q==FETCH0)||(FSM_q==FETCH1)||(FSM_q==EXEC)),({2{(FSM_q==RDMEM)||(FSM_q==WRMEM)}} & {!IR_q[IRNPRED],IR_q[IRNPRED]}) };
     wire [4:0]  full_opcode     = {IR_q[IRNPRED],IR_q[11:8]};
     always @( * ) begin
         case (full_opcode)
@@ -31,7 +32,7 @@ module opc5lscpu( input[15:0] din, input clk, input reset_b, input[1:0] int_b, i
     end // always @ ( * )
     always @(posedge clk)
         if (clken) begin
-            {reset_s0_b,reset_s1_b, predicate_q} <= {reset_b,reset_s0_b, predicate_d};
+            {reset_s0_b,reset_s1_b} <= {reset_b,reset_s0_b};
             if (!reset_s1_b)
                 {PC_q,PCI_q,PSRI_q,PSR_q,FSM_q} <= 0;
             else begin
@@ -58,7 +59,7 @@ module opc5lscpu( input[15:0] din, input clk, input reset_b, input[1:0] int_b, i
                         dprf_q[IR_q[3:0]] <= (full_opcode==JSR)? PC_q : result ;
                 end
                 if ((FSM_q==FETCH0)||(FSM_q==EXEC))
-                    IR_q <= { (&din[15:13]),(din[11:8]==STO),(din[11:8]==LD),din};
+                    IR_q <= { (din[15:13]==3'b001),(din[11:8]==STO),(din[11:8]==LD),din};
             end // else: !if(!reset_s1_b)
         end
 endmodule

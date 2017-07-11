@@ -18,7 +18,7 @@ INT:
         PUSH   (r13)
         PUSH   (r12)
         mov     r12,r0,SWI_LOG  # default to SI_LOG
-        psr     r13,psr         # get PSR into r13
+        getpsr  r13,psr         # get PSR into r13
         and     r13,r0,0xF0     # mask off SWI bits
         z.mov   r12,r0,HWI_LOG  # if nonzero then point at HI_LOG instead
         ld      r13,r12         # get count
@@ -35,7 +35,7 @@ codestart:
         mov    r13,r0
         mov    r12,r0
         mov    r1,r0,0x08
-        psr    psr,r1         # Enable interrupts
+        putpsr psr,r1         # Enable interrupts
 
 fib:
         mov     r4, r0, results
@@ -58,9 +58,9 @@ fibLoop:
 
 fibEnd:
         # cause a SWI
-        psr     psr, r0, 0x18
-        psr     psr, r0, 0x28
-        psr     psr, r0, 0x38
+        putpsr  psr, r0, 0x18
+        putpsr  psr, r0, 0x28
+        putpsr  psr, r0, 0x38
         halt    r0, r0, 0x999
 
         ORG 0x100

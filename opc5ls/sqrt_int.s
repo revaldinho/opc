@@ -29,7 +29,7 @@ INT:
         PUSH   (r13)
         PUSH   (r12)
         mov     r12,r0,SWI_LOG  # default to SI_LOG
-        psr     r13,psr         # get PSR into r13
+        getpsr  r13,psr         # get PSR into r13
         and     r13,r0,0xF0     # mask off SWI bits
         z.mov   r12,r0,HWI_LOG  # if zero then point at HI_LOG instead
         ld      r13,r12         # get count
@@ -46,7 +46,7 @@ codestart:
 
         mov    r14,r0,STACK   # Setup global stack pointer
         mov    r1,r0,0x08
-        psr    psr,r1         # Enable interrupts
+        putpsr psr,r1         # Enable interrupts
         mov    r11,r0
         mov    r10,r0, DATA0-2 # R10 points to divider data (will be preincremented)
         mov    r12,r0, RESULTS # R12 points to area for results

@@ -5,14 +5,14 @@ module opc5lstb();
    reg [15:0] mem [ 65535:0 ];
    reg        clk, reset_b, interrupt_b, int_clk, m1, clken;
    wire [15:0] addr, data1;
-   wire        rnw, vda, vpa;
+   wire        rnw, vda, vpa, vio;
    wire        ceb = 1'b0;
    wire        oeb = !rnw;
    reg [15:0]  data0 ;
    wire          mreq_b = !(vda||vpa);
    integer       seed = 10;
    // OPC CPU instantiation
-   opc5lscpu  dut0_u (.address(addr), .din(data0), .dout(data1), .rnw(rnw), .clk(clk), .reset_b(reset_b), .int_b(interrupt_b), .clken(clken), .vpa(vpa), .vda(vda));
+   opc5lscpu  dut0_u (.address(addr), .din(data0), .dout(data1), .rnw(rnw), .clk(clk), .reset_b(reset_b), .int_b({1'b1, interrupt_b}), .clken(clken), .vpa(vpa), .vda(vda), .vio(vio));
    initial begin
       $dumpvars;
       $readmemh("test.hex", mem); // Problems with readmemb - use readmemh for now

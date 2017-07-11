@@ -19,7 +19,7 @@ else
     set pyexec = pypy3
 endif
 
-foreach test ( fib robfib davefib mul32 udiv32 sqrt hello testpsr string davefib_int sqrt_int pi-spigot-bruce pi-spigot-rev)
+foreach test ( fib robfib davefib mul32 udiv32 sqrt hello testpsr string davefib_int pi-spigot-bruce pi-spigot-rev) #sqrt_int
     # Assemble the test
     python3 opc5lsasm.py ${test}.s ${test}.hex >  ${test}.lst
     # Run the emulator
@@ -41,7 +41,7 @@ end
 echo ""
 echo "Comparing memory dumps between emulation and simulation"
 echo "-------------------------------------------------------"
-foreach test ( fib robfib davefib mul32 udiv32 sqrt hello testpsr string davefib_int sqrt_int pi-spigot-bruce pi-spigot-rev)
+foreach test ( fib robfib davefib mul32 udiv32 sqrt hello testpsr string davefib_int pi-spigot-bruce pi-spigot-rev) #sqrt_int
     foreach option ( NEGEDGE_MEMORY POSEDGE_MEMORY )
         printf "%32s :" ${test}_${option}
         if "${test}" =~ "*int" then
