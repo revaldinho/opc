@@ -41,8 +41,8 @@ ENDMACRO
 # r3..r5 = local registers
 # r1,r2  = temporary registers, parameters and return registers
 
-        EQU     digits,   40
-        EQU     cols,     1+(40*10//3)            # 1 + (digits * 10/3)
+        EQU     digits,   6
+        EQU     cols,     1+(6*10//3)            # 1 + (digits * 10/3)
 
 # preamble for a bootable program
 # remove this for a monitor-friendly loadable program

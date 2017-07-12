@@ -9,7 +9,7 @@ module opc5lscpu( input[15:0] din, input clk, input reset_b, input[1:0] int_b, i
     reg [3:0]  swiid,PSRI_q;
     reg [7:0]  PSR_q ;
     reg        zero,carry,sign,enable_int,reset_s0_b,reset_s1_b;
-    wire predicate_d 		= (din[15:13]==3'b001) || (din[P2] ^ (din[P1] ? (din[P0] ? sign : zero): (din[P0] ? carry : 1))); // New data, new flags (in exec/fetch)
+    wire predicate_d 		    = (din[15:13]==3'b001) || (din[P2] ^ (din[P1] ? (din[P0] ? sign : zero): (din[P0] ? carry : 1))); // New data, new flags (in exec/fetch)
     wire predicate_q            = IR_q[IRNPRED] || (IR_q[P2] ^ (IR_q[P1] ? (IR_q[P0] ? PSR_q[S] : PSR_q[Z]) : (IR_q[P0] ? PSR_q[C] : 1))); // IR reg, old flags (in fetch1,EA)
     wire predicate_din 	        = (din[15:13]==3'b001) || (din[P2] ^ (din[P1]?(din[P0]?PSR_q[S]:PSR_q[Z]):(din[P0]?PSR_q[C]:1)));  // New data, old flags (in fetch0)
     wire [15:0] dprf_dout_p2    = (IR_q[7:4]==4'hF) ? PC_q: {16{((IR_q[7:4]!=4'h0) & (full_opcode!=DEC) & (full_opcode!=INC))}} & dprf_q[IR_q[7:4]];  // Port 2 always reads source reg

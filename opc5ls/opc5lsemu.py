@@ -24,7 +24,8 @@ while True:
         print ("%04x :%s: %-22s :  %1X  %d %d %d %d : %s" % (pc_save, mem_str, instr_str, swiid ,ei, s, c, z, ' '.join(["%04x" % i for i in regfile])))
         if ( ( (p0,p1,p2)==(0,0,1) )  or  (bool(p2) ^ (bool(s if p0==1 else z) if p1==1 else bool(c if p0==1 else 1)))):
             if opcode == (op["halt"]):
-                exit("Stopped on halt instruction at %04x with halt number 0x%04x" % (regfile[15]-(instr_len), operand) )
+                print("Stopped on halt instruction at %04x with halt number 0x%04x" % (regfile[15]-(instr_len), operand) )
+                break
             elif opcode == (op["rti"]) and (dest==15):
                 (regfile[pcreg], flag_save, preserve_flag ) = (pc_int, (0,psr_int[1],psr_int[2],psr_int[3],psr_int[4]), True )
             elif opcode == op["and"]:
