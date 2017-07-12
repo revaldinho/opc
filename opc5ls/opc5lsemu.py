@@ -1,5 +1,5 @@
 import sys, re
-mnemonics = "mov,and,or,xor,add,adc,sto,ld,ror,jsr,sub,sbc,cmp,cmpc,lsr,asr,halt,bswp,putpsr,getpsr,rti,not,out,in".split(",") 
+mnemonics="mov,and,or,xor,add,adc,sto,ld,ror,jsr,sub,sbc,inc,lsr,dec,asr,halt,bswp,putpsr,getpsr,rti,not,out,in,sp1,sp2,cmp,cmpc".split(",")
 op = dict([(opcode,mnemonics.index(opcode)) for opcode in mnemonics])
 dis = dict([(mnemonics.index(opcode),opcode) for opcode in mnemonics])
 pred_dict = {0:"",1:"0.",2:"z.",3:"nz.",4:"c.",5:"nc.",6:"mi.",7:"pl."}
@@ -13,8 +13,8 @@ while True:
     (p0, p1, p2) = ( (instr_word & 0x8000) >> 15, (instr_word & 0x4000) >> 14, (instr_word & 0x2000)>>13)
     (opcode, source, dest) = (((instr_word & 0xF00) >> 8) | (0x10 if (p0,p1,p2)==(0,0,1) else 0x00), (instr_word & 0xF0) >>4, instr_word & 0xF)
     (instr_len, rdmem) = (2 if (instr_word & 0x1000) else 1, (opcode==op["ld"]))
-    operand = wordmem[regfile[pcreg]+1] if (instr_len==2) else 0
-    instr_str = "%s%s r%d,r%d%s" % ((pred_dict[p0<<2 | p1<<1 | p2] if (p0,p1,p2)!=(0,0,1) else ""),dis[opcode],dest,source, (",0x%04x" % operand) if instr_len==2 else '')
+    operand = wordmem[regfile[pcreg]+1] if (instr_len==2) else ((0xFFF0+source) if opcode=="DEC" else (source if opcode=="DEC" else 0 ))
+    instr_str = "%s%s r%d,%s%d%s" % ((pred_dict[p0<<2 | p1<<1 | p2] if (p0,p1,p2)!=(0,0,1) else ""),dis[opcode],dest,"r" if opcode not in (op["inc"],op["dec"]) else "", source, (",0x%04x" % operand) if instr_len==2 else '')
     mem_str = " %04x %4s " % (instr_word, "%04x" % (operand) if instr_len==2 else '')
     regfile[15] += instr_len # EA_ED must be computed after PC is brought up to date
     ea_ed = wordmem[(regfile[source] + operand)&0xFFFF] if (rdmem and opcode==op["ld"])  else (iomem[(regfile[source] + operand)&0xFFFF] if rdmem else (regfile[source] + operand)&0xFFFF)
@@ -35,19 +35,19 @@ while True:
                 regfile[dest] = (regfile[dest] ^ ea_ed) & 0xFFFF
             elif opcode in (op["ror"],op["asr"],op["lsr"]):
                 (c, regfile[dest]) = (ea_ed & 0x1, ( ((c<<15) if opcode==op["ror"] else (ea_ed&0x8000 if opcode==op["asr"] else 0)) | ((ea_ed&0xFFFF) >> 1)))
-            elif opcode in (op["add"], op["adc"]) :
+            elif opcode in (op["add"], op["adc"], op["inc"]) :
                 res = (regfile[dest] + ea_ed + (c if opcode==op["adc"] else 0)) & 0x1FFFF
                 (c, regfile[dest])  = ( (res>>16) & 1, res & 0xFFFF)
             elif opcode in (op["mov"], op["ld"], op["not"]):
                 regfile[dest] = (~ea_ed if opcode==op["not"] else ea_ed) & 0xFFFF
-            elif opcode in (op["sub"], op["sbc"], op["cmp"], op["cmpc"]) :
+            elif opcode in (op["sub"], op["sbc"], op["cmp"], op["cmpc"], op["dec"]) :
                 res = (regfile[dest] + ((~ea_ed)&0xFFFF) + (c if (opcode in (op["cmpc"],op["sbc"])) else 1)) & 0x1FFFF
                 dest = 0 if opcode in( op["cmp"], op["cmpc"]) else dest # retarget r0 with result of comparison
                 (c, regfile[dest])  = ( (res>>16) & 1, res & 0xFFFF)
             elif opcode == op["bswp"]:
                 regfile[dest] = (((ea_ed&0xFF00)>>8)|((ea_ed&0x00FF)<<8)) & 0xFFFF
             elif opcode == op["jsr"]:
-                (preserve_flag,regfile[dest],regfile[pcreg]) = (True,regfile[pcreg],ea_ed) 
+                (preserve_flag,regfile[dest],regfile[pcreg]) = (True,regfile[pcreg],ea_ed)
             elif opcode == op["putpsr"] and dest==0: # putpsr
                 (preserve_flag, flag_save, interrupt) = (True, ((ea_ed&0xF0)>>4,(ea_ed&0x8)>>3,(ea_ed&0x4)>>2,(ea_ed&0x2)>>1,(ea_ed)&1), (ea_ed&0xF0)!=0)
             elif opcode == op["getpsr"] and dest != 15 and source==0: # getpsr
@@ -56,7 +56,7 @@ while True:
                 if opcode == op["sto"]:
                     (preserve_flag,wordmem[ea_ed]) = (True,regfile[dest])
                 else:
-                    (preserve_flag,stdout, iomem[ea_ed]) = (True, chr(regfile[dest]) if ea_ed==0xfe09 else stdout, regfile[dest])                    
+                    (preserve_flag,stdout, iomem[ea_ed]) = (True, chr(regfile[dest]) if ea_ed==0xfe09 else stdout, regfile[dest])
                     if ea_ed==0xfe09: ## swap to IO space !
                         print (stdout)
             (swiid,ei,s,c,z) = flag_save if (preserve_flag or dest==0xF ) else (swiid,ei, (regfile[dest]>>15) & 1, c, 1 if (regfile[dest]==0) else 0)
