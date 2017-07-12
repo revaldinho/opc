@@ -12,10 +12,10 @@ while True:
     instr_word = wordmem[regfile[pcreg]] &  0xFFFF
     (p0, p1, p2) = ( (instr_word & 0x8000) >> 15, (instr_word & 0x4000) >> 14, (instr_word & 0x2000)>>13)
     (opcode, source, dest) = (((instr_word & 0xF00) >> 8) | (0x10 if (p0,p1,p2)==(0,0,1) else 0x00), (instr_word & 0xF0) >>4, instr_word & 0xF)
-    (instr_len, rdmem) = (2 if (instr_word & 0x1000) else 1, (opcode==op["ld"]))
-    operand = wordmem[regfile[pcreg]+1] if (instr_len==2) else ((0xFFF0+source) if opcode=="DEC" else (source if opcode=="DEC" else 0 ))
+    (instr_len, rdmem, preserve_flag) = (2 if (instr_word & 0x1000) else 1, (opcode==op["ld"]), (dest==pcreg))
+    operand = wordmem[regfile[pcreg]+1] if (instr_len==2) else (source if opcode in [op["dec"],op["inc"]] else 0)
     instr_str = "%s%s r%d,%s%d%s" % ((pred_dict[p0<<2 | p1<<1 | p2] if (p0,p1,p2)!=(0,0,1) else ""),dis[opcode],dest,"r" if opcode not in (op["inc"],op["dec"]) else "", source, (",0x%04x" % operand) if instr_len==2 else '')
-    mem_str = " %04x %4s " % (instr_word, "%04x" % (operand) if instr_len==2 else '')
+    (mem_str, source) = (" %04x %4s " % (instr_word, "%04x" % (operand) if instr_len==2 else ''), (0 if opcode in (op["dec"],op["inc"]) else source))
     regfile[15] += instr_len # EA_ED must be computed after PC is brought up to date
     ea_ed = wordmem[(regfile[source] + operand)&0xFFFF] if (rdmem and opcode==op["ld"])  else (iomem[(regfile[source] + operand)&0xFFFF] if rdmem else (regfile[source] + operand)&0xFFFF)
     if interrupt : # software interrupts dont care about EI bit

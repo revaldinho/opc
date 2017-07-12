@@ -14,7 +14,7 @@ module opc5lscpu( input[15:0] din, input clk, input reset_b, input[1:0] int_b, i
     wire predicate_din 	        = (din[15:13]==3'b001) || (din[P2] ^ (din[P1]?(din[P0]?PSR_q[S]:PSR_q[Z]):(din[P0]?PSR_q[C]:1)));  // New data, old flags (in fetch0)
     wire [15:0] dprf_dout_p2    = (IR_q[7:4]==4'hF) ? PC_q: {16{((IR_q[7:4]!=4'h0) & (full_opcode!=DEC) & (full_opcode!=INC))}} & dprf_q[IR_q[7:4]];  // Port 2 always reads source reg
     wire [15:0] dprf_dout       = (IR_q[3:0]==4'hF) ? PC_q: {16{(IR_q[3:0]!=4'h0)}} & dprf_q[IR_q[3:0]];  // Port 1 always reads dest reg
-    wire [15:0] operand         = (IR_q[IRLEN]||IR_q[IRLD]) ? OR_q : dprf_dout_p2;                        // For one word instructions operand comes from dprf
+    wire [15:0] operand         = (IR_q[IRLEN]||IR_q[IRLD]||(full_opcode==INC)||(full_opcode==DEC)) ? OR_q : dprf_dout_p2;  // For one word instructions operand usu comes from dprf
     assign {rnw, dout, address} = { !(FSM_q==WRMEM), dprf_dout, (FSM_q==WRMEM || FSM_q == RDMEM)? OR_q : PC_q };
     assign {vpa,vda,vio}        = {((FSM_q==FETCH0)||(FSM_q==FETCH1)||(FSM_q==EXEC)),({2{(FSM_q==RDMEM)||(FSM_q==WRMEM)}} & {!IR_q[IRNPRED],IR_q[IRNPRED]}) };
     wire [4:0]  full_opcode     = {IR_q[IRNPRED],IR_q[11:8]};
@@ -48,7 +48,7 @@ module opc5lscpu( input[15:0] din, input clk, input reset_b, input[1:0] int_b, i
                     WRMEM  : FSM_q <= (!(&int_b) & PSR_q[EI])?INT:FETCH0;
                     default: FSM_q <= FETCH0;
                 endcase // case (FSM_q)
-                OR_q <= ((FSM_q==FETCH0)||(FSM_q==EXEC))?((full_opcode_d==DEC)?{12'hFFF,din[7:4]}:(full_opcode_d==INC)?{12'b0,din[7:4]}:16'b0):(FSM_q==EA_ED)?dprf_dout_p2+OR_q:din;
+                OR_q <= ((FSM_q==FETCH0)||(FSM_q==EXEC))?((full_opcode_d==DEC)||(full_opcode_d==INC)?{12'b0,din[7:4]}:16'b0):(FSM_q==EA_ED)?dprf_dout_p2+OR_q:din;
                 if ( FSM_q == INT )
                     {PC_q,PCI_q,PSRI_q,PSR_q[EI]} <= {(!int_b[1])?INT_VECTOR1:INT_VECTOR0,PC_q,PSR_q[3:0],1'b0} ; // Always clear EI on taking interrupt
                 else if ((FSM_q==FETCH0)||(FSM_q==FETCH1))

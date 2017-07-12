@@ -27,12 +27,6 @@ MACRO   JSR( _addr_ )
         jsr     r13,r0,_addr_
 ENDMACRO
 
-MACRO   LSR( _reg_ )
-#        c.add r0,r0     # Clear Carry
-#        ror   _reg_, _reg_        
-         lsr _reg_, _reg_
-ENDMACRO
-        
 MACRO   RTS ()
         mov     pc,r13
 ENDMACRO
@@ -41,15 +35,14 @@ ENDMACRO
 # r13 = link register
 # r12 = inner loop counter
 # r11 = Q
-# r10 = CONSTANT 1
 # r9  = outer loop counter
 # r8  = next pi output digit pointer
 # r7  = remainder/denominator pointer (data interleaved)
 # r3..r5 = local registers
 # r1,r2  = temporary registers, parameters and return registers
 
-        EQU     digits,   6
-        EQU     cols,     1+(6*10//3)            # 1 + (digits * 10/3)
+        EQU     digits,   40
+        EQU     cols,     1+(40*10//3)            # 1 + (digits * 10/3)
 
 # preamble for a bootable program
 # remove this for a monitor-friendly loadable program
@@ -59,7 +52,6 @@ ENDMACRO
 
         ORG 0x1000
 start:
-        mov     r10,r0,1                # CONSTANT 1
         mov     r8,r0,mypi
 
         ;; trivial banner
@@ -77,16 +69,16 @@ start:
         sto     r2,r7                   # store first remainder
         sto     r1,r7,1                 # store first denominator
         add     r7,r0,2                 # point at start of next pair
-        mov     r3,r10                  # loop counter i starts at index = 1
+        mov     r3,r0,1                 # loop counter i starts at index = 1
         mov     r5,r0,cols+2            # loop counter top of range
 L1:     sto     r2,r7                   # store remainder value to pointer
         mov     r4,r3
         add     r4,r4,1                 # r4 = (i*2)+1
         sto     r4,r7,1                 # store denominator value to pointer
         add     r7,r2                   # update pointer by 2
-        add     r3,r10                  # increment loop counter
+        inc     r3,1                    # increment loop counter
         cmp     r3,r5                   # reached top of range ?
-        nz.mov  pc,r0,L1
+        nz.dec  pc,PC-L1
 
         mov     r9,r0,digits            # set up outer loop counter
 L3:     mov     r11,r0                  # r11 = Q
@@ -111,7 +103,7 @@ L4:
         sto     r2, r7                  # rem[i] <- r2
         sub     r7,r0,2                 # dec rem/denom ptr
         mov     r2,r12                  # get loop ctr into r2 before decr so it's r12+1 on next iter
-        sub     r12,r10                 # decr loop counter
+        dec     r12,1                   # decr loop counter
         c.mov   pc,r0,L4                # loop if >=0
 
         # Pre-digit correction loop
@@ -122,43 +114,41 @@ L4:
         #
         cmp     r11,r0,10               # check if Q==10 and needing correction?
         nz.sto  r11,r8                  # Save digit if Q <10
-        z.mov   pc,r0, correction       # if no correction needed then continue else start corrections
-L5:     add     r8,r10                  # incr pi digit pointer
+        nz.inc   pc,L5-PC               # if no correction needed then continue else start corrections
+        sto     r0,r8                   # overwrite 0 if Q=10
+        mov     r2,r8                   # r2 is predigit pointer, start at current digit
+pdcloop:
+        dec     r2,1                    # update pointer to next predigit
+        ld      r1,r2                   # get next predigit
+        cmp     r1,r0,9                 # is predigit=9 (ie would it overflow if incremented?)
+        z.sto   r0,r2                   # store 0 to predigit if yes (preserve Z)
+        z.dec   pc,PC-pdcloop           # loop again to correct next predigit
+        inc     r1,1                    # if predigit wasnt 9 fall thru to here and add 1
+        sto     r1,r2                   # store it and return to execution
 
+L5:     inc     r8,1                    # incr pi digit pointer
         cmp     r8,r0,4+mypi            # allow buffer of 4 chars for corrections
-        nc.mov  pc,r0,L6
+        nc.inc  pc,L6-PC
         ld      r1,r8,-4                # Get digit 3 places back from latest
         JSR     (oswrdig)
         cmp     r8,r0,4+mypi              # Emit decimal point after first digit
-        nz.mov  pc,r0,L6
-        mov      r1,r0,46
+        nz.inc  pc,L6-PC
+        mov     r1,r0,46
         JSR     (oswrch)
 L6:
-        sub     r9,r10                  # dec loop counter
+        dec     r9,1                 # dec loop counter
         nz.mov  pc,r0,L3
 
         # empty the buffer
         mov     r9,r8,-3
 L7:     ld      r1,r9
         JSR     (oswrdig)
-        add     r9,r10
+        inc     r9,1
         cmp     r9,r8
-        nz.mov  pc,r0,L7
+        nz.dec  pc,PC-L7
 
         halt    r0,r0
 
-correction:
-        sto     r0,r8                   # overwrite 0 if Q=10
-        mov     r2,r8                   # r2 is predigit pointer, start at current digit
-pdcloop:
-        sub     r2,r10                  # update pointer to next predigit
-        ld      r1,r2                   # get next predigit
-        cmp     r1,r0,9                 # is predigit=9 (ie would it overflow if incremented?)
-        z.sto   r0,r2                   # store 0 to predigit if yes (preserve Z)
-        z.mov   pc,r0,pdcloop           # loop again to correct next predigit
-        add     r1,r0,1                 # if predigit wasnt 9 fall thru to here and add 1
-        sto     r1,r2                   # store it
-        mov     pc,r0,L5                # return to execution
 
         # --------------------------------------------------------------
         #
@@ -173,7 +163,6 @@ pdcloop:
         # - r11 16 bit dividend (A)
         # - r3 16 bit divisor (B)
         # - r13 holds return address
-        # - r10 hold constant 1
         # - r14 is global stack pointer
         # Exit
         # - r6  upwards preserved (except r11)
@@ -183,7 +172,6 @@ pdcloop:
         # --------------------------------------------------------------
 udiv16:
         mov     r2,r0                   # Get dividend/quotient into double word r1,2
-        mov     r4,r0, udiv16_loop      # Stash loop target in r4
         mov     r5,r0,-16               # Setup a loop counter
 udiv16_loop:
         ASL     (r11)                   # shift left the quotient/dividend
@@ -191,8 +179,8 @@ udiv16_loop:
         cmp     r2,r3                   # check if quotient is larger than divisor
         c.sub   r2,r3                   # if yes then do the subtraction for real
         c.adc   r11,r0                  # ... set LSB of quotient using (new) carry
-        add     r5,r10                  # increment loop counter zeroing carry
-        nz.mov  pc,r4                   # loop again if not finished (r5=udiv16_loop)
+        inc     r5,1                    # increment loop counter zeroing carry
+        nz.dec  pc,PC-udiv16_loop       # loop again if not finished (r5=udiv16_loop)
         RTS     ()                      # and return with quotient/remainder in r1/r2
 
         # --------------------------------------------------------------
@@ -212,17 +200,14 @@ udiv16_loop:
         #       r11   holds 16b result
         # --------------------------------------------------------------
 mul16s:
-        mov     r3,r0
-        mov     r5,r0,mul16s_loop0
-        LSR     ( r11 )                 # shift right multiplier
+        lsr     r3,r11                 # shift right multiplier into r3
+        mov     r11,r0
 mul16s_loop0:
-        c.add   r3,r2                   # add copy of multiplicand into accumulator if carry
+        c.add   r11,r2                  # add copy of multiplicand into accumulator if carry
         ASL     (r2)                    # shift left multiplicand
-        LSR     ( r11 )                 # shift right multiplier
-        nz.mov  pc,r5                   # no need for loop counter - just stop when r1 is empty
-
-        c.add   r3,r2                   # add last copy of multiplicand into accumulator if carry
-        mov     r11,r3
+        lsr     r3, r3                  # shift right multiplier
+        nz.dec  pc,PC-mul16s_loop0      # no need for loop counter - just stop when r1 is empty
+        c.add   r11,r2                  # add last copy of multiplicand into accumulator if carry
         RTS     ()
 
         # --------------------------------------------------------------
@@ -241,7 +226,7 @@ oswrch:
 oswrch_loop:
         in      r2, r0, 0xfe08
         and     r2, r0, 0x8000
-        nz.mov  pc, r0, oswrch_loop
+        nz.dec  pc, PC-oswrch_loop
         out     r1, r0, 0xfe09
         RTS     ()
 
