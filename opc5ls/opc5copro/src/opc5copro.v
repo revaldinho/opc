@@ -120,10 +120,11 @@ module opc5copro (
       .rnw        (cpu_rnw),
       .clk        (cpu_clk),
       .reset_b    (rst_b_sync),
-      .int_b      (cpu_irq_b_sync),
+      .int_b      ({1'b1 , cpu_irq_b_sync}),
       .clken      (cpu_clken),
       .vpa        (vpa),
-      .vda        (vda)
+      .vda        (vda),
+      .vio        ()
     );
 
    memory_controller inst_memory_controller

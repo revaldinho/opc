@@ -54,15 +54,15 @@ MACRO   SEC()
 ENDMACRO
 
 MACRO   EI()
-    psr     r12, psr
+    getpsr  r12, psr
     or      r12, r12, EI_MASK
-    psr     psr, r12
+    putpsr  psr, r12
 ENDMACRO
 
 MACRO   DI()
-    psr     r12, psr
+    getpsr  r12, psr
     and     r12, r12, ~EI_MASK
-    psr     psr, r12
+    putpsr  psr, r12
 ENDMACRO
 
 MACRO JSR( _address_)
@@ -86,7 +86,7 @@ ENDMACRO
 
 MACRO ERROR (_address_)
     mov     r1, r0, _address_
-    psr     psr, r0, SWI0_MASK
+    putpsr  psr, r0, SWI0_MASK
 ENDMACRO
 
 # -----------------------------------------------------------------------------
@@ -1298,15 +1298,15 @@ Type7:
 
 InterruptHandler:
     sto     r1, r0, TMP_R1
-    psr     r1, psr
+    getpsr  r1, psr
     and     r1, r0, SWI_MASK
     nz.mov  pc, r0, SWIHandler
     ld      pc, r0, IRQ1V        # invoke the IRQ handler
 
 SWIHandler:
-    psr     r1, psr
+    getpsr  r1, psr
     and     r1, r0, ~SWI_MASK
-    psr     psr, r1
+    putpsr  psr, r1
     ld      r1, r0, TMP_R1       # restore R1 from tmp location
     sto     r1, r0, LAST_ERR     # save the address of the last error
     EI      ()                   # re-enable interrupts

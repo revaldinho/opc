@@ -9,6 +9,8 @@ module opc5lscpu( input[15:0] din, input clk, input reset_b, input[1:0] int_b, i
     reg [3:0]  swiid,PSRI_q;
     reg [7:0]  PSR_q ;
     reg        zero,carry,sign,enable_int,reset_s0_b,reset_s1_b;
+    wire [4:0]  full_opcode     = {IR_q[IRNPRED],IR_q[11:8]};
+    wire [4:0]  full_opcode_d   = { (din[15:13]==3'b001),din[11:8] };
     wire predicate_d 		    = (din[15:13]==3'b001) || (din[P2] ^ (din[P1] ? (din[P0] ? sign : zero): (din[P0] ? carry : 1))); // New data, new flags (in exec/fetch)
     wire predicate_q            = IR_q[IRNPRED] || (IR_q[P2] ^ (IR_q[P1] ? (IR_q[P0] ? PSR_q[S] : PSR_q[Z]) : (IR_q[P0] ? PSR_q[C] : 1))); // IR reg, old flags (in fetch1,EA)
     wire predicate_din 	        = (din[15:13]==3'b001) || (din[P2] ^ (din[P1]?(din[P0]?PSR_q[S]:PSR_q[Z]):(din[P0]?PSR_q[C]:1)));  // New data, old flags (in fetch0)
@@ -17,15 +19,13 @@ module opc5lscpu( input[15:0] din, input clk, input reset_b, input[1:0] int_b, i
     wire [15:0] operand         = (IR_q[IRLEN]||IR_q[IRLD]||(full_opcode==INC)||(full_opcode==DEC)) ? OR_q : dprf_dout_p2;  // For one word instructions operand usu comes from dprf
     assign {rnw, dout, address} = { !(FSM_q==WRMEM), dprf_dout, (FSM_q==WRMEM || FSM_q == RDMEM)? OR_q : PC_q };
     assign {vpa,vda,vio}        = {((FSM_q==FETCH0)||(FSM_q==FETCH1)||(FSM_q==EXEC)),({2{(FSM_q==RDMEM)||(FSM_q==WRMEM)}} & {!IR_q[IRNPRED],IR_q[IRNPRED]}) };
-    wire [4:0]  full_opcode     = {IR_q[IRNPRED],IR_q[11:8]};
-    wire [4:0]  full_opcode_d   = {(din[15:13]==3'b001),din[11:8]};
     always @( * ) begin
         case (full_opcode)
             AND,OR               :{carry,result} = {PSR_q[C],(IR_q[8])?(dprf_dout & operand):(dprf_dout | operand)};
             ADD,ADC,INC          :{carry,result} = dprf_dout + operand + (IR_q[8] & PSR_q[C]);
             SUB,SBC,CMP,CMPC,DEC :{carry,result} = dprf_dout + (operand ^ 16'hFFFF) + ((IR_q[8])?PSR_q[C]:1);
             XOR,GETPSR           :{carry,result} = (IR_q[IRNPRED])?{PSR_q[C],8'b0,PSR_q}:{PSR_q[C], dprf_dout ^ operand};
-            NOT,BSWP             :{result,carry} = (IR_q[9])? {operand[7:0],operand[15:8],PSR_q[C]}:{~operand,PSR_q[C]};
+            NOT,BSWP             :{result,carry} = (IR_q[10])? {~operand,PSR_q[C]} : {operand[7:0],operand[15:8],PSR_q[C]};
             ROR,ASR,LSR          :{result,carry} = {(IR_q[10]==0)?PSR_q[C]:(IR_q[8]==1)?operand[15]:1'b0,operand};
             default              :{carry,result} = {PSR_q[C],operand} ; //LD, MOV, STO, JSR, IN,OUT and everything else
         endcase // case ( IR_q )
