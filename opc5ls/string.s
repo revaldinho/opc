@@ -1,3 +1,7 @@
+
+
+
+
         mov     r10, r0, S1
         mov     r11, r0, results
         mov     r13, r0, p1
@@ -6,7 +10,6 @@ p1:     mov     r10, r0, S2
         mov     r13, r0, p2
         mov     pc,r0,printbstr
 p2:     mov     r10, r0, S3
-        mov     r11, r0, results
         mov     r13, r0, p3
         mov     pc,r0,printwstr
 p3:     mov     r10, r0, S4
