@@ -14,10 +14,12 @@ while True:
     (opcode, source, dest) = (((instr_word & 0xF00) >> 8) | (0x10 if (p0,p1,p2)==(0,0,1) else 0x00), (instr_word & 0xF0) >>4, instr_word & 0xF)
     (instr_len, rdmem, preserve_flag) = (2 if (instr_word & 0x1000) else 1, (opcode==op["ld"]), (dest==pcreg))
     operand = wordmem[regfile[pcreg]+1] if (instr_len==2) else (source if opcode in [op["dec"],op["inc"]] else 0)
-    instr_str = "%s%s r%d,%s%d%s" % ((pred_dict[p0<<2 | p1<<1 | p2] if (p0,p1,p2)!=(0,0,1) else ""),dis[opcode],dest,"r" if opcode not in (op["inc"],op["dec"]) else "", source, (",0x%04x" % operand) if instr_len==2 else '')
+    instr_str = "%s%s r%d," % ((pred_dict[p0<<2 | p1<<1 | p2] if (p0,p1,p2)!=(0,0,1) else ""),dis[opcode],dest)
+    instr_str += ("%s%d%s" % (("r" if opcode not in (op["inc"],op["dec"]) else ""),source, (",0x%04x" % operand) if instr_len==2 else ''))
+    instr_str = re.sub("r0","psr",instr_str,1) if (opcode in (op["putpsr"],op["getpsr"])) else instr_str
     (mem_str, source) = (" %04x %4s " % (instr_word, "%04x" % (operand) if instr_len==2 else ''), (0 if opcode in (op["dec"],op["inc"]) else source))
     regfile[15] += instr_len # EA_ED must be computed after PC is brought up to date
-    ea_ed = wordmem[(regfile[source] + operand)&0xFFFF] if (rdmem and opcode==op["ld"])  else (iomem[(regfile[source] + operand)&0xFFFF] if rdmem else (regfile[source] + operand)&0xFFFF)
+    ea_ed = wordmem[(regfile[source] + operand)&0xFFFF] if opcode==op["ld"] else (iomem[(regfile[source] + operand)&0xFFFF] if rdmem else (regfile[source] + operand)&0xFFFF)
     if interrupt : # software interrupts dont care about EI bit
         (interrupt, regfile[pcreg], pc_int, psr_int , ei) = (0, 0x0002, pc_save, (swiid,ei,s,c,z), 0)
     else:
@@ -28,10 +30,8 @@ while True:
                 break
             elif opcode == (op["rti"]) and (dest==15):
                 (regfile[pcreg], flag_save, preserve_flag ) = (pc_int, (0,psr_int[1],psr_int[2],psr_int[3],psr_int[4]), True )
-            elif opcode == op["and"]:
-                regfile[dest] = (regfile[dest] & ea_ed) & 0xFFFF
-            elif opcode == op["or"]:
-                regfile[dest] = (regfile[dest] | ea_ed) & 0xFFFF
+            elif opcode in (op["and"], op["or"]):
+                regfile[dest] = ((regfile[dest] & ea_ed) if opcode==op["and"] else (regfile[dest] | ea_ed))& 0xFFFF
             elif opcode == op["xor"]:
                 regfile[dest] = (regfile[dest] ^ ea_ed) & 0xFFFF
             elif opcode in (op["ror"],op["asr"],op["lsr"]):
@@ -49,19 +49,18 @@ while True:
                 regfile[dest] = (((ea_ed&0xFF00)>>8)|((ea_ed&0x00FF)<<8)) & 0xFFFF
             elif opcode == op["jsr"]:
                 (preserve_flag,regfile[dest],regfile[pcreg]) = (True,regfile[pcreg],ea_ed)
-            elif opcode == op["putpsr"] and dest==0: # putpsr
+            elif opcode == op["putpsr"]:
                 (preserve_flag, flag_save, interrupt) = (True, ((ea_ed&0xF0)>>4,(ea_ed&0x8)>>3,(ea_ed&0x4)>>2,(ea_ed&0x2)>>1,(ea_ed)&1), (ea_ed&0xF0)!=0)
-            elif opcode == op["getpsr"] and dest != 15 and source==0: # getpsr
+            elif opcode == op["getpsr"]:
                 regfile[dest] = ((swiid&0xF)<<4) | (ei<<3) | (s<<2) | (c<<1) | z
-            elif opcode in ( op["sto"], op["out"]) :
-                if opcode == op["sto"]:
-                    (preserve_flag,wordmem[ea_ed]) = (True,regfile[dest])
-                else:
-                    (preserve_flag,stdout, iomem[ea_ed]) = (True, chr(regfile[dest]) if ea_ed==0xfe09 else stdout, regfile[dest])
-                    if ea_ed==0xfe09: ## swap to IO space !
-                        print (stdout)
+            elif opcode == op["sto"]:
+                (preserve_flag,wordmem[ea_ed]) = (True,regfile[dest])
+            elif opcode == op["out"]:
+                (preserve_flag,stdout, iomem[ea_ed]) = (True, chr(regfile[dest]) if ea_ed==0xfe09 else stdout, regfile[dest])
+                if ea_ed==0xfe09: ## swap to IO space !
+                    print (stdout)
             (swiid,ei,s,c,z) = flag_save if (preserve_flag or dest==0xF ) else (swiid,ei, (regfile[dest]>>15) & 1, c, 1 if (regfile[dest]==0) else 0)
-if len(sys.argv) > 2:                       # Dump memory for inspection if required
+if len(sys.argv) > 2:  # Dump memory for inspection if required
     with open(sys.argv[2],"w" ) as f:
         for i in range(0, len(wordmem), 16):
             f.write( '%s\n' %  ' '.join("%04x"%n for n in wordmem[i:i+16]))
