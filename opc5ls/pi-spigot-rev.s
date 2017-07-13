@@ -42,13 +42,18 @@ MACRO   SINGLE_DIGIT_CORRECTION()
         sto     r1,r8,-1                # store it
 
 SDCL5:  inc     r8,1                    # incr pi digit pointer
+        cmp     r8,r0,mypi+1            #
+        z.inc   pc,SDCL6-PC             # if first digit nothing to print yet
+SDCL8:
         ld      r1,r8,-2                # Get digit 2 places back from latest
         jsr     r13,r0,oswrdig          # Print it
-
+        cmp     r8,r0,mypi+2            # if first digit then print first + '.'
+        nz.inc  pc,SDCL6-PC
+        mov     r1,r0,46
+        jsr     r13,r0,oswrch
 SDCL6:  dec     r9,1                    # dec loop counter
         nz.mov  pc,r0,L3                # jump back into main program
         # empty the buffer
-
 SDCL7:  ld      r1,r8,-1
         jsr     r13,r0,oswrdig
 ENDMACRO
@@ -108,8 +113,8 @@ ENDMACRO
 # r3..r5 = local registers
 # r1,r2  = temporary registers, parameters and return registers
 
-        EQU     digits,   6
-        EQU     cols,     1+(6*10//3)            # 1 + (digits * 10/3)
+        EQU     digits,   9
+        EQU     cols,     1+(9*10//3)            # 1 + (digits * 10/3)
 
 # preamble for a bootable program
 # remove this for a monitor-friendly loadable program
@@ -166,7 +171,8 @@ L4:
         dec     r12,1                   # decr loop counter
         c.mov   pc,r0,L4                # loop if >=0
 
-        SINGLE_DIGIT_CORRECTION()
+        #SINGLE_DIGIT_CORRECTION()
+        MULTI_DIGIT_CORRECTION()
         halt    r0,r0
 
 
