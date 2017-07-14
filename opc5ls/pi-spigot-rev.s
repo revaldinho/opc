@@ -25,7 +25,6 @@ MACRO   RTS ()
         mov     pc,r13
 ENDMACRO
 
-
 MACRO   SINGLE_DIGIT_CORRECTION()
         # r11 = Q
         # r8  = mypi pointer (pointing at next free digit)
@@ -36,9 +35,9 @@ MACRO   SINGLE_DIGIT_CORRECTION()
         nz.inc  pc,SDCL5-PC             # if no correction needed then continue else start corrections
         sto     r0,r8                   # overwrite 0 if Q=10
         ld      r1,r8,-1                # get predigit
-        inc     r1,1                    # increment it
-        cmp     r1,r0,10                # is it 10 ?
-        z.mov   r1,r0                   # zero it if yes (preserve Z)
+        dec     r1,9                    # need to add 1 and set to 0 if overflow to 10, so sub 9 first
+        z.sub   r1,10                   # subtract another 10 if zero
+        inc     r1,10                   # and add 10 to get final value
         sto     r1,r8,-1                # store it
 
 SDCL5:  inc     r8,1                    # incr pi digit pointer
@@ -47,10 +46,10 @@ SDCL5:  inc     r8,1                    # incr pi digit pointer
 SDCL8:
         ld      r1,r8,-2                # Get digit 2 places back from latest
         jsr     r13,r0,oswrdig          # Print it
-        cmp     r8,r0,mypi+2            # if first digit then print first + '.'
-        nz.inc  pc,SDCL6-PC
-        mov     r1,r0,46
-        jsr     r13,r0,oswrch
+        mov     r1,r0,46                # get '.' into r1 in case...
+        cmp     r8,r0,mypi+2            # is this the first digit ?
+        z.jsr     r13,r0,oswrch         #  ..yes, print the '.'
+
 SDCL6:  dec     r9,1                    # dec loop counter
         nz.mov  pc,r0,L3                # jump back into main program
         # empty the buffer
@@ -84,10 +83,10 @@ MDCL5:  inc     r8,1                    # incr pi digit pointer
         nc.inc  pc,MDCL6-PC
         ld      r1,r8,-4                # Get digit 3 places back from latest
         jsr     r13,r0,oswrdig
-        cmp     r8,r0,4+mypi            # Emit decimal point after first digit
-        nz.inc  pc,MDCL6-PC
-        mov     r1,r0,46
-        jsr     r13,r0,oswrch
+        mov     r1,r0,46                # get '.' into r1 in case...
+        cmp     r8,r0,mypi+4            # is this the first digit ?
+        z.jsr   r13,r0,oswrch           #  ..yes, print the '.'
+
 MDCL6:
         dec     r9,1                    # dec loop counter
         nz.mov  pc,r0,L3                # back to main program
@@ -113,16 +112,16 @@ ENDMACRO
 # r3..r5 = local registers
 # r1,r2  = temporary registers, parameters and return registers
 
-        EQU     digits,   9
-        EQU     cols,     1+(9*10//3)            # 1 + (digits * 10/3)
+        EQU     digits,   6
+        EQU     cols,     1+(6*10//3)            # 1 + (digits * 10/3)
 
 # preamble for a bootable program
 # remove this for a monitor-friendly loadable program
     	ORG 0
-    	mov r14, r0, 0xFFFF
+    	mov r14, r0, 0x2000
     	mov pc, r0, start
 
-        ORG 0x2000
+        ORG 0x1000
 start:
         mov     r8,r0,mypi
 
@@ -171,10 +170,10 @@ L4:
         dec     r12,1                   # decr loop counter
         c.mov   pc,r0,L4                # loop if >=0
 
-        #SINGLE_DIGIT_CORRECTION()
-        MULTI_DIGIT_CORRECTION()
+        SINGLE_DIGIT_CORRECTION()
+        #MULTI_DIGIT_CORRECTION()
         halt    r0,r0
-
+        RTS     ()
 
         # --------------------------------------------------------------
         #
@@ -238,13 +237,13 @@ mul16s_loop0:
         #
         # oswrch
         #
-        # output a single ascii character to the uart
+        # Output a single ascii character to the uart
         #
-        # entry:
-        # - r1 is the character to output
-        #
-        # exit:
-        # - r2 used as temporary
+        # Entry:
+        #       r1 is the character to output
+        # Exit:
+        #       r2 used as temporary
+        # ---------------------------------------------------------------
 oswrdig: mov     r1,r1,48                # Convert digit number to ASCII
 oswrch:
 oswrch_loop:
@@ -254,8 +253,6 @@ oswrch_loop:
         out     r1, r0, 0xfe09
         RTS     ()
 
-
-mypi:      WORD 0                         # Space for pi digit storage
-
+mypi:    WORD 0                          # Space for pi digit storage
          ORG mypi + digits + 8
 remain:  WORD 0                          # Array space for remainder/denominator data interleaved
