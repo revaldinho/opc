@@ -10,8 +10,11 @@ TARGET     = copro
 # Xilinx cable specific - the prom type
 PROM       = xcf01s
 
-# CPU Module Name
-CPU_MODULE = opc5ls
+# CPU Name, for include paths
+CPU_NAME = opc5ls
+
+# CPU Architecture, for tweaks in the verilog file
+CPU_ARCH = opc5ls
 
 # CPU File Path, relative to the root directory
 CPU_PATH   = opc5ls/opc5lscpu.v

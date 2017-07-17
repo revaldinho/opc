@@ -113,7 +113,7 @@ module copro (
       .cs_b       (int_cs_b)
       );
 
-`ifdef OPC6
+`ifdef cpu_opc6
    opc6cpu inst_cpu
      (
       .din        (cpu_din),
@@ -126,7 +126,7 @@ module copro (
       .clken      (cpu_clken),
       .vpa        (vpa),
       .vda        (vda),
-      .vda        (vio)
+      .vio        (vio)
     );
 
 `else   

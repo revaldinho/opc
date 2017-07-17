@@ -1005,10 +1005,10 @@ osword0_param_block:
 # --------------------------------------------------------------
 
 osWRCH:
-    ld      r12, r0, r1status
+    IN      (r12, r1status)
     and     r12, r0, 0x40
     z.mov   pc, r0, osWRCH
-    sto     r1, r0, r1data
+    OUT     (r1, r1data)
     RTS     ()
 
 # --------------------------------------------------------------
@@ -1030,10 +1030,10 @@ osRDCH:
 # -----------------------------------------------------------------------------
 
 IRQ1Handler:
-    ld      r1, r0, r4status
+    IN      (r1, r4status)
     and     r1, r0, 0x80
     nz.mov  pc, r0, r4_irq
-    ld      r1, r0, r1status
+    IN      (r1, r1status)
     and     r1, r0, 0x80
     nz.mov  pc, r0, r1_irq
     ld      pc, r0, IRQ2V
@@ -1044,7 +1044,7 @@ IRQ1Handler:
 # -----------------------------------------------------------------------------
 
 r1_irq:
-    ld      r1, r0, r1data
+    IN      (r1, r1data)
     cmp     r1, r0, 0x80
     c.mov   pc, r0, r1_irq_escape
 
@@ -1080,7 +1080,7 @@ r1_irq_escape:
 
 r4_irq:
 
-    ld      r1, r0, r4data
+    IN      (r1, r4data)
     cmp     r1, r0, 0x80
     nc.mov  pc, r0, LFD65  # b7=0, jump for data transfer
 
@@ -1128,8 +1128,8 @@ LFD65:
     JSR     (WaitByteR4)   # block address LSB
     or      r3, r1
 
-    ld      r1, r0, r3data
-    ld      r1, r0, r3data
+    IN      (r1, r3data)
+    IN      (r1, r3data)
 
     JSR     (WaitByteR4)   # sync
 
@@ -1168,11 +1168,11 @@ Type0:
     mov     r2, r0                # clean the odd byte flag (start with an even byte)
 
 Type0_loop:
-    ld      r1, r0, r4status      # Test for an pending interrupt signalling end of transfer
+    IN      (r1, r4status)        # Test for an pending interrupt signalling end of transfer
     and     r1, r0, 0x80
     nz.mov  pc, r0, Release
 
-    ld      r1, r0, r3status      # Wait for Tube R3 free
+    IN      (r1, r3status)        # Wait for Tube R3 free
     and     r1, r0, 0x40
     z.mov   pc, r0, Type0_loop
 
@@ -1181,13 +1181,13 @@ Type0_loop:
 
     ld      r2, r3                # Read word from memory, increment memory pointer
     mov     r3, r3, 1
-    sto     r2, r0, r3data        # Send even byte to Tube R3
+    OUT     (r2, r3data)          # Send even byte to Tube R3
     bswp    r2, r2
     or      r2, r0, 0x8000        # set the odd byte flag
     mov     pc, r0, Type0_loop
 
 Type0_odd_byte:
-    sto     r2, r0, r3data        # Send odd byte to Tube R3
+    OUT     (r2, r3data)         # Send odd byte to Tube R3
     mov     pc, r0, Type0        # loop back, clearing odd byte flag
 
 # ============================================================
@@ -1203,24 +1203,24 @@ Type1:
     mov     r2, r0                # clean the odd byte flag (start with an even byte)
 
 Type1_loop:
-    ld      r1, r0, r4status      # Test for an pending interrupt signalling end of transfer
+    IN      (r1, r4status)        # Test for an pending interrupt signalling end of transfer
     and     r1, r0, 0x80
     nz.mov  pc, r0, Release
 
-    ld      r1, r0, r3status      # Wait for Tube R3 free
+    IN      (r1, r3status)        # Wait for Tube R3 free
     and     r1, r0, 0x80
     z.mov   pc, r0, Type1_loop
 
     and     r2, r2                # test odd byte flag
     mi.mov  pc, r0, Type1_odd_byte
 
-    ld      r2, r0, r3data        # Read the even byte from Tube T3
+    IN      (r2, r3data)          # Read the even byte from Tube T3
     or      r2, r0, 0x8000        # set the odd byte flag
     mov     pc, r0, Type1_loop
 
 Type1_odd_byte:
 
-    ld      r1, r0, r3data        # Read the odd byte from Tube T3
+    IN      (r1, r3data)          # Read the odd byte from Tube T3
     bswp    r1, r1                # Shift it to the upper byte
     and     r2, r0, 0x00FF        # Clear the odd byte flag
     or      r2, r1                # Or the odd byte in the MSB
@@ -1252,15 +1252,15 @@ Type7:
 
 InterruptHandler:
     sto     r1, r0, TMP_R1
-    psr     r1, psr
+    GETPSR  (r1)
     and     r1, r0, SWI_MASK
     nz.mov  pc, r0, SWIHandler
     ld      pc, r0, IRQ1V        # invoke the IRQ handler
 
 SWIHandler:
-    psr     r1, psr
+    GETPSR  (r1)
     and     r1, r0, ~SWI_MASK
-    psr     psr, r1
+    PUTPSR  (r1)
     ld      r1, r0, TMP_R1       # restore R1 from tmp location
     sto     r1, r0, LAST_ERR     # save the address of the last error
     EI      ()                   # re-enable interrupts
@@ -1333,11 +1333,11 @@ DefaultVectors:
 
 # Wait for byte in Tube R1 while allowing requests via Tube R4
 WaitByteR1:
-    ld      r12, r0, r1status
+    IN      (r12, r1status)
     and     r12, r0, 0x80
     nz.mov  pc, r0, GotByteR1
 
-    ld      r12, r0, r4status
+    IN      (r12, r4status)
     and     r12, r0, 0x80
     z.mov   pc, r0, WaitByteR1
 
@@ -1355,34 +1355,34 @@ WaitByteR1:
 #JMP WaitByteR1
 
 GotByteR1:
-    ld     r1, r0, r1data    # Fetch byte from Tube R1 and return
+    IN     (r1, r1data)    # Fetch byte from Tube R1 and return
     RTS    ()
 
 # --------------------------------------------------------------
 
 WaitByteR2:
-    ld      r1, r0, r2status
+    IN      (r1, r2status)
     and     r1, r0, 0x80
     z.mov   pc, r0, WaitByteR2
-    ld      r1, r0, r2data
+    IN      (r1, r2data)
     RTS     ()
 
 # --------------------------------------------------------------
 
 WaitByteR4:
-    ld      r1, r0, r4status
+    IN      (r1, r4status)
     and     r1, r0, 0x80
     z.mov   pc, r0, WaitByteR4
-    ld      r1, r0, r4data
+    IN      (r1, r4data)
     RTS     ()
 
 # --------------------------------------------------------------
 
 SendByteR2:
-    ld      r12, r0, r2status     # Wait for Tube R2 free
+    IN      (r12, r2status)       # Wait for Tube R2 free
     and     r12, r0, 0x40
     z.mov   pc, r0, SendByteR2
-    sto     r1, r0, r2data        # Send byte to Tube R2
+    OUT     (r1, r2data)          # Send byte to Tube R2
     RTS()
 
 # --------------------------------------------------------------

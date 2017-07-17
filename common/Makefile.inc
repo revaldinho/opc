@@ -1,6 +1,6 @@
 COMMON      ?= $(ROOT)/common
 
-INC_FLAGS   ?= -I $(ROOT)/include/$(CPU_MODULE) -I $(ROOT)/include
+INC_FLAGS   ?= -I $(ROOT)/include/$(CPU_NAME) -I $(ROOT)/include
 
 XILINX      ?= /opt/Xilinx/14.7
 PAPILIO     ?= /opt/GadgetFactory/papilio-loader/programmer
@@ -22,7 +22,7 @@ working/$(PROJECT).bit:
 	# generate a tmp .xise file so we can change if
 	cp ../$(TARGET).xise tmp.xise
 	# substitute the path of the CPU
-	sed "s@#CPU_PATH#@$(CPU_PATH)@g" < ../$(TARGET).xise > tmp.xise; fi
+	sed -e "s@#CPU_PATH#@$(CPU_PATH)@g" -e "s@#CPU_ARCH#@$(CPU_ARCH)@g" < ../$(TARGET).xise > tmp.xise
 	# use the xilinx tools to synthesise the project and generate a bitstream file
 	xtclsh $(COMMON)/ise_build.tcl tmp.xise
 	# clean up
