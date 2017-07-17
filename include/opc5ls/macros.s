@@ -2,6 +2,9 @@
 # Macros
 # -----------------------------------------------------------------------------
 
+# set the cpu type to support conditional assembly
+##define CPU_OPC5LS
+
 EQU     EI_MASK, 0x0008
 EQU    SWI_MASK, 0x00F0
 EQU   SWI0_MASK, 0x0010
