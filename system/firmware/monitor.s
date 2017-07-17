@@ -8,6 +8,9 @@
 ##include "macros.s"
 
 ORG 0x0000
+    mov     pc, r0, monitor
+
+##include "lib_printhex4.s"
 
 monitor:
     mov     r14, r0, 0x3fff
@@ -24,9 +27,9 @@ mon1:
     and     r11, r11       # don't output prompt if echo off
     nz.mov  pc, r0, mon2
 
-    JSR     (osnewl)
+    JSR     (osNEWL)
     mov     r1, r0, 0x2D
-    JSR     (oswrch)
+    JSR     (osWRCH)
 
 mon2:
     mov     r5, r0          # r5 == NUMBER
@@ -43,7 +46,7 @@ mon4:
     or      r5, r1
 
 mon6:
-    JSR     (osrdch)
+    JSR     (osRDCH)
 
     cmp     r1, r0, 0x0D
     z.mov   pc, r0, mon1
@@ -62,7 +65,7 @@ mon6:
     cmp     r1, r0, 0x7F  # don't output if >= 07F
     c.mov   pc, r0, mon6
 
-    JSR     (oswrch)
+    JSR     (osWRCH)
 
 echo_off:
     cmp     r1, r0, 0x23
@@ -117,7 +120,7 @@ dump:
     mov     r3, r0
 
 d0:
-    JSR     (osnewl)
+    JSR     (osNEWL)
 
     mov     r1, r5
     add     r1, r3
@@ -152,7 +155,7 @@ dump3:
     mov      r1, r0, 0x2E
 
 dump4:
-    JSR     (oswrch)
+    JSR     (osWRCH)
     add     r3, r0, 1
     mov     r2, r3
     and     r2, r0, 0x07
@@ -228,7 +231,7 @@ dis:
     mov     r3, r0, 16
 
 dis_loop:
-    JSR     (osnewl)
+    JSR     (osNEWL)
 
     mov     r1, r5
     JSR     (disassemble)
@@ -342,13 +345,13 @@ nop:
     z.and   r0, r0
 
 regs:
-    JSR     (osnewl)
+    JSR     (osNEWL)
     JSR     (print_regs)
     mov     pc, r0, mon1           # back to the - prompt
 
 print_state:
     PUSH    (r13)
-    JSR     (osnewl)
+    JSR     (osNEWL)
     mov     r1, r4                 # display the next instruction
     JSR     (disassemble)
 
@@ -389,7 +392,7 @@ print_regs:
     JSR     (print_flag)
 
     mov     r1, r0, 0x3A          # ":"
-    JSR     (oswrch)
+    JSR     (osWRCH)
 
     mov     r2, r0
     mov     r3, r0, 16
@@ -407,14 +410,14 @@ print_flag:
     PUSH    (r13)
     and     r1, r0, 1
     add     r1, r0, 0x30
-    JSR     (oswrch)              # "0" or "1"
+    JSR     (osWRCH)              # "0" or "1"
     JSR     (print_sp)            # " "
     POP     (r13)
     RTS     ()
 
 # --------------------------------------------------------------
 #
-# osnewl
+# osNEWL
 #
 # Outputs <cr> then <lf>
 #
@@ -423,18 +426,18 @@ print_flag:
 # Exit:
 # - r1 trashed
 
-osnewl:
+osNEWL:
     PUSH    (r13)
     mov     r1, r0, 0x0a
-    JSR     (oswrch)
+    JSR     (osWRCH)
     mov     r1, r0, 0x0d
-    JSR     (oswrch)
+    JSR     (osWRCH)
     POP     (r13)
     RTS     ()
 
 # --------------------------------------------------------------
 #
-# oswrch
+# osWRCH
 #
 # Output a single ASCII character to the UART
 #
@@ -444,7 +447,7 @@ osnewl:
 # - r12 is the horizontal position
 # - all other registers preserved
 
-oswrch:
+osWRCH:
     PUSH    (r13)
 oswrch_loop:
     ld      r13, r0, 0xfe08
@@ -460,7 +463,7 @@ oswrch_loop:
 
 # --------------------------------------------------------------
 #
-# osrdch
+# osRDCH
 #
 # Read a single ASCII character from the UART
 #
@@ -469,10 +472,10 @@ oswrch_loop:
 # Exit:
 # - r1 is the character read
 
-osrdch:
+osRDCH:
     ld      r1, r0, 0xfe08
     and     r1, r0, 0x4000
-    z.mov   pc, r0, osrdch
+    z.mov   pc, r0, osRDCH
     ld      r1, r0, 0xfe09
     RTS     ()
 
@@ -497,69 +500,18 @@ ps_loop:
     ld      r1, r2
     and     r1, r0, 0xff
     z.mov   pc, r0, ps_exit
-    JSR     (oswrch)
+    JSR     (osWRCH)
     ld      r1, r2
     bswp    r1, r1
     and     r1, r0, 0xff
     z.mov   pc, r0, ps_exit
-    JSR     (oswrch)
+    JSR     (osWRCH)
     mov     r2, r2, 0x0001
     mov     pc, r0, ps_loop
 
 ps_exit:
     POP     (r1)
     POP     (r13)
-    RTS     ()
-
-
-# --------------------------------------------------------------
-#
-# print_hex4
-#
-# Prints a 4-digit hex value
-#
-# Entry:
-# - r1 is the value to be printed
-#
-# Exit:
-# - all registers preserved
-
-print_hex4:
-
-    PUSH    (r13)
-    PUSH    (r1)            # preserve working registers
-    PUSH    (r2)
-    PUSH    (r3)
-
-    mov     r2, r1          # r2 is now the value to be printed
-
-    mov     r3, r0, 0x04    # r3 is a loop counter for 4 digits
-
-ph_loop:
-    add     r2, r2          # shift the upper nibble of r2
-    adc     r1, r1          # into the lower nibble of r1
-    add     r2, r2          # one bit at a time
-    adc     r1, r1
-    add     r2, r2          # add   rd, rd is the same as ASL
-    adc     r1, r1          # adc   rd, rd is the same as ROL
-    add     r2, r2
-    adc     r1, r1
-
-    and     r1, r0, 0x0F    # mask off everything but the bottom nibble
-    cmp     r1, r0, 0x0A    # set the carry if r1 >= 0x0A
-    c.add   r1, r0, 0x27    # 'a' - '9' + 1
-    add     r1, r0, 0x30    # '0'
-
-    JSR     (oswrch)        # output R1
-
-    sub     r3, r0, 1       # decrement the loop counter
-    nz.mov  pc, r0, ph_loop # loop back for four digits
-
-    POP     (r3)            # restore working registers
-    POP     (r2)
-    POP     (r1)
-    POP     (r13)
-
     RTS     ()
 
 # --------------------------------------------------------------
@@ -596,7 +548,7 @@ print_sp:
      PUSH   (r13)
      PUSH   (r1)
      mov    r1, r0, 0x20
-     JSR    (oswrch)
+     JSR    (osWRCH)
      POP    (r1)
      POP    (r13)
      RTS    ()
@@ -616,9 +568,9 @@ print_delim:
      PUSH   (r13)
      PUSH   (r1)
      mov    r1, r0, 0x3a
-     JSR    (oswrch)
+     JSR    (osWRCH)
      mov    r1, r0, 0x20
-     JSR    (oswrch)
+     JSR    (osWRCH)
      POP    (r1)
      POP    (r13)
      RTS    ()
@@ -717,7 +669,7 @@ dis6:
     JSR     (print_reg)
 
     mov     r1, r0, 0x2c
-    JSR     (oswrch)
+    JSR     (osWRCH)
 
     mov     r1, r6                      # extract source register
     ror     r1, r1
@@ -732,12 +684,12 @@ dis6:
     z.mov   pc, r0, dis7
 
     mov     r1, r0, 0x2c                # print a ,
-    JSR     (oswrch)
+    JSR     (osWRCH)
 
     mov     r1, r0, 0x30                # print 0x
-    JSR     (oswrch)
+    JSR     (osWRCH)
     mov     r1, r0, 0x78
-    JSR     (oswrch)
+    JSR     (osWRCH)
 
     mov     r1, r7
     JSR     (print_hex4)                # print the operand
@@ -761,7 +713,7 @@ print_reg:
 
     PUSH    (r1)
     mov     r1, r0, 0x72
-    JSR     (oswrch)
+    JSR     (osWRCH)
     POP     (r1)
 
     cmp     r1, r0, 0x0A
@@ -769,14 +721,14 @@ print_reg:
 
     PUSH    (r1)
     mov     r1, r0, 0x31
-    JSR     (oswrch)
+    JSR     (osWRCH)
     POP     (r1)
 
     sub     r1, r0, 0x0A
 
 print_reg_num:
     add     r1, r0, 0x30
-    JSR     (oswrch)
+    JSR     (osWRCH)
     POP     (r13)
     RTS     ()
 
@@ -1029,11 +981,11 @@ start:
         PUSH(r13)
         ;; trivial banner
         mov r1, r0, 0x4f
-        JSR(oswrch)
+        JSR(osWRCH)
         mov r1, r0, 0x6b
-        JSR(oswrch)
+        JSR(osWRCH)
         mov r1, r0, 0x20
-        JSR(oswrch)
+        JSR(osWRCH)
 
 
         ;; mov r14, r0, stack   ; initialise stack pointer
@@ -1080,10 +1032,10 @@ l3:
         cmp r2, r0, ndigits-1   # cpx #358
         nc.mov pc, r0, l4       # bcc l4
         nz.mov pc, r0, l5       # bne l5
-        JSR (oswrch)
+        JSR (osWRCH)
         mov r1, r0, 46          # lda #46
 l4:
-        JSR (oswrch)
+        JSR (osWRCH)
 l5:     mov r1, r3              # tya
         xor r1, r0, 48          # eor #48
         mov r3, r6              # ply
@@ -1094,7 +1046,7 @@ l5:     mov r1, r3              # tya
         mov r3, r3, -3          # dey by 3
 l6:     mov r2, r2, -1          # dex
         nz.mov pc, r0, l1       # bne l1
-        JSR (oswrch)
+        JSR (osWRCH)
         mov r0, r0, 3142        # RTS()
         POP(r13)
         RTS()
