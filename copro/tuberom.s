@@ -1,3 +1,5 @@
+##include "macros.s"
+
 EQU        BASE, 0xE000
 EQU        CODE, 0xF800
 
@@ -34,59 +36,10 @@ EQU      ERRBUF, 0x0236
 EQU      INPBUF, 0x0236
 EQU      INPEND, 0x0300
 
-EQU     EI_MASK, 0x0008
-EQU    SWI_MASK, 0x00F0
-EQU   SWI0_MASK, 0x0010
-EQU   SWI1_MASK, 0x0020
-EQU   SWI2_MASK, 0x0040
-EQU   SWI3_MASK, 0x0080
-
-# -----------------------------------------------------------------------------
-# Macros
-# -----------------------------------------------------------------------------
-
-MACRO   CLC()
-    c.add r0,r0
-ENDMACRO
-
-MACRO   SEC()
-    nc.ror r0,r0,1
-ENDMACRO
-
-MACRO   EI()
-    psr     r12, psr
-    or      r12, r12, EI_MASK
-    psr     psr, r12
-ENDMACRO
-
-MACRO   DI()
-    psr     r12, psr
-    and     r12, r12, ~EI_MASK
-    psr     psr, r12
-ENDMACRO
-
-MACRO JSR( _address_)
-    mov     r13, pc, 0x0002
-    mov     pc,  r0, _address_
-ENDMACRO
-
-MACRO RTS()
-    mov     pc, r13
-ENDMACRO
-
-MACRO   PUSH( _data_)
-    mov     r14, r14, -1
-    sto     _data_, r14, 1
-ENDMACRO
-
-MACRO   POP( _data_ )
-    ld      _data_, r14, 1
-    mov     r14, r14, 1
-ENDMACRO
 
 MACRO ERROR (_address_)
     mov     r1, r0, _address_
-    psr     psr, r0, SWI0_MASK
+    SWI0    ()
 ENDMACRO
 
 # -----------------------------------------------------------------------------
@@ -457,7 +410,8 @@ cmdHelp:
     RTS    ()
 
 msgHelp:
-    STRING   "OPC5LS 0.50"
+    CPU_NAME()
+    STRING   " 0.50"
     WORD     10, 13, 0
 
 # --------------------------------------------------------------
@@ -1494,7 +1448,8 @@ osnewl_code:
 
 BannerMessage:
     WORD    0x0a
-    STRING "OPC5LS Co Processor"
+    CPU_NAME()
+    STRING " Co Processor"
     WORD    0x0a, 0x0a, 0x0d, 0x00
 
 EscapeError:

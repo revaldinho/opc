@@ -1,5 +1,5 @@
 # The root directory of the project
-ROOT       = ../../../
+ROOT       = ../../..
 
 # The project .bit file produced by the Xilinx .xise project
 PROJECT    = copro

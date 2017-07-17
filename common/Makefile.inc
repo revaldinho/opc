@@ -1,4 +1,6 @@
-COMMON      = ../../../common
+COMMON      ?= $(ROOT)/common
+
+INC_FLAGS   ?= -I $(ROOT)/include/$(CPU_MODULE) -I $(ROOT)/include
 
 XILINX      ?= /opt/Xilinx/14.7
 PAPILIO     ?= /opt/GadgetFactory/papilio-loader/programmer
@@ -7,10 +9,10 @@ PATH       := $(PATH):${XILINX}/ISE_DS/ISE/bin/lin:${PAPILIO}/linux32
 SHELL      := env PATH=$(PATH) /bin/sh
 
 # Default name of assembler program
-PROG        = $(basename $(notdir $(PROG_SRC)))
+PROG        ?= $(basename $(notdir $(PROG_SRC)))
 
 # Path of the back anotated block memory map file
-BMM_FILE    = memory_bd.bmm
+BMM_FILE    ?= memory_bd.bmm
 
 build: $(TARGET).bit
 
@@ -30,7 +32,10 @@ $(TARGET).bit: $(PROG).mem working/$(PROJECT).bit
 	data2mem -bm $(BMM_FILE) -bd $(PROG).mem -bt working/$(PROJECT).bit -o b $(TARGET).bit
 
 $(PROG).hex: $(ROOT)/$(PROG_SRC)
-	python $(ROOT)/$(ASM_PATH) $(ROOT)/$(PROG_SRC) $(PROG).hex
+	# run the pre-processor to resolve and ##includes
+	filepp $(INC_FLAGS) -kc '##' $(ROOT)/$(PROG_SRC) > $(PROG).s
+	# run the assember
+	python $(ROOT)/$(ASM_PATH) $(PROG).s $(PROG).hex
 
 # This is for use in the FPGA
 $(PROG).mem: $(PROG).hex
@@ -45,7 +50,7 @@ $(PROG).c: $(PROG).hex
 
 clean:
 	rm -f deploy.batch program.batch tmp.xise
-	rm -f $(PROG).hex $(PROG).mem $(PROG).c
+	rm -f $(PROG).s $(PROG).hex $(PROG).mem $(PROG).c
 	rm -f $(TARGET).bit $(TARGET).cfi $(TARGET).mcs $(TARGET).prm
 	rm -f _impactbatch.log
 
