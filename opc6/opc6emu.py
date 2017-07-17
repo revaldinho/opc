@@ -12,7 +12,7 @@ while True:
     instr_word = wordmem[regfile[pcreg]] &  0xFFFF
     (p0, p1, p2) = ( (instr_word & 0x8000) >> 15, (instr_word & 0x4000) >> 14, (instr_word & 0x2000)>>13)
     (opcode, source, dest) = (((instr_word & 0xF00) >> 8) | (0x10 if (p0,p1,p2)==(0,0,1) else 0x00), (instr_word & 0xF0) >>4, instr_word & 0xF)
-    (instr_len, rdmem, preserve_flag) = (2 if (instr_word & 0x1000) else 1, (opcode==op["ld"]), (dest==pcreg))
+    (instr_len, rdmem, preserve_flag) = (2 if (instr_word & 0x1000) else 1, (opcode in (op["ld"],op["in"])), (dest==pcreg))
     operand = wordmem[regfile[pcreg]+1] if (instr_len==2) else (source if opcode in [op["dec"],op["inc"]] else 0)
     instr_str = "%s%s r%d," % ((pred_dict[p0<<2 | p1<<1 | p2] if (p0,p1,p2)!=(0,0,1) else ""),dis[opcode],dest)
     instr_str += ("%s%d%s" % (("r" if opcode not in (op["inc"],op["dec"]) else ""),source, (",0x%04x" % operand) if instr_len==2 else ''))
@@ -39,7 +39,7 @@ while True:
             elif opcode in (op["add"], op["adc"], op["inc"]) :
                 res = (regfile[dest] + ea_ed + (c if opcode==op["adc"] else 0)) & 0x1FFFF
                 (c, regfile[dest])  = ( (res>>16) & 1, res & 0xFFFF)
-            elif opcode in (op["mov"], op["ld"], op["not"]):
+            elif opcode in (op["mov"], op["ld"], op["not"], op["in"]):
                 regfile[dest] = (~ea_ed if opcode==op["not"] else ea_ed) & 0xFFFF
             elif opcode in (op["sub"], op["sbc"], op["cmp"], op["cmpc"], op["dec"]) :
                 res = (regfile[dest] + ((~ea_ed)&0xFFFF) + (c if (opcode in (op["cmpc"],op["sbc"])) else 1)) & 0x1FFFF
