@@ -1,4 +1,4 @@
-COMMON      = ../../common
+COMMON      = ../../../common
 
 XILINX      ?= /opt/Xilinx/14.7
 PAPILIO     ?= /opt/GadgetFactory/papilio-loader/programmer
@@ -7,16 +7,10 @@ PATH       := $(PATH):${XILINX}/ISE_DS/ISE/bin/lin:${PAPILIO}/linux32
 SHELL      := env PATH=$(PATH) /bin/sh
 
 # Default name of assembler program
-PROG         = tuberom
+PROG        = $(basename $(notdir $(PROG_SRC)))
 
 # Path of the back anotated block memory map file
-BMM_FILE    = opc5copro_bd.bmm
-
-# Path of the default CPU in the .xise file
-DEFAULT_CPU = opc5lscpu.v
-
-# Replacement path of the XP CPU, ssubstituted if "make CPU=xp"
-XP_CPU      = ../opc5ls-xp/opc5lscpu.v
+BMM_FILE    = memory_bd.bmm
 
 build: $(TARGET).bit
 
@@ -25,8 +19,8 @@ working/$(PROJECT).bit:
 	mkdir -p working
 	# generate a tmp .xise file so we can change if
 	cp ../$(TARGET).xise tmp.xise
-	# if the CPU param is xp, then substitute the path of the XP CPU
-	if [ "$(CPU)" = "xp" ]; then sed "s@$(DEFAULT_CPU)@$(XP_CPU)@g" < ../$(TARGET).xise > tmp.xise; fi
+	# substitute the path of the CPU
+	sed "s@#CPU_PATH#@$(CPU_PATH)@g" < ../$(TARGET).xise > tmp.xise; fi
 	# use the xilinx tools to synthesise the project and generate a bitstream file
 	xtclsh $(COMMON)/ise_build.tcl tmp.xise
 	# clean up
@@ -35,8 +29,8 @@ working/$(PROJECT).bit:
 $(TARGET).bit: $(PROG).mem working/$(PROJECT).bit
 	data2mem -bm $(BMM_FILE) -bd $(PROG).mem -bt working/$(PROJECT).bit -o b $(TARGET).bit
 
-$(PROG).hex: ../../$(PROG).s
-	python ../../../opc5lsasm.py ../../$(PROG).s $(PROG).hex
+$(PROG).hex: $(PROG_SRC)
+	python $(ASM_PATH) $(PROG_SRC) $(PROG).hex
 
 # This is for use in the FPGA
 $(PROG).mem: $(PROG).hex
@@ -45,7 +39,7 @@ $(PROG).mem: $(PROG).hex
 # This is for use in PiTubeDirect
 $(PROG).c: $(PROG).hex
 	echo '#include "$(PROG).h"' > $(PROG).c
-	echo 'uint16_t $(PROG)_opc5ls[0x800] = {' >> $(PROG).c
+	echo 'uint16_t $(PROG)[0x800] = {' >> $(PROG).c
 	tr " " "\n" < $(PROG).hex | tail -2048 | awk '{print "0x" $$1 ","}' >> $(PROG).c
 	echo '};' >> $(PROG).c
 

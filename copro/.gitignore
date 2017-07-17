@@ -1,12 +1,12 @@
 iseconfig/
 working/
 tuberom.mem
-opc5copro.bit
-opc5copro_bd.bmm
-opc5copro.cfi
-opc5copro.mcs
-opc5copro.prm
-opc5copro.sig
+copro.bit
+copro_bd.bmm
+copro.cfi
+copro.mcs
+copro.prm
+copro.sig
 _impact.cmd
 
 
