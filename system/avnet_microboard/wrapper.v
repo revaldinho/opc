@@ -1,4 +1,4 @@
-module opc5wrapper
+module wrapper
   (
    input         USER_RESET,
    output        SPI_SCK,
@@ -48,7 +48,7 @@ module opc5wrapper
    wire [7:0]    led;
    assign GPIO_LED = led[3:0];
 
-   opc5system #(
+   system #(
     .CLKSPEED(40000000),
     .BAUD(115200),
     .RAMSIZE(14),
