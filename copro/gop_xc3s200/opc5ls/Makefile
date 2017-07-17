@@ -1,3 +1,6 @@
+# The root directory of the project
+ROOT       = ../../../
+
 # The project .bit file produced by the Xilinx .xise project
 PROJECT    = copro
 
@@ -10,15 +13,15 @@ PROM       = xcf01s
 # CPU Module Name
 CPU_MODULE = opc5ls
 
-# CPU File Path
+# CPU File Path, relative to the root directory
 CPU_PATH   = opc5ls/opc5lscpu.v
 
-# Assembler File Path
+# Assembler File Path, relative to the root directory
 ASM_PATH   = opc5ls/opc5lsasm.py
 
-# Program Source Path
-PROG_SRC   = ../../tuberom.s
+# Program Source Path, relative to the root directory
+PROG_SRC   = copro/tuberom.s
 
 # Common include files
-include ../../../common/Makefile.inc
-include ../../../common/Makefile_xilinx_cable.inc
+include $(ROOT)/common/Makefile.inc
+include $(ROOT)/common/Makefile_xilinx_cable.inc

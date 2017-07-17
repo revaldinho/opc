@@ -29,8 +29,8 @@ working/$(PROJECT).bit:
 $(TARGET).bit: $(PROG).mem working/$(PROJECT).bit
 	data2mem -bm $(BMM_FILE) -bd $(PROG).mem -bt working/$(PROJECT).bit -o b $(TARGET).bit
 
-$(PROG).hex: $(PROG_SRC)
-	python $(ASM_PATH) $(PROG_SRC) $(PROG).hex
+$(PROG).hex: $(ROOT)/$(PROG_SRC)
+	python $(ROOT)/$(ASM_PATH) $(ROOT)/$(PROG_SRC) $(PROG).hex
 
 # This is for use in the FPGA
 $(PROG).mem: $(PROG).hex

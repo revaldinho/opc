@@ -2,11 +2,11 @@ iseconfig/
 working/
 tuberom.mem
 copro.bit
-copro_bd.bmm
 copro.cfi
 copro.mcs
 copro.prm
 copro.sig
+memory_bd.bmm
 _impact.cmd
 
 

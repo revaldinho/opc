@@ -1,4 +1,4 @@
-module opc5copro (
+module copro (
 
    // GOP signals
    input            fastclk,
@@ -68,6 +68,7 @@ module opc5copro (
    wire             cpu_mreq_b;
    wire             vpa;
    wire             vda;
+   wire             vio;
 
 // ---------------------------------------------
 // clock generator
@@ -112,7 +113,24 @@ module opc5copro (
       .cs_b       (int_cs_b)
       );
 
-   opc5lscpu inst_opc5ls
+`ifdef OPC6
+   opc6cpu inst_cpu
+     (
+      .din        (cpu_din),
+      .dout       (cpu_dout),
+      .address    (cpu_addr),
+      .rnw        (cpu_rnw),
+      .clk        (cpu_clk),
+      .reset_b    (rst_b_sync),
+      .int_b      ({1'b1, cpu_irq_b_sync}),
+      .clken      (cpu_clken),
+      .vpa        (vpa),
+      .vda        (vda),
+      .vda        (vio)
+    );
+
+`else   
+   opc5lscpu inst_cpu
      (
       .din        (cpu_din),
       .dout       (cpu_dout),
@@ -125,7 +143,9 @@ module opc5copro (
       .vpa        (vpa),
       .vda        (vda)
     );
-
+   assign vio = !cpu_mreq_b;   
+`endif
+   
    memory_controller inst_memory_controller
      (
       .clock      (cpu_clk),
@@ -172,7 +192,7 @@ module opc5copro (
    assign cpu_mreq_b = !(vpa | vda);   
 
    // Tube mapped to FEF8-FEFF
-   assign p_cs_b   = !((cpu_addr[15:3] == 13'b1111111011111) && !cpu_mreq_b);
+   assign p_cs_b   = !((cpu_addr[15:3] == 13'b1111111011111) && vio);
 
    // Internal RAM mapped to 0000:0FFF and F000:FFFF
    assign int_cs_b = !(((cpu_addr[15:12] == 4'h0) || (cpu_addr[15:12] == 4'hF)) && !cpu_mreq_b);
