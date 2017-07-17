@@ -7,7 +7,7 @@
 source /opt/Xilinx/14.7/ISE_DS/settings32.sh
 
 # ./README [sx]
-if [ "$1" == "sx" ]; then
+if [ "$3" == "sx" ]; then
     echo "Running build with SmartXplorer option"
 fi
 
@@ -22,23 +22,31 @@ rm -rf *~ xst .#* `ls -1 | egrep -v '(prj|xst|README)$'`
 mkdir tmp
 mkdir xst 
 
+# Create the prj and xst files
+sed -e "s@#CPU_ARCH#@$1@g" <../common/cpu_and_memory_controller.xst >cpu_and_memory_controller.xst
+
+sed -e "s@#CPU_PATH#@$2@g" <../common/cpu_and_memory_controller.prj >cpu_and_memory_controller.prj
+
 echo "work" > $project_name.lso
 
 # Synthesis
 xst \
     -ifn "./${project_name}.xst" \
     -intstyle xflow              \
-    -ofn "./${project_name}.syr" 
+    -ofn "./${project_name}.syr"
 #
 ngdbuild    -dd _ngo  \
 	    -p  $target \
-	    -uc ../${project_name}.ucf \
+	    -uc ../../${project_name}.ucf \
 	    ${project_name}.ngc \
 	    ${project_name}.ngd  
 
 
-if [ "$1" == "sx" ] ; then
-    smartxplorer ${project_name}.ngd -p ${target} -uc ../${project_name}.ucf -ra -wd smartXplorer
+if [ "$3" == "sx" ] ; then
+    yes localhost | head -4 > hostlist
+    smartxplorer ${project_name}.ngd -p ${target} -l hostlist -uc ../../${project_name}.ucf -ra -wd smartXplorer
+    grep "occupied" smartXplorer/run*/*.log | sort | uniq
+    grep "Maximum" smartXplorer/run*/*.log  | sort | uniq
 else
     # Default options, map then place and route the selected device
     map -p $target \

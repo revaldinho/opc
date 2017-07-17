@@ -1,0 +1,4 @@
+verilog work "../../cpu_and_memory_controller.v"
+verilog work "#CPU_PATH#"
+verilog work "../../../copro/src/memory_controller.v"
+

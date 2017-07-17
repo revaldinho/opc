@@ -2,9 +2,14 @@ module cpu_and_memory_controller
   (
    input         clk,
    input         reset_b,
+`ifdef cpu_opc6
+   input [1:0]   int_b,
+   output        vio,
+`else
    input         int_b,
+`endif
    output        vpa,
-   output        vda, 
+   output        vda,
 
    // Ram Signals
    output        ram_cs_b,
@@ -26,9 +31,14 @@ module cpu_and_memory_controller
    wire [15:0]   cpu_dout;
    wire          cpu_mreq_b = !(vpa | vda);
 
-   
-   opc5lscpu inst_opc5ls
+`ifdef cpu_opc6
+   opc6cpu inst_cpu
      (
+      .vio        (vio),
+`else
+   opc5lscpu inst_cpu
+     (
+`endif
       .din        (cpu_din),
       .dout       (cpu_dout),
       .address    (cpu_addr),

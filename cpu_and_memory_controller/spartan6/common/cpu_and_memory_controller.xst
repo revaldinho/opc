@@ -23,3 +23,4 @@ run
 -resource_sharing YES
 -iobuf YES
 -equivalent_register_removal YES
+-define "cpu_#CPU_ARCH#=1"

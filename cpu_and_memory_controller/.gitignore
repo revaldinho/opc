@@ -1,9 +1,9 @@
 iseconfig/
 working/
-monitor.mem
-opc5system.bit
-opc5system_bd.bmm
 _impact.cmd
-opc5system.cfi
-opc5system.mcs
-opc5system.prm
+spartan6/opc*/_xmsgs/
+spartan6/opc*/cpu_and_memory_controller*
+spartan6/opc*/hostlist
+spartan6/opc*/xlnx_auto_0_xdb/
+spartan6/opc*/xst/
+spartan6/opc*/smartXplorer/
