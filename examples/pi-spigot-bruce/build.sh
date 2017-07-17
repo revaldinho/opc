@@ -1,5 +1,7 @@
 #!/bin/bash
 
+ASM=opc6/opc6asm.py
+
 function beeb_file {
       HEX=$1
       BIN=$2
@@ -28,7 +30,7 @@ function beeb_file {
 
 SSD=pitest.ssd
 
-MMB=../../../utils/mmb_utils/beeb
+MMB=../../utils/mmb_utils/beeb
 
 rm -f ${SSD}
 
@@ -52,8 +54,8 @@ do
 
         name=disk/PI${load}${key}
 
-        sed "s/#LOAD#/0x${load}/;s/#NDIGITS#/${ndmap[${key}]}/"<  pi-spigot-bruce.s > tmp.s
-        python ../../opc5lsasm.py tmp.s tmp.hex
+        sed "s/#LOAD#/0x${load}/;s/#NDIGITS#/${ndmap[${key}]}/"<  main.s > tmp.s
+        python ../../${ASM} tmp.s tmp.hex
         beeb_file tmp.hex ${name} ${load} ${len} ${load}
         rm -f tmp.s tmp.hex
     done
