@@ -4,6 +4,6 @@ deploy: $(TARGET).bit
 	rm -f deploy.batch
 
 program: $(TARGET).bit
-	sed "s@#TARGET#@$(TARGET)@g;s@#PROM#@$(PROM)@g" <$(COMMON)/program.batch >program.batch
-	impact -batch program.batch
-	rm -f program.batch
+	sed "s@#TARGET#@$(TARGET)@g;s@#PROM#@$(PROM)@g" <$(COMMON)/program_spi.batch >program_spi.batch
+	impact -batch program_spi.batch
+	rm -f program_spi.batch

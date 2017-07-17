@@ -27,4 +27,4 @@ PROG_SRC   = system/monitor.s
 
 # Common include files
 include $(ROOT)/common/Makefile.inc
-include $(ROOT)/common/Makefile_xilinx_cable.inc
+include $(ROOT)/common/Makefile_xilinx_cable_spi.inc
