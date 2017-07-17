@@ -23,7 +23,7 @@ CPU_PATH   = opc6/opc6cpu.v
 ASM_PATH   = opc6/opc6asm.py
 
 # Program Source Path, relative to the root directory
-PROG_SRC   = copro/tuberom.s
+PROG_SRC   = copro/firmware/tuberom.s
 
 # Start address (in words) of the ROM (in the assembler output)
 ROMSTART   = E000

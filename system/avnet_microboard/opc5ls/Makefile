@@ -23,7 +23,7 @@ CPU_PATH   = opc5ls/opc5lscpu.v
 ASM_PATH   = opc5ls/opc5lsasm.py
 
 # Program Source Path, relative to the root directory
-PROG_SRC   = system/monitor.s
+PROG_SRC   = system/firmware/monitor.s
 
 # Common include files
 include $(ROOT)/common/Makefile.inc

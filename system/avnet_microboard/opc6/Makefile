@@ -23,7 +23,7 @@ CPU_PATH   = opc6/opc6cpu.v
 ASM_PATH   = opc6/opc6asm.py
 
 # Program Source Path, relative to the root directory
-PROG_SRC   = system/monitor.s
+PROG_SRC   = system/firmware/monitor.s
 
 # Common include files
 include $(ROOT)/common/Makefile.inc
