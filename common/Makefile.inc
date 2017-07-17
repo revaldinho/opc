@@ -36,6 +36,8 @@ $(PROG).hex: $(ROOT)/$(PROG_SRC)
 	filepp $(INC_FLAGS) -kc '##' $(ROOT)/$(PROG_SRC) > $(PROG).s
 	# run the assember
 	python $(ROOT)/$(ASM_PATH) $(PROG).s $(PROG).hex
+	# clean up
+	rm -f $(PROG).s
 
 # This is for use in the FPGA
 $(PROG).mem: $(PROG).hex

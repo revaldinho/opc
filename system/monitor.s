@@ -5,25 +5,8 @@
 #
 # (c) 2017 David Banks
 
-MACRO JSR( _address_)
-    mov     r13, pc, 0x0002
-    mov     pc,  r0, _address_
-ENDMACRO
-
-MACRO RTS()
-    mov     pc, r13
-ENDMACRO
-
-MACRO   PUSH( _data_)
-    mov     r14, r14, -1
-    sto     _data_, r14, 1
-ENDMACRO
-
-MACRO   POP( _data_ )
-    ld      _data_, r14, 1
-    mov     r14, r14, 1
-ENDMACRO
-
+##include "macros.s"
+        
 ORG 0x0000
 
 monitor:
@@ -314,7 +297,7 @@ store_operand:
     ld      r8, r6, reg_state      # load the dst register value
     ld      r9, r0, reg_state_psr  # load the s (bit 2), c (bit 1) and z (bit 0) flags
 
-    psr     psr, r9                # load the flags
+    PUTPSR  (r9)                   # load the flags
 
 instruction:
     WORD    0x0000                 # emulated instruction patched here
@@ -322,7 +305,7 @@ instruction:
 operand:
     WORD    0x0000                 # emulated opcode patched here
 
-    psr     r9, psr                # save the flags
+    GETPSR  (r9)                   # save the flags
 
     cmp     r6, r0, 15             # was the destination register r15
     nz.sto  r9, r0, reg_state_psr  # no, then save the flags

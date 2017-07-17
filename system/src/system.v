@@ -1,4 +1,4 @@
-module opc5system ( input clk, input[7:0] sw, output[7:0] led, input rxd, output txd,
+module system ( input clk, input[7:0] sw, output[7:0] led, input rxd, output txd,
                     output [6:0] seg, output [3:0] an, input select);
 
    // CLKSPEED is the main clock speed
@@ -28,7 +28,24 @@ module opc5system ( input clk, input[7:0] sw, output[7:0] led, input rxd, output
    always @(posedge clk)
         reset_b <= select;
 
-   // The OPC5 CPU
+   // The CPU
+`ifdef cpu_opc6
+   opc6cpu inst_cpu
+     (
+      .din(cpu_din),
+      .clk(clk),
+      .reset_b(reset_b),
+      .int_b(2'b11),
+      .clken(1'b1),
+      .vpa(),
+      .vda(),
+      .vio(),
+      .dout(cpu_dout),
+      .address(address),
+      .rnw(rnw)
+    );
+
+`else   
    opc5lscpu CPU
      (
       .din(cpu_din),
@@ -42,6 +59,7 @@ module opc5system ( input clk, input[7:0] sw, output[7:0] led, input rxd, output
       .address(address),
       .rnw(rnw)
       );
+`endif
 
    // A block RAM - clocked off negative edge to mask output register
    ram RAM
@@ -53,7 +71,7 @@ module opc5system ( input clk, input[7:0] sw, output[7:0] led, input rxd, output
       .clk(!clk),
       .cs_b(ram_cs_b)
       );
-
+   
    // A simple 115200 baud UART
    uart #(CLKSPEED, BAUD) UART
      (
