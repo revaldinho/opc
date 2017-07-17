@@ -410,7 +410,7 @@ cmdHelp:
     RTS    ()
 
 msgHelp:
-    CPU_NAME()
+    CPU_STRING()
     STRING   " 0.50"
     WORD     10, 13, 0
 
@@ -1448,7 +1448,7 @@ osnewl_code:
 
 BannerMessage:
     WORD    0x0a
-    CPU_NAME()
+    CPU_STRING()
     STRING " Co Processor"
     WORD    0x0a, 0x0a, 0x0d, 0x00
 

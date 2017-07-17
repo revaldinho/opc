@@ -6,13 +6,17 @@ XILINX      ?= /opt/Xilinx/14.7
 PAPILIO     ?= /opt/GadgetFactory/papilio-loader/programmer
 
 PATH       := $(PATH):${XILINX}/ISE_DS/ISE/bin/lin:${PAPILIO}/linux32
-SHELL      := env PATH=$(PATH) /bin/sh
+SHELL      := env PATH=$(PATH) /bin/bash
 
 # Default name of assembler program
 PROG        ?= $(basename $(notdir $(PROG_SRC)))
 
 # Path of the back anotated block memory map file
 BMM_FILE    ?= memory_bd.bmm
+
+# Default region to extract from the assembler output into the ROM
+ROMSTART    ?= 0000
+ROMLEN      ?= 4000
 
 build: $(TARGET).bit
 
@@ -41,9 +45,9 @@ $(PROG).hex: $(ROOT)/$(PROG_SRC)
 
 # This is for use in the FPGA
 $(PROG).mem: $(PROG).hex
-	tr " " "\n" < $(PROG).hex | tail -8192 > $(PROG).mem
+	tr " " "\n" < $(PROG).hex | sed -n $$((1+16#$(ROMSTART))),$$((16#$(ROMSTART) + 16#$(ROMLEN)))p > $(PROG).mem
 
-# This is for use in PiTubeDirect
+# This is for use in PiTubeDirect (this is specific to copro)
 $(PROG).c: $(PROG).hex
 	echo '#include "$(PROG).h"' > $(PROG).c
 	echo 'uint16_t $(PROG)[0x800] = {' >> $(PROG).c

@@ -755,7 +755,8 @@ print_reg_num:
 
 welcome:
     WORD    0x0D0A
-    BSTRING "OPC5 Monitor"
+    CPU_BSTRING()
+    BSTRING " Monitor"
     WORD    0x0D0A, 0x0000
 
 predicates:       # Each predicate must be 2 words, zero terminated

@@ -25,6 +25,12 @@ ASM_PATH   = opc6/opc6asm.py
 # Program Source Path, relative to the root directory
 PROG_SRC   = copro/tuberom.s
 
+# Start address (in words) of the ROM (in the assembler output)
+ROMSTART   = E000
+
+# Length address (in words) of the ROM (in the assembler output)
+ROMLEN     = 2000
+
 # Common include files
 include $(ROOT)/common/Makefile.inc
 include $(ROOT)/common/Makefile_xilinx_cable.inc

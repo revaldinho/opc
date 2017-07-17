@@ -4,6 +4,10 @@
 
 ##include "../opc5ls/macros.s"
         
-MACRO   CPU_NAME()
-    STRING "OPC5LS-XP"
+MACRO   CPU_STRING()
+    STRING "OPC5LSXP"
+ENDMACRO
+
+MACRO   CPU_BSTRING()
+    BSTRING "OPC5LSXP"
 ENDMACRO
