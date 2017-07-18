@@ -1,4 +1,0 @@
-verilog work "../cpu_and_memory_controller.v"
-verilog work "../../../opc5lscpu.v"
-verilog work "../../src/memory_controller.v"
-

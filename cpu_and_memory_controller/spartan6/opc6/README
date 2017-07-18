@@ -1,0 +1,2 @@
+#!/bin/bash
+../common/SCRIPT opc6 ../../../opc6/opc6cpu.v $*

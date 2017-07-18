@@ -1,0 +1,26 @@
+set -tmpdir "tmp"
+set -xsthdpdir "xst"
+run
+-ifn cpu_and_memory_controller.prj
+-p xc6slx9-csg225-3
+-ifmt mixed
+-ofn cpu_and_memory_controller
+-ofmt NGC
+-top cpu_and_memory_controller
+-opt_mode Area
+-opt_level 2
+-iuc NO
+-lso cpu_and_memory_controller.lso
+-keep_hierarchy No
+-netlist_hierarchy as_optimized
+-rtlview Yes
+-hierarchy_separator /
+-bus_delimiter <>
+-case maintain
+-fsm_extract YES
+-fsm_encoding Auto
+-safe_implementation No
+-resource_sharing YES
+-iobuf YES
+-equivalent_register_removal YES
+-define "cpu_#CPU_ARCH#=1"

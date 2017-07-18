@@ -1,0 +1,9 @@
+iseconfig/
+working/
+_impact.cmd
+spartan6/opc*/_xmsgs/
+spartan6/opc*/cpu_and_memory_controller*
+spartan6/opc*/hostlist
+spartan6/opc*/xlnx_auto_0_xdb/
+spartan6/opc*/xst/
+spartan6/opc*/smartXplorer/
