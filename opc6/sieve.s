@@ -1,8 +1,7 @@
         #
         # Sieve.s
         #
-        # Find all prime numbers less than 65535, limited by the print routine which 
-        # can handle numbers up to 99999.
+        # Find all prime numbers less than 65535
         #
         # MAX = 100
         ## Need to zero all of sieve area first
@@ -49,20 +48,22 @@ ENDMACRO
 
         ORG   0x1000
         EQU   MAX,1024                # Can use up to 65535 here
-        
-        mov   r10,r0,1+MAX//2         # Only going to store odd markers
+        mov   r10,r0,MAX              # Counter will run to MAX 
+        mov   r2,r0,1+MAX//2          # But we're only going to store odd markers so init an array half that size
         not   r9, r0                  # non-zero marker
         
-        # Zero all entries first
+        # Set all entries to match the number first and then zero non-primes later
         mov   r1,r0
 L0:     sto   r0,r1,results
         inc   r1,1
-        cmp   r1,r10
+        cmp   r1,r2
         nz.dec pc,PC-L0
 
         # Print out the first primes
         mov   r1,r0,2
-        jsr   r13,r0,PrintDec   # Print it        
+        jsr   r13,r0,PrintDec   # Print it
+        mov   r1,r0,13
+        jsr   r13,r0,PrintDec   # Print it                
         
         # Now start the sieve at value 3
         mov   r12,r0,3
