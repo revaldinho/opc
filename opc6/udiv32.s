@@ -35,6 +35,9 @@ ENDMACRO
 MACRO   ROL( _reg_ )
         adc   _reg_, _reg_
 ENDMACRO
+MACRO   LSL( _reg_ )
+        add   _reg_, _reg_
+ENDMACRO
 
         mov    r14, r0,STACK   # Setup global stack pointer
         mov    r10,r0, DATA0-2 # R10 points to divider data (will be preincremented)
@@ -49,14 +52,13 @@ inner:
         mov    r1, r10         # get dividend address A
         mov    r2, r11         # get divisor address B
         mov    r3, r12         # get result area pointer
-        mov    r13,r0, next    # save return address
-        mov    pc, r0, udiv32  # JSR udiv32
-next:   add    r12,r0,4        # increment result pointer by 4
-        add    r11,r0,2        # increment divisor address by 2
+        jsr    r13, r0, udiv32 # JSR udiv32
+next:   inc    r12,4           # increment result pointer by 4
+        inc    r11,2           # increment divisor address by 2
         ld     r2,r11          # get divisor data LSW
         z.ld   r2,r11,1        # get divisor data MSW
         z.mov  pc,r0,outer     # if (0,0) then next outer loop
-        mov    pc,r0,inner     # else next inner loop
+        dec   pc,PC-inner     # else next inner loop
 
 end:
         halt    r0,r0,0x99
@@ -81,8 +83,8 @@ end:
 
 udiv32:
         PUSH    (r13, r14)      # save return address
-        PUSH4   (r12,r11,r10,r3, r14)
-
+        PUSH    (r10, r14)   
+        PUSH    (r3, r14)      
         ld      r6, r2          # Get divisor into r6,r7
         ld      r7, r2,1
 
@@ -93,12 +95,9 @@ udiv32:
 
         mov    r1, r0, 1            # r1 = constant 1
         mov    r10, r0,-32          # Setup a loop counter
-        mov    r11, r0, udiv32_loop # stash inner loop top in a register
-        mov    r8, r0, udiv32_next  # stash inner loop label in register
-        CLC()                       # ok to clear carry outside loop: will be clear on re-entry from bottom
 udiv32_loop:
         # shift left the quotient/dividend
-        ROL(r2)
+        LSL(r2)
         ROL(r3)
         ROL(r4)
         ROL(r5)
@@ -106,13 +105,13 @@ udiv32_loop:
         cmp    r4,r6
         cmpc   r5,r7
         # If carry not set then dont copy the result and dont update the quotient
-        nc.mov  pc,r8         # r8=udiv32_next
+        nc.inc  pc,udiv32_next-PC
         sub   r4,r6
         sbc   r5,r7
-        or    r2,r1           # set LSB of quotient
+        inc   r2,1           # set LSB of quotient
 udiv32_next:
-        add   r10, r1          # increment loop counter
-        nz.mov pc, r11         # loop again if not finished
+        inc    r10, 1                # increment loop counter
+        nz.dec pc, PC-udiv32_loop    # loop again if not finished
         # remainder/quotient in r2,3,4,5
         POP     (r1, r14)       # Get results pointer from stack
         sto     r2,r1,0         # save results
@@ -120,7 +119,8 @@ udiv32_next:
         sto     r4,r1,2
         sto     r5,r1,3
         # restore other registers
-        POP4    (r10,r11,r12,r13, r14)
+        POP     (r10, r14)
+        POP     (r13, r14)        
         mov    pc,r13          # and return
 
 

@@ -24,10 +24,6 @@ MACRO   POP4( _d0_,_d1_,_d2_,_d3_, _ptr_)
         ld      _d0_, _ptr_,3
 ENDMACRO
 
-MACRO   CLC()
-        add r0,r0
-ENDMACRO
-
 MACRO   SEC()
         ror r0,r0,1
 ENDMACRO
@@ -41,16 +37,15 @@ ENDMACRO
         mov    r10,r0, DATA0-2 # R10 points to divider data (will be preincremented)
         mov    r12,r0, RESULTS # R12 points to area for results
 
-outer:  add    r10,r0,2        # increment data pointer by 2
+outer:  inc    r10,2           # increment data pointer by 2
         ld     r2,r10          # check if we reached the (0,0) word
         z.ld   r2,r10,1
         z.mov  pc,r0,end       # .. if yes, bail out
-        mov    r1, r10         # get number to be routed
+        mov    r1, r10         # get number to be rooted
         mov    r2, r12         # get result area pointer
-        mov    r13,r0, next    # save return address
-        mov    pc, r0, sqrt    # JSR sqrt
-next:   add    r12,r0,4        # increment result pointer by 4
-        mov    pc,r0,outer     #  next  loop
+        jsr    r13,r0,sqrt
+next:   inc    r12,4           # increment result pointer by 4
+        dec    pc,PC-outer     #  next  loop
 
 end:
         halt    r0,r0,0x99
@@ -112,13 +107,11 @@ sqrt_bitloop:
         cmpc   r6,r2
         nc.mov  pc,r13         # r13=sqrt_next - done if carry out is set
         z.mov  pc,r13          # r13=sqrt_next - or if zero is set (and carry clear)
-        CLC     ()
-        ror   r6,r6           # rotate bit right (carry clear)
+        lsr   r6,r6           # rotate bit right (carry clear)
         ror   r5,r5
-        CLC     ()
-        ror   r6,r6           # rotate bit right (carry clear)
+        lsr   r6,r6           # rotate bit right (carry clear)
         ror   r5,r5
-        mov    pc,r0,sqrt_bitloop
+        dec   pc,PC-sqrt_bitloop
 sqrt_next:
         # while (bit != 0):
         mov    r7, r5
@@ -137,31 +130,27 @@ sqrt_next:
         cmp   r1, r7
         cmpc  r2, r8
         # Greater or equal than means c=1 from subtraction
-        c.mov  pc,r0,sqrt_mmask   # If < just shift root and next iteration
-        CLC     ()                 # Clear carry and shift root right
-        ror   r4,r4
+        c.inc  pc,sqrt_mmask-PC   # If < just shift root and next iteration
+        lsr   r4,r4
         ror   r3,r3
-        mov    pc,r0,sqrt_next3
+        inc    pc,sqrt_next3-PC
 
 sqrt_mmask:
         # If >= then do substract again into num r1r2, rotate and merge mask into bit
         sub    r1,r7          # Copy subtraction result into num r1,r2
         sbc    r2,r8
-        CLC     ()              # Clear carry and shift root right
-        ror   r4,r4
+        lsr   r4,r4               
         ror   r3,r3
         or    r4,r6          # Now OR in the mask
         or    r3,r5
 
 sqrt_next3:
         #    bit >>= 2
-        CLC     ()
-        ror   r6,r6
+        lsr   r6,r6
         ror   r5,r5
-        CLC     ()
-        ror   r6,r6
+        lsr   r6,r6
         ror   r5,r5
-        mov    pc,r13          # r13=sqrt_next
+        mov   pc,r13          # r13=sqrt_next
 
 sqrt_next2:
         # root in r3,r4, num/remainder in r1,r2
