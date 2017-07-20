@@ -7,13 +7,26 @@
 
 ##include "macros.s"
 
-ORG 0x0000
+EQU        BASE, 0xC000
+EQU        CODE, 0xFA00
+
+EQU   UART_ADDR, 0xFE08
+
+EQU       STACK, CODE - 1
+EQU     MEM_BOT, 0x0100
+EQU     MEM_TOP, CODE - 1
+
+EQU        HPOS, 0x00FE
+
+ORG BASE
     mov     pc, r0, monitor
+
+ORG CODE
 
 ##include "lib_printhex4.s"
 
 monitor:
-    mov     r14, r0, 0x3fff
+    mov     r14, r0, STACK
 
     mov     r1, r0, welcome
     JSR     (print_string)
@@ -22,7 +35,7 @@ monitor:
 
 mon1:
 
-    mov     r14, r0, 0x3fff
+    mov     r14, r0, STACK
 
     and     r11, r11       # don't output prompt if echo off
     nz.mov  pc, r0, mon2
@@ -182,7 +195,7 @@ toggle_echo:
     mov     pc, r0, mon2
 
 go:
-    sto     r5, r0, go2
+    sto     r5, r0, go1 + 1
     PUSH    (r11)          # save echo state
     JSR     (load_regs)
     JSR     (go1)
@@ -191,9 +204,7 @@ go:
     mov     pc, r0, mon1
 
 go1:
-    WORD    0x100F   # mov pc, r0, ...
-go2:
-    WORD    0x0000
+    mov     pc, r0, 0x0000
 
 
 load_regs:
@@ -356,7 +367,8 @@ print_state:
     JSR     (disassemble)
 
 pad1:
-    cmp     r12, r0, 42            # pad instruction like the emulator does
+    ld      r1, r0, HPOS
+    cmp     r1, r0, 42             # pad instruction like the emulator does
     z.mov   pc, r0, pad2
     JSR     (print_sp)
     mov     pc, r0, pad1
@@ -450,14 +462,15 @@ osNEWL:
 osWRCH:
     PUSH    (r13)
 oswrch_loop:
-    ld      r13, r0, 0xfe08
-    and     r13, r0, 0x8000
-    nz.mov  pc, r0, oswrch_loop
-    sto     r1, r0, 0xfe09
-    mov     r12, r12, 1       # increment the horizontal position
-    mov     r13, r1           #
+    ld      r13, r0, uart_status
+    mi.mov  pc, r0, oswrch_loop
+    sto     r1, r0, uart_data
+    ld      r13, r0, HPOS     # increment the horizontal position
+    mov     r13, r13, 1
+    sto     r13, r0, HPOS
+    mov     r13, r1
     xor     r13, r0, 13       # test for <cr> without corrupting x
-    z.mov   r12, r0           # reset horizontal position
+    z.sto   r0, r0, HPOS      # reset horizontal position
     POP     (r13)
     RTS     ()
 
@@ -473,10 +486,10 @@ oswrch_loop:
 # - r1 is the character read
 
 osRDCH:
-    ld      r1, r0, 0xfe08
+    ld      r1, r0, uart_status
     and     r1, r0, 0x4000
     z.mov   pc, r0, osRDCH
-    ld      r1, r0, 0xfe09
+    ld      r1, r0, uart_data
     RTS     ()
 
 # --------------------------------------------------------------
@@ -493,6 +506,7 @@ osRDCH:
 
 print_string:
     PUSH    (r13)
+    PUSH    (r1)
     PUSH    (r2)
     mov     r2, r1
 
@@ -510,9 +524,27 @@ ps_loop:
     mov     pc, r0, ps_loop
 
 ps_exit:
+    POP     (r2)
     POP     (r1)
     POP     (r13)
     RTS     ()
+
+# -----------------------------------------------------------------------------
+# Serial port
+# -----------------------------------------------------------------------------
+
+# Limit check to precent code running into next block...
+
+Limit1:
+    EQU dummy, 0 if (Limit1 < UART_ADDR) else limit1_error
+
+ORG UART_ADDR
+
+uart_status:
+    WORD 0x0000
+
+uart_data:
+    WORD 0x0000
 
 # --------------------------------------------------------------
 #
@@ -732,6 +764,20 @@ print_reg_num:
     POP     (r13)
     RTS     ()
 
+osnewl_code:
+    PUSH    (r13)
+    mov     r1, r0, 0x0a
+    JSR     (OSWRCH)
+    mov     r1, r0, 0x0d
+    JSR     (OSWRCH)
+    POP     (r13)
+    RTS     ()
+
+
+# -----------------------------------------------------------------------------
+# Data
+# -----------------------------------------------------------------------------
+
 welcome:
     WORD    0x0D0A
     CPU_BSTRING()
@@ -904,15 +950,99 @@ reg_state_pc:
 reg_state_psr:
     WORD 0x0000
 
+
 # Limit check to precent code running into next block...
 
-Limit1:
-    EQU dummy, 0 if (Limit1 < 0x0800) else limit1_error
+Limit2:
+    EQU dummy, 0 if (Limit2 < 0xFFC8) else limit2_error
+
+
+# -----------------------------------------------------------------------------
+# MOS interface
+# -----------------------------------------------------------------------------
+
+ORG 0xFFC8
+
+NVRDCH:                      # &FFC8
+    mov     pc, r0, osRDCH
+    WORD    0x0000
+
+NVWRCH:                      # &FFCB
+    mov     pc, r0, osWRCH
+    WORD    0x0000
+
+OSFIND:                      # &FFCE
+    RTS     ()
+    WORD    0x0000
+    WORD    0x0000
+
+OSGBPB:                      # &FFD1
+    RTS     ()
+    WORD    0x0000
+    WORD    0x0000
+
+OSBPUT:                      # &FFD4
+    RTS     ()
+    WORD    0x0000
+    WORD    0x0000
+
+OSBGET:                      # &FFD7
+    RTS     ()
+    WORD    0x0000
+    WORD    0x0000
+
+OSARGS:                      # &FFDA
+    RTS     ()
+    WORD    0x0000
+    WORD    0x0000
+
+OSFILE:                      # &FFDD
+    RTS     ()
+    WORD    0x0000
+    WORD    0x0000
+
+OSRDCH:                      # &FFE0
+    mov     pc, r0, osRDCH
+    WORD    0x0000
+
+OSASCI:                      # &FFE3
+    cmp     r1, r0, 0x0d
+    nz.mov  pc, r0, OSWRCH
+
+OSNEWL:                      # &FFE7
+    mov     pc, r0, osnewl_code
+    WORD    0x0000
+    WORD    0x0000
+    WORD    0x0000
+
+OSWRCR:                      # &FFEC
+    mov     r1, r0, 0x0D
+
+OSWRCH:                      # &FFEE
+    mov     pc, r0, osWRCH
+    WORD    0x0000
+
+OSWORD:                      # &FFF1
+    RTS     ()
+    WORD    0x0000
+    WORD    0x0000
+
+OSBYTE:                      # &FFF4
+    RTS     ()
+    WORD    0x0000
+    WORD    0x0000
+
+OS_CLI:                      # &FFF7
+    RTS     ()
+    WORD    0x0000
+    WORD    0x0000
+
+
 
 # ----------------------------------------------------
 # Some test code (fastfib)
 
-        ORG     0x700
+        ORG     BASE + 0x100
 
 fib:
         mov     r4, r0, fibRes
@@ -936,7 +1066,7 @@ fibLoop:
 fibEnd:
         RTS     ()
 
-        ORG     0x780
+        ORG     BASE + 0x180
 
 fibRes:
 
@@ -970,13 +1100,10 @@ fibRes:
 # 7 digits in 42589 instructions, 108368 cycles
 # 8 digits in 52659 instructions, 133981 cycles
 
-        ORG 359 # Original target 359 digits
-ndigits:
+        EQU ndigits,  359 # Original target 359 digits
+        EQU   psize, 1193 # Should be 1+ndigits*10/3
 
-        ORG 1193 # 1193  should be 1+ndigits*10/3
-psize:
-
-        ORG 0x1000
+        ORG BASE + 0x200
 start:
         PUSH(r13)
         ;; trivial banner
@@ -987,8 +1114,6 @@ start:
         mov r1, r0, 0x20
         JSR(osWRCH)
 
-
-        ;; mov r14, r0, stack   ; initialise stack pointer
         JSR( init)
         mov r2, r0, ndigits     # ldx #359
         mov r3, r0, psize       # ldy #1193
@@ -1050,7 +1175,6 @@ l6:     mov r2, r2, -1          # dex
         mov r0, r0, 3142        # RTS()
         POP(r13)
         RTS()
-done:   mov pc, r0, done
 
 init:
         mov r1, r0, 2           # lda #2
@@ -1086,7 +1210,6 @@ d2:     adc r11, r11            # rol q
         nz.mov pc, r0, d1       # bne d1
         RTS()
 
-base:   WORD 0,0,0,0,0,0,0,0,0  # reserve some stack space
-stack:  WORD 0
+
 p:      WORD 0  # needs 1193 words but there's nothing beyond
 

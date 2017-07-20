@@ -15,7 +15,7 @@ PROG        ?= $(basename $(notdir $(PROG_SRC)))
 BMM_FILE    ?= memory_bd.bmm
 
 # Default region to extract from the assembler output into the ROM
-ROMSTART    ?= 0000
+ROMSTART    ?= C000
 ROMLEN      ?= 4000
 
 build: $(TARGET).bit
