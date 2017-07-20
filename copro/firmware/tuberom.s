@@ -4,38 +4,57 @@ EQU        BASE, 0xE000
 EQU        CODE, 0xF800
 
 EQU       STACK, CODE - 1
-EQU     MEM_BOT, 0x0400
+EQU     MEM_BOT, 0x0100
 EQU     MEM_TOP, CODE - 1
 
 EQU NUM_VECTORS, 27           # number of vectors in DefaultVectors table
+
+# -----------------------------------------------------------------------------
+# Memory from 0x0000 to 0x00FF is reserved for system use
+# -----------------------------------------------------------------------------
+
+# 0x0000 = OPC5/6 Reset address
+
+# 0x0002 = OPC5/6 IRQ0 address
+
+EQU       USERV, 0x0004
+EQU        BRKV, 0x0005
+EQU       IRQ1V, 0x0006
+EQU       IRQ2V, 0x0007
+EQU        CLIV, 0x0008
+EQU       BYTEV, 0x0009
+EQU       WORDV, 0x000A
+EQU       WRCHV, 0x000B
+EQU       RDCHV, 0x000C
+EQU       FILEV, 0x000D
+EQU       ARGSV, 0x000E
+EQU       BGETV, 0x000F
+EQU       BPUTV, 0x0010
+EQU       GBPBV, 0x0011
+EQU       FINDV, 0x0012
+EQU        FSCV, 0x0013
+EQU       EVNTV, 0x0014
+EQU        UPTV, 0x0015       # not implemented
+EQU        NETV, 0x0016       # not implemented
+EQU        VDUV, 0x0017       # not implemented
+EQU        KEYV, 0x0018       # not implemented
+EQU        INSV, 0x0019       # not implemented
+EQU        REMV, 0x001A       # not implemented
+EQU        CNPV, 0x001B       # not implemented
+EQU       IND1V, 0x001C       # not implemented
+EQU       IND2V, 0x001D       # not implemented
+EQU       IND3V, 0x001E       # not implemented
+
+# 0x0020 = OPC6 IRQ1 address
+
+EQU      ERRBUF, 0x0030
+EQU      INPBUF, 0x0030
+EQU      INPEND, 0x00F6
 
 EQU        ADDR, 0x00F6       # tube execution address
 EQU      TMP_R1, 0x00FC       # tmp store for R1 during IRQ
 EQU    LAST_ERR, 0x00FD       # last error
 EQU ESCAPE_FLAG, 0x00FF       # escape flag
-
-EQU       USERV, 0x0200
-EQU        BRKV, 0x0202
-EQU       IRQ1V, 0x0204
-EQU       IRQ2V, 0x0206
-EQU        CLIV, 0x0208
-EQU       BYTEV, 0x020A
-EQU       WORDV, 0x020C
-EQU       WRCHV, 0x020E
-EQU       RDCHV, 0x0210
-EQU       FILEV, 0x0212
-EQU       ARGSV, 0x0214
-EQU       BGETV, 0x0216
-EQU       BPUTV, 0x0218
-EQU       GBPBV, 0x021A
-EQU       FINDV, 0x021C
-EQU        FSCV, 0x021E
-EQU       EVNTV, 0x0220
-
-EQU      ERRBUF, 0x0236
-EQU      INPBUF, 0x0236
-EQU      INPEND, 0x0300
-
 
 MACRO ERROR (_address_)
     mov     r1, r0, _address_
@@ -58,14 +77,12 @@ ORG CODE
 ResetHandler:
     mov     r14, r0, STACK              # setup the stack
 
-    mov     r2, r0, NUM_VECTORS         # copy the vectors
-    mov     r3, r0, NUM_VECTORS * 2
+    mov     r2, r0, NUM_VECTORS - 1     # copy the vectors
 InitVecLoop:
-    ld      r1,  r2, DefaultVectors
-    sto     r1,  r3, USERV
-    sub     r3,  r0, 2
-    sub     r2,  r0, 1
-    pl.mov  pc,  r0, InitVecLoop
+    ld      r1, r2, DefaultVectors
+    sto     r1, r2, USERV
+    sub     r2, r0, 1
+    pl.mov  pc, r0, InitVecLoop
 
     EI      ()                          # enable interrupts
 
@@ -957,10 +974,13 @@ osword0_param_block:
 # --------------------------------------------------------------
 
 osWRCH:
+    PUSH    (r12)
+osWRCH1:
     IN      (r12, r1status)
     and     r12, r0, 0x40
-    z.mov   pc, r0, osWRCH
+    z.mov   pc, r0, osWRCH1
     OUT     (r1, r1data)
+    POP     (r12)
     RTS     ()
 
 # --------------------------------------------------------------
@@ -1471,11 +1491,11 @@ OSNEWL:                      # &FFE7
 OSWRCR:                      # &FFEC
     mov     r1, r0, 0x0D
 
-OSWRCH:                      # &FFF1
+OSWRCH:                      # &FFEE
     ld      pc, r0, WRCHV
     WORD    0x0000
 
-OSWORD:                      # &FFEE
+OSWORD:                      # &FFF1
     ld      pc, r0, WORDV
     WORD    0x0000
 
