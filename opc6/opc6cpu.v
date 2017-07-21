@@ -1,7 +1,7 @@
 module opc6cpu( input[15:0] din, input clk, input reset_b, input[1:0] int_b, input clken, output vpa, output vda, output vio,output[15:0] dout, output[15:0] address, output rnw);
     parameter MOV=5'h0,AND=5'h1,OR=5'h2,XOR=5'h3,ADD=5'h4,ADC=5'h5,STO=5'h6,LD=5'h7,ROR=5'h8,JSR=5'h9,SUB=5'hA,SBC=5'hB,INC=5'hC,LSR=5'hD,DEC=5'hE,ASR=5'hF;
     parameter HLT=5'h10,BSWP=5'h11,PUTPSR=5'h12,GETPSR=5'h13,RTI=5'h14,NOT=5'h15,OUT=5'h16,IN=5'h17,CMP=5'h1A,CMPC=5'h1B,FETCH0=3'h0,FETCH1=3'h1,EA_ED=3'h2,RDMEM=3'h3,EXEC=3'h4,WRMEM=3'h5,INT=3'h6;
-    parameter EI=3,S=2,C=1,Z=0,P0=15,P1=14,P2=13,IRLEN=12,IRLD=16,IRSTO=17,IRNPRED=18,INT_VECTOR0=16'h0002,INT_VECTOR1=16'h0020;
+    parameter EI=3,S=2,C=1,Z=0,P0=15,P1=14,P2=13,IRLEN=12,IRLD=16,IRSTO=17,IRNPRED=18,INT_VECTOR0=16'h0002,INT_VECTOR1=16'h0004;
     reg [15:0] OR_q, PC_q, PCI_q, result;
     reg [18:0] IR_q; (* RAM_STYLE="DISTRIBUTED" *)
     reg [15:0] dprf_q[15:0];
