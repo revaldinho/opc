@@ -12,9 +12,14 @@ EQU        CODE, 0xFA00
 
 EQU   UART_ADDR, 0xFE08
 
-EQU       STACK, CODE - 1
 EQU     MEM_BOT, 0x0100
 EQU     MEM_TOP, CODE - 1
+
+# This is the main stack, used by the monitor and by programs that are run with GO
+EQU       STACK, CODE - 1
+
+# This is second stack, used by the single step emulation
+EQU    SS_STACK, STACK - 0x100  # Second stack
 
 EQU      INPBUF, 0x0030
 EQU      INPEND, 0x00F6
@@ -192,8 +197,19 @@ comma:
 # ---------------------------------------------------------
 
 at:
-    mov     r4, r5
+    mov     r4, r5                 # r4 is used by the comma command
+
+    sto     r5, r0, reg_state_pc   # Initialize the emulated state used by single step
+    sto     r0, r0, reg_state_psr
+    mov     r1, r0, spin           # r13 is the link register
+    sto     r1, r0, reg_state_r13  # this gives the emulation somewhere to go after the last rst
+    mov     r1, r0, SS_STACK       # r14 is the stack pointer
+    sto     r1, r0, reg_state_r14  # this gives the emulation a seperate stack area
     mov     pc, r0, mon2
+
+spin:
+    mov     pc, r0, spin           # single stepped ends up here
+                                   # if you step beyond the last rts
 
 # ---------------------------------------------------------
 
@@ -273,10 +289,11 @@ dis_loop:
 
 # Single Step Command
 #
-# Global registers:
-# r4 is the emulated program counter (set by @)
-#
 # Local registers:
+# r1 is the fetched instruction
+# r2 is the fetched operand
+# r3 is a temporary working register
+# r4 is the program counter
 # r5 is the source register number
 # r6 is the destination register number
 # r7 is the emulated source register
@@ -284,17 +301,10 @@ dis_loop:
 # r9 is the emulated flags
 # r10 is the iteration count
 #
-# TODO: for latest xp2
+# TODO: for OPC6
 #
-# - bugfix (also in previous versions)
-#     - need to clear "r0" in reg_state before each instruction, as this can get corrupted
-#
-# - support JSR rlink, rs, immed
-#     - r15 is now implied
 # - support INC/DEC rd, imm
 #     - somehow handle 4-bit imm instead of rs
-# - support halt (???)
-#     - emulator only, so should work as a NOP
 # - support PUTPSR and GETPSR (not setting SWI)
 #     - "psr" is now r0
 #     - but we re-write
@@ -307,6 +317,7 @@ step:
 step_loop:
     JSR     (print_state)
 
+    ld      r4, r0, reg_state_pc   # load the program counter
     ld      r1, r4                 # fetch the instruction
     add     r4, r0, 1              # increment the PC
 
@@ -320,29 +331,56 @@ step_loop:
     mov     r6, r1                 # extract the dst register num (r6)
     and     r6, r0, 0x000F
 
-    and     r1, r0, 0xff00         # patch the instruction so:
-    or      r1, r0, 0x0078         # src = r7, dst = r8
+    ld      r2, r0, nop            # by default the operand slot is filled with a nop
+    sto     r2, r0, operand        # store the operand
 
-    sto     r1, r0, instruction    # write the patched instruction
+    mov     r2, r1
+    and     r2, r0, 0x1000         # test for an operand
+    z.mov   pc, r0, no_operand     # r2 zero if no operand, which is correct
 
-    and     r1, r0, 0x1000         # test for an operand
-    z.mov   pc, r0, no_operand
-
-    ld      r1, r4                 # fetch the operand
+    ld      r2, r4                 # fetch the operand
+    sto     r2, r0, operand        # store back the operand, and leave it in r2
     add     r4, r0, 1              # increment the PC
-    mov     pc, r0, store_operand
 
 no_operand:
-    ld      r1, r0, nop            # operand slot is filled with a nop
-
-store_operand:
-    sto     r1, r0, operand        # store the operand
-
     sto     r4, r0, reg_state_pc   # save the updated program counter which
                                    # will now point to the next instruction
 
     ld      r7, r5, reg_state      # load the src register value
     ld      r8, r6, reg_state      # load the dst register value
+
+##ifdef CPU_OPC6
+
+    #
+    # Emulate OPC6 JSR instruction
+
+    add     r2, r7                 # calculate the EA by adding the source register value to the operand
+
+    # r1 = instruction, r2 = EA
+
+    mov     r3, r1                 # test for the jsr opcode
+    and     r3, r0, 0x0f00
+    cmp     r3, r0, 0x0900
+    nz.mov  pc, r0, not_jsr
+
+    mov     r3, r1                 # test for the never predicate
+    and     r3, r0, 0xe000
+    cmp     r3, r0, 0x2000
+    z.mov   pc, r0, not_jsr        # never predicate present, so not a jsr
+
+    or      r1, r0, 0x1000         # patch the instruction to always have an operand
+    mov     r3, r0, jsr_taken
+    sto     r3, r0, operand        # patch the operand to be the jsr_taken routine
+
+not_jsr:
+
+#endif
+
+    and     r1, r0, 0xff00         # patch the instruction so:
+    or      r1, r0, 0x0078         # src = r7, dst = r8
+
+    sto     r1, r0, instruction    # write the patched instruction
+
     ld      r9, r0, reg_state_psr  # load the s (bit 2), c (bit 1) and z (bit 0) flags
 
     PUTPSR  (r9)                   # load the flags
@@ -358,10 +396,10 @@ operand:
     cmp     r6, r0, 15             # was the destination register r15
     nz.sto  r9, r0, reg_state_psr  # no, then save the flags
 
-    sto     r8, r6, reg_state      # save the new dst register value
+    cmp     r6, r0                 # was the destination register r0
+    nz.sto  r8, r6, reg_state      # no, then save the new dst register value
 
-    ld      r4, r0, reg_state_pc   # load the PC (r5)
-
+next_instruction:
     sub     r10, r0, 1             # decrement the iteration count
     nz.mov  pc, r0, step_loop      # and loop back for more instructions
 
@@ -372,10 +410,29 @@ operand:
 nop:
     z.and   r0, r0
 
+##ifdef CPU_OPC6
+
+jsr_taken:
+
+    cmp     r2, r0, 0xffee         # EA = oswrch?
+    nz.mov  pc, r0, not_oswrch
+
+    ld      r1, r0, reg_state_r1   # emulate oswrch
+    JSR     (OSWRCH)
+    mov     pc, r0, next_instruction
+
+not_oswrch:
+    sto     r4, r6, reg_state      # store the current PC in the specified link register
+    mov     r4, r2                 # update the PC to the calculated effective address
+    sto     r4, r0, reg_state_pc   # save the updated PC
+    mov     pc, r0, next_instruction
+
+##endif
+
 print_state:
     PUSH    (r13)
     JSR     (OSNEWL)
-    mov     r1, r4                 # display the next instruction
+    ld      r1, r0, reg_state_pc   # display the next instruction
     JSR     (disassemble)
 
 pad1:
@@ -1078,8 +1135,8 @@ fibRes:
 # 7 digits in 42589 instructions, 108368 cycles
 # 8 digits in 52659 instructions, 133981 cycles
 
-        EQU ndigits,  359 # Original target 359 digits
-        EQU   psize, 1193 # Should be 1+ndigits*10/3
+        EQU ndigits,  6 # Original target 359 digits
+        EQU   psize, 21 # Should be 1+ndigits*10/3
 
         ORG BASE + 0x200
 start:
