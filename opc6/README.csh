@@ -1,6 +1,6 @@
 #!/bin/tcsh -f
 # Remove non primary data files
-rm -rf *~ *sim *trace *vcd *dump `ls -1 | egrep -v '(\.v$|\.csh|\.ucf|\.py|\.s$|spartan|xc95|opc6system|opc6copro)'`
+rm -rf *~ *sim *trace *vcd *dump `ls -1 | egrep -v '(\.v$|\.csh|\.ucf|\.py|\.s$|spartan|xc95|opc6system|opc6copro|Make*)'`
 
 if ( $#argv > 0 ) then 
     if ( $argv[1] == "clean" ) exit

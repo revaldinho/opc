@@ -19,8 +19,7 @@ CONT:   inc r4,1               # inc loop counter
 END:    halt    r0,r0,0x999     # Finish simulation
 
 
-FIB:    sto    r13,r14        # Push return address on stack
-        inc    r14,1         # incrementing stack pointer
+FIB:    push   r13,r14,-1        # Push return address on stack
 
         mov   r2,r5          # Fibonacci computation
         add  r2,r6
@@ -30,8 +29,7 @@ FIB:    sto    r13,r14        # Push return address on stack
         mov   r5,r6          # Prepare r5,r6 for next iteration
         mov   r6,r2
 
-        dec   r14,1          # Pop return address of stack
-        ld    pc,r14         # and return
+        pop    pc,r14,1         # and return
 
         ORG 0x100
 

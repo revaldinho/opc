@@ -36,29 +36,27 @@ MACRO   RTS ()
         mov     pc,r13
 ENDMACRO
 MACRO   PUSHALL()
-        mov     r14, r14, -9
-        sto     r13, r14, 1
-        sto     r12, r14, 2
-        sto     r11, r14, 3
-        sto     r10, r14, 4
-        sto      r9, r14, 5
-        sto      r8, r14, 6
-        sto      r7, r14, 7
-        sto      r6, r14, 8
-        sto      r5, r14, 9                
+        push     r13, r14, -1
+        push     r12, r14, -1
+        push     r11, r14, -1
+        push     r10, r14, -1
+        push      r9, r14, -1
+        push      r8, r14, -1
+        push      r7, r14, -1
+        push      r6, r14, -1
+        push      r5, r14, -1                
 ENDMACRO
 
 MACRO   POPALL()
-        ld      r13, r14, 1
-        ld      r12, r14, 2
-        ld      r11, r14, 3
-        ld      r10, r14, 4
-        ld       r9, r14, 5
-        ld       r8, r14, 6
-        ld       r7, r14, 7
-        ld       r6, r14, 8
-        ld       r5, r14, 9                
-        mov     r14, r14, 9
+        pop     r5, r14, 1
+        pop     r6, r14, 1
+        pop     r7, r14, 1
+        pop     r8, r14, 1
+        pop     r9, r14, 1
+        pop    r10, r14, 1
+        pop    r11, r14, 1
+        pop    r12, r14, 1
+        pop    r13, r14, 1                
 ENDMACRO
 
         mov   r14,r0,0x2000
@@ -76,7 +74,7 @@ ENDMACRO
         mov   pc,r0,start
 
         ORG   0x1000
-        EQU   MAX,1000          # set max number to sift through (<1.7M)
+        EQU   MAX,20          # set max number to sift through (<1.7M)
 start:  
         mov   r10,r0, (MAX & 0xFFFF0000) >> 16  # upper word
         mov   r9, r0, MAX & 0xFFFF              # lower word

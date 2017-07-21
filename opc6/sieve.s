@@ -47,7 +47,7 @@ ENDMACRO
         mov   pc,r0,0x1000            # Program start at 0x1000 for use with monitor
 
         ORG   0x1000
-        EQU   MAX,1024                # Can use up to 65535 here
+        EQU   MAX,200                # Can use up to 65535 here
         mov   r10,r0,MAX              # Counter will run to MAX 
         mov   r2,r0,1+MAX//2          # But we're only going to store odd markers so init an array half that size
         not   r9, r0                  # non-zero marker

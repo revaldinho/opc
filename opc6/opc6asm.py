@@ -1,5 +1,5 @@
 import sys, re
-op = "mov,and,or,xor,add,adc,sto,ld,ror,jsr,sub,sbc,inc,lsr,dec,asr,halt,bswp,putpsr,getpsr,rti,not,out,in,sp1,sp2,cmp,cmpc".split(",")
+op = "mov,and,or,xor,add,adc,sto,ld,ror,jsr,sub,sbc,inc,lsr,dec,asr,halt,bswp,putpsr,getpsr,rti,not,out,in,push,pop,cmp,cmpc".split(",")
 symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
 predicates = {"1":0x0000,"z":0x4000,"nz":0x6000,"c":0x8000,"nc":0xA000,"mi":0xC000,"pl":0xE000,"":0x0000} ##0x2000 reseved for non-predicated instructions
 def expand_macro(line, macro):  # recursively expand macros, passing on instances not (yet) defined
@@ -36,7 +36,6 @@ for iteration in range (0,2): # Two pass assembly
         (pred, opfields,words, memptr) = ("1" if pred==None else pred, [ x.strip() for x in operands.split(",")],[], nextmem)
         if (label and label != "None") or (instr=="EQU"):
             exec ("%s= %s" % ((label,str(nextmem)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
-            instr = None if instr == "EQU" else instr ## if instr was EQU then it is handled so no more to do
         if instr in op and iteration < 1:
             nextmem += len(opfields)-1                  # If two operands are provide instruction will be one word
         elif instr=="WORD" and iteration < 1:
@@ -57,7 +56,7 @@ for iteration in range (0,2): # Two pass assembly
             (wordmem[nextmem:nextmem+len(words)], nextmem )  = (words, nextmem+len(words))
         elif instr == "ORG":
             nextmem = eval(operands,globals(),symtab)
-        elif instr :
+        elif instr and (instr != "EQU")  :
             sys.exit("Error: unrecognized instruction %s" % instr)
         if iteration > 0 :
             print("%04x  %-20s  %s"%(memptr,' '.join([("%04x" % i) for i in words]),line.rstrip()))
