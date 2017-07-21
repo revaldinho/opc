@@ -16,6 +16,8 @@ EQU       STACK, CODE - 1
 EQU     MEM_BOT, 0x0100
 EQU     MEM_TOP, CODE - 1
 
+EQU      INPBUF, 0x0030
+EQU      INPEND, 0x00F6
 EQU        HPOS, 0x00FE
 
 ORG BASE
@@ -23,13 +25,18 @@ ORG BASE
 
 ORG CODE
 
-##include "lib_printhex4.s"
+##include "lib_printhex.s"
+##include "lib_printbstring.s"
+##include "lib_dumpmem.s"
+##include "lib_srec.s"
+
+# ---------------------------------------------------------
 
 monitor:
     mov     r14, r0, STACK
 
     mov     r1, r0, welcome
-    JSR     (print_string)
+    JSR     (print_bstring)
 
     mov     r11, r0        # enable local echo
 
@@ -40,9 +47,9 @@ mon1:
     and     r11, r11       # don't output prompt if echo off
     nz.mov  pc, r0, mon2
 
-    JSR     (osNEWL)
+    JSR     (OSNEWL)
     mov     r1, r0, 0x2D
-    JSR     (osWRCH)
+    JSR     (OSWRCH)
 
 mon2:
     mov     r5, r0          # r5 == NUMBER
@@ -59,7 +66,7 @@ mon4:
     or      r5, r1
 
 mon6:
-    JSR     (osRDCH)
+    JSR     (OSRDCH)
 
     cmp     r1, r0, 0x0D
     z.mov   pc, r0, mon1
@@ -78,7 +85,7 @@ mon6:
     cmp     r1, r0, 0x7F  # don't output if >= 07F
     c.mov   pc, r0, mon6
 
-    JSR     (osWRCH)
+    JSR     (OSWRCH)
 
 echo_off:
     cmp     r1, r0, 0x23
@@ -126,73 +133,82 @@ echo_off:
     cmp     r1, r0, 0xffec   # s
     z.mov   pc, r0, step
 
+    cmp     r1, r0, 0x0005   # l
+    z.mov   pc, r0, srec
+
     cmp     r1, r0, 0xfff1   # x
     nz.mov  pc, r0, mon6
 
+# ---------------------------------------------------------
+
 dump:
-    mov     r3, r0
-
-d0:
-    JSR     (osNEWL)
-
     mov     r1, r5
-    add     r1, r3
-    JSR     (print_hex4_sp)
-
-dump1:
-    mov     r1, r5
-    add     r1, r3
-    ld      r1, r1
-    JSR     (print_hex4_sp)
-
-    add     r3, r0, 1
-
-    mov     r2, r3
-    and     r2, r0, 0x07
-    nz.mov  pc, r0, dump1
-
-    sub     r3, r0, 0x08
-
-dump2:
-    mov     r1, r5
-    add     r1, r3
-    ld      r1, r1
-    and     r1, r0, 0x7F
-
-    cmp     r1, r0, 0x20
-    nc.mov  pc, r0, dump3
-    cmp     r1, r0, 0x7F
-    nc.mov  pc, r0, dump4
-
-dump3:
-    mov      r1, r0, 0x2E
-
-dump4:
-    JSR     (osWRCH)
-    add     r3, r0, 1
-    mov     r2, r3
-    and     r2, r0, 0x07
-    nz.mov  pc, r0, dump2
-
-    cmp     r3, r0, 0x80
-    nc.mov  pc, r0, d0
-
-    add     r5, r3
-
+    JSR     (dump_mem)
+    add     r5, r0, 0x80
     mov     pc, r0, mon6
+
+# ---------------------------------------------------------
+
+srec:
+    JSR     (OSNEWL)
+    mov     r1, r0, srec_start_msg
+    JSR     (print_bstring)
+    JSR     (OSNEWL)
+    JSR     (srec_load)
+    cmp     r1, r0
+    z.mov   pc, r0, mon2
+    cmp     r1, r0, 2
+    z.mov   pc, r0, srec_checksum_error
+
+srec_bad_format_error:
+    mov     r1, r0, srec_bad_format_error_msg
+    JSR     (print_bstring)
+    mov     pc, r0, mon1
+
+srec_checksum_error:
+    mov     r1, r0, srec_checksum_error_msg
+    JSR     (print_bstring)
+    mov     pc, r0, mon1
+
+srec_start_msg:
+    BSTRING "Paste srecords followed by a blank line"
+    WORD 0x0000
+
+srec_bad_format_error_msg:
+    BSTRING "Bad Format"
+    WORD 0x0000
+
+srec_checksum_error_msg:
+    BSTRING "Checksum Mismatch"
+    WORD 0x0000
+
+# ---------------------------------------------------------
 
 comma:
     sto     r5, r4
     add     r4, r0, 1
     mov     pc, r0, mon2
 
+# ---------------------------------------------------------
+
 at:
     mov     r4, r5
     mov     pc, r0, mon2
 
+# ---------------------------------------------------------
+
+regs:
+    JSR     (OSNEWL)
+    JSR     (print_regs)
+    mov     pc, r0, mon1           # back to the - prompt
+
+# ---------------------------------------------------------
+
 toggle_echo:
     xor     r11, r0, 1
     mov     pc, r0, mon2
+
+# ---------------------------------------------------------
 
 go:
     sto     r5, r0, go1 + 1
@@ -205,7 +221,6 @@ go:
 
 go1:
     mov     pc, r0, 0x0000
-
 
 load_regs:
     ld      r1, r0, reg_state_r1
@@ -237,12 +252,13 @@ save_regs:
     sto     r12, r0, reg_state_r12
     RTS     ()
 
-dis:
+# ---------------------------------------------------------
 
+dis:
     mov     r3, r0, 16
 
 dis_loop:
-    JSR     (osNEWL)
+    JSR     (OSNEWL)
 
     mov     r1, r5
     JSR     (disassemble)
@@ -253,6 +269,7 @@ dis_loop:
 
     mov     pc, r0, mon6
 
+# ---------------------------------------------------------
 
 # Single Step Command
 #
@@ -355,14 +372,9 @@ operand:
 nop:
     z.and   r0, r0
 
-regs:
-    JSR     (osNEWL)
-    JSR     (print_regs)
-    mov     pc, r0, mon1           # back to the - prompt
-
 print_state:
     PUSH    (r13)
-    JSR     (osNEWL)
+    JSR     (OSNEWL)
     mov     r1, r4                 # display the next instruction
     JSR     (disassemble)
 
@@ -370,7 +382,7 @@ pad1:
     ld      r1, r0, HPOS
     cmp     r1, r0, 42             # pad instruction like the emulator does
     z.mov   pc, r0, pad2
-    JSR     (print_sp)
+    JSR     (print_spc)
     mov     pc, r0, pad1
 
 pad2:
@@ -404,14 +416,14 @@ print_regs:
     JSR     (print_flag)
 
     mov     r1, r0, 0x3A          # ":"
-    JSR     (osWRCH)
+    JSR     (OSWRCH)
 
     mov     r2, r0
     mov     r3, r0, 16
 dr_loop:
     ld      r1, r2, reg_state
-    JSR     (print_sp)
-    JSR     (print_hex4)          # "1234"
+    JSR     (print_spc)
+    JSR     (print_hex_4)         # "1234"
     add     r2, r0, 1
     sub     r3, r0, 1
     nz.mov  pc, r0, dr_loop
@@ -422,8 +434,8 @@ print_flag:
     PUSH    (r13)
     and     r1, r0, 1
     add     r1, r0, 0x30
-    JSR     (osWRCH)              # "0" or "1"
-    JSR     (print_sp)            # " "
+    JSR     (OSWRCH)              # "0" or "1"
+    JSR     (print_spc)           # " "
     POP     (r13)
     RTS     ()
 
@@ -441,9 +453,9 @@ print_flag:
 osNEWL:
     PUSH    (r13)
     mov     r1, r0, 0x0a
-    JSR     (osWRCH)
+    JSR     (OSWRCH)
     mov     r1, r0, 0x0d
-    JSR     (osWRCH)
+    JSR     (OSWRCH)
     POP     (r13)
     RTS     ()
 
@@ -492,41 +504,55 @@ osRDCH:
     ld      r1, r0, uart_data
     RTS     ()
 
+
 # --------------------------------------------------------------
 #
-# print_string
+# osWORD
 #
-# Prints the zero terminated ASCII string
+# Minimal implementation of OSWORD
+#
+# Just implements OSWORD0 (ReadLine)
 #
 # Entry:
-# - r1 points to the zero terminated string
+# - r1 is the OSWORD number
+# - r2 points to the OSWORD param block
 #
 # Exit:
-# - all other registers preserved
+# - r1 is the character read
+#
+# TODO:
+# - better handle lines > max length (currently no 0x0d terminator)
+# - support delete-last-char (Delete)
+# - support delete-line (Ctrl-U)
+# - support character range checking
 
-print_string:
+osWORD:
+    cmp     r1, r0
+    z.mov   pc, r0, osWORD0
+    RTS     ()
+
+osWORD0:
     PUSH    (r13)
-    PUSH    (r1)
-    PUSH    (r2)
-    mov     r2, r1
+    PUSH    (r3)
+    ld      r3, r2, 1   # r3 = maximum line length
+    sub     r3, r0, 1   # allow space for terminator
+    ld      r2, r2      # r2 = input buffer
 
-ps_loop:
-    ld      r1, r2
-    and     r1, r0, 0xff
-    z.mov   pc, r0, ps_exit
-    JSR     (osWRCH)
-    ld      r1, r2
-    bswp    r1, r1
-    and     r1, r0, 0xff
-    z.mov   pc, r0, ps_exit
-    JSR     (osWRCH)
-    mov     r2, r2, 0x0001
-    mov     pc, r0, ps_loop
+osWORD0_loop:
+    JSR     (OSRDCH)
+    cmp     r1, r0, 0x0d
+    z.mov   pc, r0, osWORD0_exit
+    sto     r1, r2
+    add     r2, r0, 1
+    sub     r3, r0, 1
+    nz.mov  pc, r0, osWORD0_loop
 
-ps_exit:
-    POP     (r2)
-    POP     (r1)
+osWORD0_exit:
+    mov     r1, r0, 0x0d
+    sto     r1, r2
+    POP     (r3)
     POP     (r13)
+    CLC     ()
     RTS     ()
 
 # -----------------------------------------------------------------------------
@@ -546,44 +572,6 @@ uart_status:
 uart_data:
     WORD 0x0000
 
-# --------------------------------------------------------------
-#
-# print_hex4_sp
-#
-# Prints a 4-digit hex value followed by a space
-#
-# Entry:
-# - r1 is the value to be printed
-#
-# Exit:
-# - all registers preserved
-
-print_hex4_sp:
-     PUSH   (r13)
-     JSR    (print_hex4)
-     JSR    (print_sp)
-     POP    (r13)
-     RTS    ()
-
-# --------------------------------------------------------------
-#
-# print_sp
-#
-# Prints a space
-#
-# Entry:
-#
-# Exit:
-# - all registers preserved
-
-print_sp:
-     PUSH   (r13)
-     PUSH   (r1)
-     mov    r1, r0, 0x20
-     JSR    (osWRCH)
-     POP    (r1)
-     POP    (r13)
-     RTS    ()
 
 # --------------------------------------------------------------
 #
@@ -600,9 +588,9 @@ print_delim:
      PUSH   (r13)
      PUSH   (r1)
      mov    r1, r0, 0x3a
-     JSR    (osWRCH)
+     JSR    (OSWRCH)
      mov    r1, r0, 0x20
-     JSR    (osWRCH)
+     JSR    (OSWRCH)
      POP    (r1)
      POP    (r13)
      RTS    ()
@@ -631,14 +619,14 @@ disassemble:
 
     mov     r5, r1                      # r5 holds the instruction addess
 
-    JSR     (print_hex4_sp)             # print address
+    JSR     (print_hex_4_spc)           # print address
     JSR     (print_delim)               # print ": " delimiter
 
     ld      r6, r5                      # r6 holds the opcode
     add     r5, r0, 1                   # increment the address pointer
 
     mov     r1, r6
-    JSR     (print_hex4_sp)             # print opcode
+    JSR     (print_hex_4_spc)           # print opcode
 
     mov     r1, r6
     and     r1, r0, 0x1000              # test the length bit
@@ -648,16 +636,16 @@ disassemble:
     add     r5, r0, 1                   # increment the address pointer
 
     mov     r1, r7
-    JSR     (print_hex4)                # print operand - two words instructions
+    JSR     (print_hex_4)               # print operand - two words instructions
     mov     pc, r0, dis2
 
 dis1:
 
     mov     r1, r0, four_spaces
-    JSR     (print_string)              # print 4 spaces - one word instructions
+    JSR     (print_bstring)             # print 4 spaces - one word instructions
 
 dis2:
-    JSR     (print_sp)                  # print space
+    JSR     (print_spc)                 # print space
     JSR     (print_delim)               # print ": " delimiter
 
     mov     r2, r6
@@ -672,7 +660,7 @@ dis3:
     mov     pc, r0, dis3
 
 dis4:
-    JSR     (print_string)
+    JSR     (print_bstring)
 
     mov     r2, r6
     and     r2, r0, 0x0F00              # extract opcode
@@ -694,14 +682,14 @@ dis5:
     mov     pc, r0, dis5
 
 dis6:
-    JSR     (print_string)
-    JSR     (print_sp)                  # print a space
+    JSR     (print_bstring)
+    JSR     (print_spc)                 # print a space
 
     mov     r1, r6                      # extract destination register
     JSR     (print_reg)
 
     mov     r1, r0, 0x2c
-    JSR     (osWRCH)
+    JSR     (OSWRCH)
 
     mov     r1, r6                      # extract source register
     ror     r1, r1
@@ -716,15 +704,15 @@ dis6:
     z.mov   pc, r0, dis7
 
     mov     r1, r0, 0x2c                # print a ,
-    JSR     (osWRCH)
+    JSR     (OSWRCH)
 
     mov     r1, r0, 0x30                # print 0x
-    JSR     (osWRCH)
+    JSR     (OSWRCH)
     mov     r1, r0, 0x78
-    JSR     (osWRCH)
+    JSR     (OSWRCH)
 
     mov     r1, r7
-    JSR     (print_hex4)                # print the operand
+    JSR     (print_hex_4)               # print the operand
 
 dis7:
 
@@ -745,7 +733,7 @@ print_reg:
 
     PUSH    (r1)
     mov     r1, r0, 0x72
-    JSR     (osWRCH)
+    JSR     (OSWRCH)
     POP     (r1)
 
     cmp     r1, r0, 0x0A
@@ -753,26 +741,16 @@ print_reg:
 
     PUSH    (r1)
     mov     r1, r0, 0x31
-    JSR     (osWRCH)
+    JSR     (OSWRCH)
     POP     (r1)
 
     sub     r1, r0, 0x0A
 
 print_reg_num:
     add     r1, r0, 0x30
-    JSR     (osWRCH)
-    POP     (r13)
-    RTS     ()
-
-osnewl_code:
-    PUSH    (r13)
-    mov     r1, r0, 0x0a
-    JSR     (OSWRCH)
-    mov     r1, r0, 0x0d
     JSR     (OSWRCH)
     POP     (r13)
     RTS     ()
-
 
 # -----------------------------------------------------------------------------
 # Data
@@ -1010,7 +988,7 @@ OSASCI:                      # &FFE3
     nz.mov  pc, r0, OSWRCH
 
 OSNEWL:                      # &FFE7
-    mov     pc, r0, osnewl_code
+    mov     pc, r0, osNEWL
     WORD    0x0000
     WORD    0x0000
     WORD    0x0000
@@ -1023,7 +1001,7 @@ OSWRCH:                      # &FFEE
     WORD    0x0000
 
 OSWORD:                      # &FFF1
-    RTS     ()
+    mov     pc, r0, osWORD
     WORD    0x0000
     WORD    0x0000
 
@@ -1108,11 +1086,11 @@ start:
         PUSH(r13)
         ;; trivial banner
         mov r1, r0, 0x4f
-        JSR(osWRCH)
+        JSR(OSWRCH)
         mov r1, r0, 0x6b
-        JSR(osWRCH)
+        JSR(OSWRCH)
         mov r1, r0, 0x20
-        JSR(osWRCH)
+        JSR(OSWRCH)
 
         JSR( init)
         mov r2, r0, ndigits     # ldx #359
@@ -1157,10 +1135,10 @@ l3:
         cmp r2, r0, ndigits-1   # cpx #358
         nc.mov pc, r0, l4       # bcc l4
         nz.mov pc, r0, l5       # bne l5
-        JSR (osWRCH)
+        JSR (OSWRCH)
         mov r1, r0, 46          # lda #46
 l4:
-        JSR (osWRCH)
+        JSR (OSWRCH)
 l5:     mov r1, r3              # tya
         xor r1, r0, 48          # eor #48
         mov r3, r6              # ply
@@ -1171,7 +1149,7 @@ l5:     mov r1, r3              # tya
         mov r3, r3, -3          # dey by 3
 l6:     mov r2, r2, -1          # dex
         nz.mov pc, r0, l1       # bne l1
-        JSR (osWRCH)
+        JSR (OSWRCH)
         mov r0, r0, 3142        # RTS()
         POP(r13)
         RTS()
@@ -1212,4 +1190,3 @@ d2:     adc r11, r11            # rol q
 
 
 p:      WORD 0  # needs 1193 words but there's nothing beyond
-

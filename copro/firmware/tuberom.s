@@ -72,7 +72,12 @@ ORG BASE
 
 ORG CODE
 
-##include "lib_printhex4.s"
+##include "lib_printstring.s"
+##include "lib_printhex.s"
+##include "lib_printdec.s"
+##include "lib_readhex.s"
+##include "lib_srec.s"
+##include "lib_dumpmem.s"
 
 ResetHandler:
     mov     r14, r0, STACK              # setup the stack
@@ -87,7 +92,7 @@ InitVecLoop:
     EI      ()                          # enable interrupts
 
     mov     r1, r0, BannerMessage       # send the reset message
-    JSR     (PrintString)
+    JSR     (print_string)
 
     mov     r1, r0                      # send the terminator
     JSR     (OSWRCH)
@@ -135,7 +140,7 @@ ErrorHandler:
     JSR     (OSNEWL)
     ld       r1, r0, LAST_ERR           # Address of the last error: <error num> <err string> <00>
     add      r1, r0, 1                  # Skip over error num
-    JSR     (PrintString)               # Print error string
+    JSR     (print_string)              # Print error string
     JSR     (OSNEWL)
 
     mov     pc, r0, CmdPrompt           # Jump to command prompt
@@ -307,7 +312,7 @@ cmdLocal:
     sub     r1, r0, 1
 cmdLoop0:
     add     r1, r0, 1
-    JSR     (SkipSpaces)            # skip leading spaces
+    JSR     (skip_spaces)           # skip leading spaces
     cmp     r2, r0, ord('*')        # also skip leading *
     z.mov   pc, r0, cmdLoop0
 
@@ -352,78 +357,30 @@ cmdExec:
 # --------------------------------------------------------------
 
 cmdGo:
-    PUSH   (r13)
-    JSR    (ReadHex)
-    JSR    (cmdExecR2)
-    mov    r1, r0
-    POP    (r13)
-    RTS    ()
+    PUSH    (r13)
+    JSR     (read_hex)
+    JSR     (cmdExecR2)
+    mov     r1, r0
+    POP     (r13)
+    RTS     ()
 
 # --------------------------------------------------------------
 
 cmdMem:
     PUSH    (r13)
-    JSR     (ReadHex)
-    mov     r5, r2
-    mov     r3, r0
-
-cmdMem0:
-    JSR     (OSNEWL)
-
-    cmp     r3, r0, 0x80
-    c.mov   pc, r0, cmdMem5
-
-    mov     r1, r5
-    add     r1, r3
-    JSR     (PrintHexSp)
-
-cmdMem1:
-    mov     r1, r5
-    add     r1, r3
-    ld      r1, r1
-    JSR     (PrintHexSp)
-
-    add     r3, r0, 1
-
-    mov     r2, r3
-    and     r2, r0, 0x07
-    nz.mov  pc, r0, cmdMem1
-
-    sub     r3, r0, 0x08
-
-cmdMem2:
-    mov     r1, r5
-    add     r1, r3
-    ld      r1, r1
-    and     r1, r0, 0x7F
-
-    cmp     r1, r0, 0x20
-    nc.mov  pc, r0, cmdMem3
-    cmp     r1, r0, 0x7F
-    nc.mov  pc, r0, cmdMem4
-
-cmdMem3:
-    mov     r1, r0, 0x2E
-
-cmdMem4:
-    JSR     (OSWRCH)
-    add     r3, r0, 1
-    mov     r2, r3
-    and     r2, r0, 0x07
-    nz.mov  pc, r0, cmdMem2
-    mov     pc, r0, cmdMem0
-
-cmdMem5:
-    mov    r1, r0
-    POP    (r13)
-    RTS    ()
+    JSR     (read_hex)
+    mov     r1, r2
+    JSR     (dump_mem)
+    mov     r1, r0
+    POP     (r13)
+    RTS     ()
 
 # --------------------------------------------------------------
 
 cmdHelp:
     PUSH   (r13)
     mov    r1, r0, msgHelp
-    JSR    (PrintString)
+    JSR    (print_string)
     mov    r1, r0, 1
     POP    (r13)
     RTS    ()
@@ -437,127 +394,43 @@ msgHelp:
 
 cmdTest:
     PUSH   (r13)
-    JSR    (ReadHex)
+    JSR    (read_hex)
     mov    r1, r2
-    JSR    (PrintHexSp)
-    JSR    (PrintDec)
+    JSR    (print_hex_4_spc)
+    JSR    (print_dec_16)
     JSR    (OSNEWL)
     mov    r1, r0
     POP    (r13)
     RTS    ()
 
-# --------------------------------------------------------------
-
-# Load a chunk of data in srecord format: see
-#    man srec_motorola
-# Only rudimentary error handling and consistency checking
-#
-# May or may not implement the RUN type of record
-# (we begin with the minimum: S1 records)
-#
-# Typical minimal srecord input:
-#   S123204065640DEA204F20446F6E65210DEA606885F66885F79848A000F00320E3FFE6F617
-#   S1122060D002E6F7B1F6C9EAD0F168A86CF60031
-# (lines up to 74 characters, 10 chars of overhead, that's max 32 bytes of payload)
-#
-# S1 Format is a data packet with a 16-bit address
-#   <whitespace>
-#   <line end>
-#   Sn     where n=1
-#   LL     two hex chars of length: number of bytes in remainder of this record
-#   AAAA   four hex chars of address
-#   BB<*>  many pairs of hex chars, the data to be stored
-#   CC     two hex chars, a checksum
-#   <line end>
-#   <whitespace>
+# ---------------------------------------------------------
 
 cmdSrec:
-    PUSH    (r13)
-
-    mov     r4, r0, 0xffff          # initialize address to 0xffff meaning not yet set
-
-cmdSrecLineLoop:
-    mov     r1, r0
-    mov     r2, r0, osword0_param_block
-    JSR     (OSWORD)                # read a line of input into INPBUF
-    c.mov   pc, r0, CmdOSEscape
-
-    mov     r1, r0, INPBUF
-
-    JSR     (SkipSpaces)            # remove leading spaces, last char read in r2
-
-    cmp     r2, r0, ord('S')
-    nz.mov  pc, r0, cmdSrecExit
-    add     r1, r0, 1
-
-    ld      r2, r1                  # test for 1
-    cmp     r2, r0, ord('1')
-    nz.mov  pc, r0, cmdSrecError
-    add     r1, r0, 1
-
-    JSR     (ReadHex2)              # r2 = LL
-    c.mov   pc, r0, cmdSrecError
-    mov     r3, r2                  # LL now held in r3
-    mov     r5, r2                  # initialize checksum to LL
-
-    JSR     (ReadHex4)              # r2 = AAAA
-    c.mov   pc, r0, cmdSrecError
-
-    cmp     r4, r0, 0xffff          # test if address not set
-    z.mov   r4, r2                  # AAAA now held in r4
-
-    add     r5, r2                  # accumulate AAAA in checksum
-    bswp    r2, r2
-    add     r5, r2
-
-    sub     r3, r0, 3
-    CLC     ()
-    ror     r3, r3                  # convert to words
-    c.mov   pc, r0, cmdSrecError    # length expected to be even because we are a word based machine
-
-
-cmdSrecWordLoop:
-
-    JSR     (ReadHex4)              # r2 = BBBB
-    c.mov   pc, r0, cmdSrecError
-
-    add     r5, r2                  # accumulate BBBB in checksum
-    bswp    r2, r2
-    add     r5, r2
-
-    sto     r2, r4                  # store the word
-    add     r4, r0, 1               # increment the address pointer
-
-    sub     r3, r0, 1
-    nz.mov  pc, r0, cmdSrecWordLoop
-
-    JSR     (ReadHex2)              # r2 = 00CC
-    add     r5, r2, 1               # accumulate CC and 01
-    and     r5, r0, 0xff            # result in bits 7..0 should now be zero
-
-    nz.mov  pc, r0, cmdSrecChecksumError
-
-    mov     pc, r0, cmdSrecLineLoop
-
-cmdSrecExit:
-    mov     r1, r0
-    POP     (r13)
-    RTS     ()
-
-cmdSrecError:
-    ERROR   (BadFormatError)
-
-BadFormatError:
-    WORD    17                    # TODO assign proper error code
-    STRING "Bad Format"
-    WORD    0x00
+    PUSH   (r13)
+    JSR    (srec_load)
+    cmp    r1, r0, 1
+    z.mov  pc, r0, CmdOSEscape
+    cmp    r1, r0, 2
+    z.mov  pc, r0, cmdSrecChecksumError
+    cmp    r1, r0, 0
+    nz.mov  pc, r0, cmdSrecBadFormatError
+    mov    r1, r0, 1
+    RTS    ()
 
 cmdSrecChecksumError:
-    ERROR   (ChecksumError)
+    ERROR   (checksumError)
 
-ChecksumError:
+checksumError:
     WORD    17                    # TODO assign proper error code
-    STRING "Checksum mismatch"
+    STRING "Checksum Mismatch"
+    WORD    0x00
+
+cmdSrecBadFormatError:
+    ERROR   (badFormatError)
+
+badFormatError:
+    WORD    17                    # TODO assign proper error code
+    STRING "Bad Format"
     WORD    0x00
 
 # ---------------------------------------------------------
@@ -587,296 +460,6 @@ cmdTable:
     STRING  "srec"
     WORD    cmdSrec
     WORD    cmdEnd
-
-# --------------------------------------------------------------
-# Skip Spaces
-#
-# Entry:
-# - r1 is the address of the string
-#
-# Exit:
-# - r1 is updated to skip and spaces
-# - r2 is non-space character
-# - all other registers preserved
-
-SkipSpaces:
-    sub     r1, r0, 1
-skipSpcLoop:
-    add     r1, r0, 1
-    ld      r2, r1
-    cmp     r2, r0, 0x20
-    z.mov   pc, r0, skipSpcLoop
-    RTS     ()
-
-# --------------------------------------------------------------
-#
-# ReadHex
-#
-# Read a multi-digit hex value, terminated by a non hex character
-#
-# Entry:
-# - r1 is the address of the hex string
-#
-# Exit:
-# - r1 is updated after processing the string
-# - r2 contains the hex value
-#
-# - all registers preserved
-
-ReadHex:
-    PUSH    (r13)
-    JSR     (SkipSpaces)
-    mov     r2, r0          # r2 is will contain the hex value
-
-rh_loop:
-    JSR     (ReadHex1)
-    nc.mov  pc, r0, rh_loop
-    POP     (r13)
-    RTS     ()
-
-# --------------------------------------------------------------
-#
-# ReadHex2
-#
-# Read a 2-digit hex value
-#
-# Entry:
-# - r1 is the address of the hex string
-#
-# Exit:
-# - r1 is updated after processing the string
-# - r2 contains the hex value
-# - carry set if there was an error
-# - all registers preserved
-
-ReadHex2:
-    PUSH    (r13)
-    mov     r2, r0          # r2 is will contain the hex value
-    JSR     (ReadHex1)
-    JSR     (ReadHex1)
-    POP     (r13)
-    RTS     ()
-
-# --------------------------------------------------------------
-#
-# ReadHex4
-#
-# Read a 4-digit hex value
-#
-# Entry:
-# - r1 is the address of the hex string
-#
-# Exit:
-# - r1 is updated after processing the string
-# - r2 contains the hex value
-# - carry set if there was an error
-# - all registers preserved
-
-ReadHex4:
-    PUSH    (r13)
-    mov     r2, r0          # r2 is will contain the hex value
-    JSR     (ReadHex1)
-    JSR     (ReadHex1)
-    JSR     (ReadHex1)
-    JSR     (ReadHex1)
-    POP     (r13)
-    RTS     ()
-
-ReadHex1:
-    PUSH    (r3)
-    ld      r3, r1
-    cmp     r3, r0, 0x30
-    nc.mov  pc, r0, rh1_invalid
-    cmp     r3, r0, 0x3A
-    nc.mov  pc, r0, rh1_valid
-    and     r3, r0, 0xdf
-    sub     r3, r0, 0x07
-    nc.mov  pc, r0, rh1_invalid
-    cmp     r3, r0, 0x40
-    c.mov   pc, r0, rh1_invalid
-
-rh1_valid:
-    add     r2, r2
-    add     r2, r2
-    add     r2, r2
-    add     r2, r2
-
-    and     r3, r0, 0x0F
-    add     r2, r3
-
-    add     r1, r0, 1
-    CLC     ()
-    mov     pc, r0, rh1_exit
-
-rh1_invalid:
-    SEC     ()
-
-rh1_exit:
-    POP     (r3)
-    RTS     ()
-
-# --------------------------------------------------------------
-#
-# PrintHexSp
-#
-# Prints a 4-digit hex value followed by a space
-#
-# Entry:
-# - r1 is the value to be printed
-#
-# Exit:
-# - all registers preserved
-
-PrintHexSp:
-    PUSH    (r13)
-    JSR     (print_hex4)
-    JSR     (PrintSpc)
-    POP     (r13)
-    RTS     ()
-
-PrintSpc:
-    PUSH    (r13)
-    PUSH    (r1)
-    mov     r1, r0, 0x20
-    JSR     (OSWRCH)
-    POP     (r1)
-    POP     (r13)
-    RTS     ()
-
-# --------------------------------------------------------------
-#
-# PrintDecimal
-#
-# Prints a 16-bit value as decimal
-#
-# Entry:
-# - r1 is the value to be printed
-#
-# Exit:
-# - all registers preserved
-
-
-# PrintDec:
-#     PUSH    (r13)
-#     PUSH    (r1)
-#     PUSH    (r2)
-#     PUSH    (r3)
-#     PUSH    (r4)
-#
-#     mov     r2, r1
-#     mov     r3, r0, DecTable - 1
-#
-# PrintDec1:
-#     add     r3, r0, 1
-#     ld      r4, r3
-#     z.mov   pc, r0, PrintDec4
-#
-#     mov     r1, r0, 0x30
-# PrintDec2:
-#     cmp     r2, r4
-#     nc.mov  pc, r0, PrintDec3
-#     add     r1, r0, 1
-#     sub     r2, r4
-#     mov     pc, r0, PrintDec2
-#
-# PrintDec3:
-#     JSR     (osWRCH)
-#     mov     pc, r0, PrintDec1
-#
-# PrintDec4:
-#     POP     (r4)
-#     POP     (r3)
-#     POP     (r2)
-#     POP     (r1)
-#     POP     (r13)
-#     RTS     ()
-#
-# DecTable:
-#     WORD    10000, 1000, 100, 10, 1, 0
-
-
-# digit = 0
-#          if (a >= 40000) a = a - 40000; digit = digit + 4
-# a = a*2; if (a >= 40000) a = a - 40000; digit = digit + 2
-# a = a*2; if (a >= 40000) a = a - 40000; digit = digit + 1
-# output character (digit ^ $30)
-# digit = 0
-#          if (a >= 32000) a = a - 32000; digit = digit + 8
-# a = a*2; if (a >= 32000) a = a - 32000; digit = digit + 4
-# a = a*2; if (a >= 32000) a = a - 32000; digit = digit + 2
-# a = a*2; if (a >= 32000) a = a - 32000; digit = digit + 1
-# output character (digit ^ $30)
-# digit = 0
-#          if (a >= 25600) a = a - 25600; digit = digit + 8
-# a = a*2; if (a >= 25600) a = a - 25600; digit = digit + 4
-# a = a*2; if (a >= 25600) a = a - 25600; digit = digit + 2
-# a = a*2; if (a >= 25600) a = a - 25600; digit = digit + 1
-# output character (digit ^ $30)
-# digit = 0
-#          if (a >= 20480) a = a - 20480; digit = digit + 8
-# a = a*2; if (a >= 20480) a = a - 20480; digit = digit + 4
-# a = a*2; if (a >= 20480) a = a - 20480; digit = digit + 2
-# a = a*2; if (a >= 20480) a = a - 20480; digit = digit + 1
-# output character (digit ^ $30)
-# digit = 0
-#          if (a >= 16384) a = a - 16384; digit = digit + 8
-# a = a*2; if (a >= 16384) a = a - 16384; digit = digit + 4
-# a = a*2; if (a >= 16484) a = a - 16384; digit = digit + 2
-# a = a*2; if (a >= 16384) a = a - 16384; digit = digit + 1
-# output character (digit ^ $30)
-
-# Based on
-# http://6502org.wikidot.com/software-output-decimal
-
-PrintDec:
-    PUSH    (r13)
-    PUSH    (r1)
-    PUSH    (r2)
-    PUSH    (r3)
-    PUSH    (r4)
-
-    mov     r2, r1
-    mov     r3, r0, 4
-    mov     r1, r0, 0x2006
-
-PrintDec1:
-    ld      r4, r3, DecTable
-    CLC     ()
-    ror     r2, r2
-
-PrintDec2:
-    adc     r2, r2
-    c.mov   pc, r0, PrintDec3
-    cmp     r2, r4
-    nc.mov  pc, r0, PrintDec4
-
-PrintDec3:
-    sub     r2, r4
-    SEC     ()
-
-PrintDec4:
-    adc     r1, r1
-    nc.mov  pc, r0, PrintDec2
-
-    JSR     (osWRCH)
-
-    mov     r1, r0, 0x1003
-    sub     r3, r0, 1
-    pl.mov  pc, r0, PrintDec1
-
-    POP     (r4)
-    POP     (r3)
-    POP     (r2)
-    POP     (r1)
-    POP     (r13)
-    RTS     ()
-
-DecTable:
-    WORD        8 * (2**11)
-    WORD       80 * (2** 8)
-    WORD      800 * (2** 5)
-    WORD     8000 * (2** 2)
-    WORD    40000 * (2** 0)
 
 # --------------------------------------------------------------
 
@@ -1373,35 +956,6 @@ SendStringR2Lp:
     POP     (r13)
     RTS     ()
 
-# --------------------------------------------------------------
-#
-# PrintString
-#
-# Prints the zero terminated ASCII string
-#
-# Entry:
-# - r1 points to the zero terminated string
-#
-# Exit:
-# - all other registers preserved
-
-PrintString:
-    PUSH    (r2)
-    PUSH    (r13)
-    mov     r2, r1
-
-ps_loop:
-    ld      r1, r2
-    and     r1, r0, 0xff
-    z.mov   pc, r0, ps_exit
-    JSR     (OSWRCH)
-    mov     r2, r2, 0x0001
-    mov     pc, r0, ps_loop
-
-ps_exit:
-    POP     (r13)
-    POP     (r2)
-    RTS     ()
 
 # --------------------------------------------------------------
 
