@@ -414,6 +414,7 @@ next_instruction:
     sub     r10, r0, 1             # decrement the iteration count
     nz.mov  pc, r0, step_loop      # and loop back for more instructions
 
+    ld      r1, r0, reg_state_pc
     JSR     (print_state)          # print the final state
 
     mov     pc, r0, mon1           # back to the - prompt
