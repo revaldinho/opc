@@ -1,5 +1,5 @@
 import sys, re
-mnemonics="mov,and,or,xor,add,adc,sto,ld,ror,jsr,sub,sbc,inc,lsr,dec,asr,halt,bswp,putpsr,getpsr,rti,not,push,pop,out,in,cmp,cmpc".split(",")
+mnemonics="mov,and,or,xor,add,adc,sto,ld,ror,jsr,sub,sbc,inc,lsr,dec,asr,halt,bswp,putpsr,getpsr,rti,not,out,in,push,pop,cmp,cmpc".split(",")
 op = dict([(opcode,mnemonics.index(opcode)) for opcode in mnemonics])
 dis = dict([(mnemonics.index(opcode),opcode) for opcode in mnemonics])
 pred_dict = {0:"",1:"0.",2:"z.",3:"nz.",4:"c.",5:"nc.",6:"mi.",7:"pl."}

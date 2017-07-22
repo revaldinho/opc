@@ -74,7 +74,7 @@ ENDMACRO
         mov   pc,r0,start
 
         ORG   0x1000
-        EQU   MAX,20          # set max number to sift through (<1.7M)
+        EQU   MAX,100          # set max number to sift through (<1.7M)
 start:  
         mov   r10,r0, (MAX & 0xFFFF0000) >> 16  # upper word
         mov   r9, r0, MAX & 0xFFFF              # lower word
