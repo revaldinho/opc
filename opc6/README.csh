@@ -17,6 +17,7 @@ else
 endif
 
 set testlist = ( fib robfib  hello string  davefib mul32 udiv32 sqrt davefib_int pi-spigot-rev testpsr sqrt_int pi-spigot-bruce sieve e-spigot-rev bigsieve )
+set testlist = (pi-spigot-rev bigsieve)
 foreach test ( $testlist )
     echo "Running Test $test"
     # Assemble the test
@@ -44,7 +45,7 @@ foreach test ( $testlist )
     foreach option ( NEGEDGE_MEMORY POSEDGE_MEMORY )
         printf "%32s :" ${test}_${option}
         if "${test}" =~ "*int" then
-            python3 ../utils/mdumpcheck.py ${test}.dump  ${vpath}${test}_${option}.vdump 0xF000 0x0500 0xFFFF
+            python3 ../utils/mdumpcheck.py ${test}.dump  ${vpath}${test}_${option}.vdump 0xF000 0x4000 0xFFFF
         else
             python3 ../utils/mdumpcheck.py ${test}.dump  ${vpath}${test}_${option}.vdump
         endif
