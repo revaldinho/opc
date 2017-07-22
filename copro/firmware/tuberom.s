@@ -17,35 +17,35 @@ EQU NUM_VECTORS, 27           # number of vectors in DefaultVectors table
 
 # 0x0002 = OPC5/6 IRQ0 address
 
-EQU       USERV, 0x0004
-EQU        BRKV, 0x0005
-EQU       IRQ1V, 0x0006
-EQU       IRQ2V, 0x0007
-EQU        CLIV, 0x0008
-EQU       BYTEV, 0x0009
-EQU       WORDV, 0x000A
-EQU       WRCHV, 0x000B
-EQU       RDCHV, 0x000C
-EQU       FILEV, 0x000D
-EQU       ARGSV, 0x000E
-EQU       BGETV, 0x000F
-EQU       BPUTV, 0x0010
-EQU       GBPBV, 0x0011
-EQU       FINDV, 0x0012
-EQU        FSCV, 0x0013
-EQU       EVNTV, 0x0014
-EQU        UPTV, 0x0015       # not implemented
-EQU        NETV, 0x0016       # not implemented
-EQU        VDUV, 0x0017       # not implemented
-EQU        KEYV, 0x0018       # not implemented
-EQU        INSV, 0x0019       # not implemented
-EQU        REMV, 0x001A       # not implemented
-EQU        CNPV, 0x001B       # not implemented
-EQU       IND1V, 0x001C       # not implemented
-EQU       IND2V, 0x001D       # not implemented
-EQU       IND3V, 0x001E       # not implemented
-
-# 0x0020 = OPC6 IRQ1 address
+# 0x0004 = OPC6 IRQ1 address
+        
+EQU       USERV, 0x0010
+EQU        BRKV, 0x0011
+EQU       IRQ1V, 0x0012
+EQU       IRQ2V, 0x0013
+EQU        CLIV, 0x0014
+EQU       BYTEV, 0x0015
+EQU       WORDV, 0x0016
+EQU       WRCHV, 0x0017
+EQU       RDCHV, 0x0018
+EQU       FILEV, 0x0019
+EQU       ARGSV, 0x001A
+EQU       BGETV, 0x001B
+EQU       BPUTV, 0x001C
+EQU       GBPBV, 0x001D
+EQU       FINDV, 0x001E
+EQU        FSCV, 0x001F
+EQU       EVNTV, 0x0020
+EQU        UPTV, 0x0021       # not implemented
+EQU        NETV, 0x0022       # not implemented
+EQU        VDUV, 0x0023       # not implemented
+EQU        KEYV, 0x0024       # not implemented
+EQU        INSV, 0x0025       # not implemented
+EQU        REMV, 0x0026       # not implemented
+EQU        CNPV, 0x0027       # not implemented
+EQU       IND1V, 0x0028       # not implemented
+EQU       IND2V, 0x0029       # not implemented
+EQU       IND3V, 0x002A       # not implemented
 
 EQU      ERRBUF, 0x0030
 EQU      INPBUF, 0x0030
