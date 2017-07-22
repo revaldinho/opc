@@ -22,7 +22,9 @@ module system ( input clk, input[7:0] sw, output[7:0] led, input rxd, output txd
    reg         reset_b;
 
    wire        uart_cs_b = !({address[15:1],  1'b0} == 16'hfe08);
-   wire         ram_cs_b = !(address[15:RAMSIZE] == 0);
+   
+   // Map the RAM at both the top and bottom of memory (uart_cs_b takes priority)
+   wire         ram_cs_b = !((|address[15:RAMSIZE] == 1'b0)  || (&address[15:RAMSIZE] == 1'b1));
 
    // Synchronize reset
    always @(posedge clk)
@@ -96,7 +98,7 @@ module system ( input clk, input[7:0] sw, output[7:0] led, input rxd, output txd
       );
 
    // Data Multiplexor
-   assign cpu_din = ram_cs_b ? (uart_cs_b ? 16'hffff : uart_dout) : ram_dout;
+   assign cpu_din = uart_cs_b ? (ram_cs_b ? 16'hffff : ram_dout) : uart_dout;
 
    // LEDs could be used for debugging in the future
    assign led = sw;
