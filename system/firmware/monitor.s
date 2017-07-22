@@ -298,16 +298,14 @@ dis_loop:
 # r6 is the destination register number
 # r7 is the emulated source register
 # r8 is the emulated destination register
-# r9 is the emulated flags
+# r9 is the saved pc value, and then the emulated flags
 # r10 is the iteration count
 #
 # TODO: for OPC6
 #
-# - support INC/DEC rd, imm
-#     - somehow handle 4-bit imm instead of rs
 # - support PUTPSR and GETPSR (not setting SWI)
-#     - "psr" is now r0
-#     - but we re-write
+#     - "psr" should be r0
+#     - but we re-write src/dst so need to check if values other than r0 are ok
 # - support SWI and RTI (???)
 #     - need to emulate the shadow PC/shadow PSR
 
@@ -315,9 +313,8 @@ step:
     mov     r10, r5, 1             # iteration count + 1
 
 step_loop:
-    JSR     (print_state)
-
     ld      r4, r0, reg_state_pc   # load the program counter
+    mov     r9, r4                 # save the program counter of the current instruction
     ld      r1, r4                 # fetch the instruction
     add     r4, r0, 1              # increment the PC
 
@@ -354,32 +351,46 @@ no_operand:
     #
     # Emulate OPC6 JSR instruction
 
-    add     r2, r7                 # calculate the EA by adding the source register value to the operand
+    # r1 = instruction, r2 = operand
 
-    # r1 = instruction, r2 = EA
-
-    mov     r3, r1                 # test for the jsr opcode
-    and     r3, r0, 0x0f00
-    cmp     r3, r0, 0x0900
-    nz.mov  pc, r0, not_jsr
-
-    mov     r3, r1                 # test for the never predicate
+    mov     r3, r1                 # extract the predicate
     and     r3, r0, 0xe000
     cmp     r3, r0, 0x2000
     z.mov   pc, r0, not_jsr        # never predicate present, so not a jsr
+
+    mov     r3, r1                 # extract the opcode
+    and     r3, r0, 0x0f00
+    cmp     r3, r0, 0x0c00         # test for inc
+    z.mov   pc, r0, skip_src_rewrite
+    cmp     r3, r0, 0x0e00         # test for dec
+    z.mov   pc, r0, skip_src_rewrite
+
+    cmp     r3, r0, 0x0900         # test for jsr
+    nz.mov  pc, r0, not_jsr
 
     or      r1, r0, 0x1000         # patch the instruction to always have an operand
     mov     r3, r0, jsr_taken
     sto     r3, r0, operand        # patch the operand to be the jsr_taken routine
 
+    add     r2, r7                 # pass EA to jsr_taken by adding the source register (r7) value to the operand (r2)
+
 not_jsr:
 
-#endif
+##endif
 
-    and     r1, r0, 0xff00         # patch the instruction so:
-    or      r1, r0, 0x0078         # src = r7, dst = r8
+    and     r1, r0, 0xff0f         # patch the instruction so:
+    or      r1, r0, 0x0070         # src = r7
+
+skip_src_rewrite:
+    and     r1, r0, 0xfff0         # patch the instruction so:
+    or      r1, r0, 0x0008         # dst = r8
 
     sto     r1, r0, instruction    # write the patched instruction
+
+    mov     r1, r9                 # print state done here to be identical to the emulator
+    PUSH    (r2)
+    JSR     (print_state)
+    POP     (r2)
 
     ld      r9, r0, reg_state_psr  # load the s (bit 2), c (bit 1) and z (bit 0) flags
 
@@ -413,6 +424,7 @@ nop:
 ##ifdef CPU_OPC6
 
 jsr_taken:
+    sto     r4, r6, reg_state      # store the current PC in the specified link register
 
     cmp     r2, r0, 0xffee         # EA = oswrch?
     nz.mov  pc, r0, not_oswrch
@@ -422,7 +434,6 @@ jsr_taken:
     mov     pc, r0, next_instruction
 
 not_oswrch:
-    sto     r4, r6, reg_state      # store the current PC in the specified link register
     mov     r4, r2                 # update the PC to the calculated effective address
     sto     r4, r0, reg_state_pc   # save the updated PC
     mov     pc, r0, next_instruction
@@ -431,8 +442,9 @@ not_oswrch:
 
 print_state:
     PUSH    (r13)
+    PUSH    (r1)
     JSR     (OSNEWL)
-    ld      r1, r0, reg_state_pc   # display the next instruction
+    POP     (r1)
     JSR     (disassemble)
 
 pad1:
@@ -460,6 +472,23 @@ pad2:
 print_regs:
 
     PUSH    (r13)
+    JSR     (print_spc)
+    ld      r1, r0, reg_state_psr # extract SWI flag
+    ror     r1, r1
+    ror     r1, r1
+    ror     r1, r1
+    ror     r1, r1
+    and     r1, r0, 0x0f
+    JSR     (print_hex_1)
+    JSR     (print_spc)
+    JSR     (print_spc)
+
+    ld      r1, r0, reg_state_psr # extract EI flag
+    ror     r1, r1
+    ror     r1, r1
+    ror     r1, r1
+    JSR     (print_flag)
+
     ld      r1, r0, reg_state_psr # extract S flag
     ror     r1, r1
     ror     r1, r1
@@ -727,6 +756,7 @@ dis4:
     and     r1, r0, 0xE000
     cmp     r1, r0, 0x2000
     z.add   r2, r0, 0x1000
+    PUSH    (r2)                        # save the opcode so we can later test for inc/dec
 ##endif
 
     mov     r1, r0, opcodes             # find string for opcode
@@ -742,18 +772,31 @@ dis6:
     JSR     (print_bstring)
     JSR     (print_spc)                 # print a space
 
+    mov     r1, r0, ord('r')
+    JSR     (OSWRCH)
     mov     r1, r6                      # extract destination register
-    JSR     (print_reg)
+    JSR     (print_reg_num)
 
     mov     r1, r0, 0x2c
     JSR     (OSWRCH)
+
+    mov     r1, r0, ord('r')
+
+##ifdef CPU_OPC6
+    POP     (r2)                        # restore the opcode (bits 12..8)
+    and     r2, r0, 0x1D00              # inc = 0x0C00, dec = 0x0E00
+    cmp     r2, r0, 0x0C00              # both now map to 0x0C00
+    nz.jsr  r13, r0, OSWRCH             # if not inc/dec, src is a register
+##else
+    JSR     (OSWRCH)
+##endif
 
     mov     r1, r6                      # extract source register
     ror     r1, r1
     ror     r1, r1
     ror     r1, r1
     ror     r1, r1
-    JSR     (print_reg)
+    JSR     (print_reg_num)
 
     mov     r1, r6                      # extract length
     and     r1, r0, 0x1000
@@ -763,9 +806,9 @@ dis6:
     mov     r1, r0, 0x2c                # print a ,
     JSR     (OSWRCH)
 
-    mov     r1, r0, 0x30                # print 0x
+    mov     r1, r0, ord('0')            # print 0x
     JSR     (OSWRCH)
-    mov     r1, r0, 0x78
+    mov     r1, r0, ord('x')
     JSR     (OSWRCH)
 
     mov     r1, r7
@@ -783,18 +826,12 @@ dis7:
     POP     (r13)
     RTS     ()
 
-print_reg:
-
+print_reg_num:
     PUSH    (r13)
     and     r1, r0, 0x0F
 
-    PUSH    (r1)
-    mov     r1, r0, 0x72
-    JSR     (OSWRCH)
-    POP     (r1)
-
     cmp     r1, r0, 0x0A
-    nc.mov  pc, r0, print_reg_num
+    nc.mov  pc, r0, print_reg_num_1
 
     PUSH    (r1)
     mov     r1, r0, 0x31
@@ -803,7 +840,7 @@ print_reg:
 
     sub     r1, r0, 0x0A
 
-print_reg_num:
+print_reg_num_1:
     add     r1, r0, 0x30
     JSR     (OSWRCH)
     POP     (r13)

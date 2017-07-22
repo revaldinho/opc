@@ -1,7 +1,7 @@
 ##ifndef _LIB_PRINTHEX_S
 
 ##define _LIB_PRINTHEX_S
-        
+
 # --------------------------------------------------------------
 #
 # print_hex_4
@@ -35,12 +35,7 @@ print_hex_4_loop:
     add     r2, r2
     adc     r1, r1
 
-    and     r1, r0, 0x0F    # mask off everything but the bottom nibble
-    cmp     r1, r0, 0x0A    # set the carry if r1 >= 0x0A
-    c.add   r1, r0, 0x27    # 'a' - '9' + 1
-    add     r1, r0, 0x30    # '0'
-
-    JSR     (OSWRCH)        # output R1
+    JSR     (print_hex_1)
 
     sub     r3, r0, 1       # decrement the loop counter and loop back for next digits
     nz.mov  pc, r0, print_hex_4_loop
@@ -51,6 +46,25 @@ print_hex_4_loop:
     POP     (r13)
 
     RTS     ()
+
+# --------------------------------------------------------------
+#
+# print_hex_1
+#
+# Prints a 1-digit hex value
+#
+# Entry:
+# - r1 is the value to be printed
+#
+# Exit:
+# - all registers preserved
+
+print_hex_1:
+    and     r1, r0, 0x0F    # mask off everything but the bottom nibble
+    cmp     r1, r0, 0x0A    # set the carry if r1 >= 0x0A
+    c.add   r1, r0, 0x27    # 'a' - '9' + 1
+    add     r1, r0, 0x30    # '0'
+    mov     pc, r0, OSWRCH  # output R1
 
 # --------------------------------------------------------------
 #
@@ -82,7 +96,7 @@ print_hex_4_spc:
 #
 # Exit:
 # - all registers preserved
-        
+
 print_spc:
     PUSH    (r13)
     PUSH    (r1)
@@ -91,5 +105,5 @@ print_spc:
     POP     (r1)
     POP     (r13)
     RTS     ()
-        
+
 ##endif
