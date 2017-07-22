@@ -36,7 +36,6 @@ for iteration in range (0,2): # Two pass assembly
         (pred, opfields,words, memptr) = ("1" if pred==None else pred, [ x.strip() for x in operands.split(",")],[], nextmem)
         if (label and label != "None") or (instr=="EQU"):
             exec ("%s= %s" % ((label,str(nextmem)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
-            instr = None if instr == "EQU" else instr ## if instr was EQU then it is handled so no more to do
         if instr in op and iteration < 1:
             nextmem += len(opfields)-1                  # If two operands are provide instruction will be one word
         elif instr=="WORD" and iteration < 1:
@@ -57,7 +56,7 @@ for iteration in range (0,2): # Two pass assembly
             (wordmem[nextmem:nextmem+len(words)], nextmem )  = (words, nextmem+len(words))
         elif instr == "ORG":
             nextmem = eval(operands,globals(),symtab)
-        elif instr :
+        elif instr and (instr != "EQU") :
             sys.exit("Error: unrecognized instruction %s" % instr)
         if iteration > 0 :
             print("%04x  %-20s  %s"%(memptr,' '.join([("%04x" % i) for i in words]),line.rstrip()))
