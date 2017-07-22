@@ -9,6 +9,16 @@ MACRO   CLC()
         c.add r0,r0
 ENDMACRO
 
+MACRO   PUSH( _data_)
+        mov     r14, r14, -1
+        sto     _data_, r14, 1
+ENDMACRO
+
+MACRO   POP( _data_ )
+        ld      _data_, r14, 1
+        mov     r14, r14, 1
+ENDMACRO
+
 MACRO   SEC()
         nc.ror     r0,r0,1
 ENDMACRO
@@ -45,7 +55,8 @@ SDCL5:  inc     r8,1                    # incr pi digit pointer
         z.inc   pc,SDCL6-PC             # if first digit nothing to print yet
 SDCL8:
         ld      r1,r8,-2                # Get digit 2 places back from latest
-        jsr     r13,r0,oswrdig          # Print it
+        mov     r1,r1,48                # Make it ASCII
+        jsr     r13,r0,oswrch           # Print it
         mov     r1,r0,46                # get '.' into r1 in case...
         cmp     r8,r0,mypi+2            # is this the first digit ?
         z.jsr     r13,r0,oswrch         #  ..yes, print the '.'
@@ -54,7 +65,8 @@ SDCL6:  dec     r9,1                    # dec loop counter
         nz.mov  pc,r0,L3                # jump back into main program
         # empty the buffer
 SDCL7:  ld      r1,r8,-1
-        jsr     r13,r0,oswrdig
+        mov     r1,r1,48                # Make it ASCII        
+        jsr     r13,r0,oswrch
 ENDMACRO
 
 MACRO   MULTI_DIGIT_CORRECTION()
@@ -82,7 +94,8 @@ MDCL5:  inc     r8,1                    # incr pi digit pointer
         cmp     r8,r0,4+mypi            # allow buffer of 4 chars for corrections
         nc.inc  pc,MDCL6-PC
         ld      r1,r8,-4                # Get digit 3 places back from latest
-        jsr     r13,r0,oswrdig
+        mov     r1,r1,48                # Make it ASCII
+        jsr     r13,r0,oswrch        
         mov     r1,r0,46                # get '.' into r1 in case...
         cmp     r8,r0,mypi+4            # is this the first digit ?
         z.jsr   r13,r0,oswrch           #  ..yes, print the '.'
@@ -94,7 +107,8 @@ MDCL6:
         # empty the buffer
         mov     r9,r8,-3
 MDCL7:  ld      r1,r9
-        jsr     r13,r0,oswrdig
+        mov     r1,r1,48                # Make it ASCII        
+        jsr     r13,r0,oswrch
         inc     r9,1
         cmp     r9,r8
         nz.dec  pc,PC-MDCL7
@@ -112,19 +126,18 @@ ENDMACRO
 # r3..r5 = local registers
 # r1,r2  = temporary registers, parameters and return registers
 
-        EQU     digits,   9
-        EQU     cols,     1+(9*10//3)            # 1 + (digits * 10/3)
+        EQU     digits,   6
+        EQU     cols,     1+(6*10//3)            # 1 + (digits * 10/3)
 
-# preamble for a bootable program
-# remove this for a monitor-friendly loadable program
-    	ORG 0
-    	mov r14, r0, 0x2000
-    	mov pc, r0, start
+        mov   r13,r0                  # Initialise r13 to stop PUSH/POP ever loading X's to stack for regression runs        
+        mov   r14,r0,0xFDFF           # Set stack to grow down from here for monitor
+        mov   pc,r0,0x100             # Program start at 0x100 for use with monitor/copro
 
-        ORG 0x1000
+        ORG   0x100
 start:
+        PUSH  (r13)
+        
         mov     r8,r0,mypi
-
         ;; trivial banner
         mov     r1, r0, 0x4f
         jsr     r13,r0,oswrch
@@ -170,9 +183,10 @@ L4:
         dec     r12,1                   # decr loop counter
         c.mov   pc,r0,L4                # loop if >=0
 
-        SINGLE_DIGIT_CORRECTION()
-        #MULTI_DIGIT_CORRECTION()
-        halt    r0,r0
+        #SINGLE_DIGIT_CORRECTION()
+        MULTI_DIGIT_CORRECTION()
+        halt    r0,r0,0xBEEB
+        POP     (r13)
         RTS     ()
 
         # --------------------------------------------------------------
@@ -233,6 +247,18 @@ mul16s_loop0:
         c.add   r11,r2                  # add last copy of multiplicand into accumulator if carry
         RTS     ()
 
+Limit:
+        EQU dummy, 0 if (Limit < 0x200) else limit_error
+
+        ORG 0x200
+        
+        
+mypi:    WORD 0                          # Space for pi digit storage
+         ORG mypi + digits + 8
+remain:  WORD 0                          # Array space for remainder data
+        
+
+ORG     0xFFEE
         # --------------------------------------------------------------
         #
         # oswrch
@@ -244,7 +270,6 @@ mul16s_loop0:
         # Exit:
         #       r2 used as temporary
         # ---------------------------------------------------------------
-oswrdig: mov     r1,r1,48                # Convert digit number to ASCII
 oswrch:
 oswrch_loop:
         in      r2, r0, 0xfe08
@@ -253,6 +278,3 @@ oswrch_loop:
         out     r1, r0, 0xfe09
         RTS     ()
 
-mypi:    WORD 0                          # Space for pi digit storage
-         ORG mypi + digits + 8
-remain:  WORD 0                          # Array space for remainder/denominator data interleaved
