@@ -8,7 +8,7 @@
 ##include "macros.s"
 
 EQU        BASE, 0xC000
-EQU        CODE, 0xFA00
+EQU        CODE, 0xF800
 
 EQU   UART_ADDR, 0xFE08
 
