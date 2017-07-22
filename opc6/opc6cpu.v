@@ -11,7 +11,7 @@ module opc6cpu( input[15:0] din, input clk, input reset_b, input[1:0] int_b, inp
     reg        zero,carry,sign,enable_int,reset_s0_b,reset_s1_b;
     wire [4:0]  full_opcode     = {IR_q[IRNPRED],IR_q[11:8]};
     wire [4:0]  full_opcode_d   = { (din[15:13]==3'b001),din[11:8] };
-    wire predicate_d 		    = (din[15:13]==3'b001) || (din[P2] ^ (din[P1] ? (din[P0] ? sign : zero): (din[P0] ? carry : 1))); // New data, new flags (in exec/fetch)
+    wire predicate_d 		= (din[15:13]==3'b001) || (din[P2] ^ (din[P1] ? (din[P0] ? sign : zero): (din[P0] ? carry : 1))); // New data, new flags (in exec/fetch)
     wire predicate_q            = IR_q[IRNPRED] || (IR_q[P2] ^ (IR_q[P1] ? (IR_q[P0] ? PSR_q[S] : PSR_q[Z]) : (IR_q[P0] ? PSR_q[C] : 1))); // IR reg, old flags (in fetch1,EA)
     wire predicate_din 	        = (din[15:13]==3'b001) || (din[P2] ^ (din[P1]?(din[P0]?PSR_q[S]:PSR_q[Z]):(din[P0]?PSR_q[C]:1)));  // New data, old flags (in fetch0)
     wire [15:0] dprf_dout_p2    = (IR_q[7:4]==4'hF) ? PC_q: {16{((IR_q[7:4]!=4'h0))}} & dprf_q[IR_q[7:4]];  // Port 2 always reads source reg
@@ -43,8 +43,7 @@ module opc6cpu( input[15:0] din, input clk, input reset_b, input[1:0] int_b, inp
                     EA_ED  : FSM_q <= (!predicate_q )? FETCH0: (IR_q[IRLD]) ? RDMEM : (IR_q[IRSTO]) ? WRMEM : EXEC;
                     RDMEM  : FSM_q <= EXEC;
                     EXEC   : FSM_q <= ((!(&int_b) & PSR_q[EI])||( (full_opcode==PUTPSR) && (|swiid)))?INT:((IR_q[3:0]==4'hF)||(full_opcode==JSR))?FETCH0:
-                                      (din[IRLEN]) ? FETCH1 : // go to fetch0 if PC or PSR affected by exec
-                                      ((din[11:8]==LD) || (din[11:8]==STO) ) ? EA_ED : (predicate_d) ? EXEC : EA_ED; // short cut to exec on all predicates, but ld/sto go to EA_ED
+                                      (din[IRLEN]) ? FETCH1 : ((din[11:8]==LD) || (din[11:8]==STO) ) ? EA_ED : (predicate_d) ? EXEC : FETCH0; 
                     WRMEM  : FSM_q <= (!(&int_b) & PSR_q[EI])?INT:FETCH0;
                     default: FSM_q <= FETCH0;
                 endcase // case (FSM_q)
