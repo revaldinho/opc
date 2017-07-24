@@ -18,16 +18,26 @@
 	;; r10 stands for r
 	;; r11 stands for q
 	;; r12 stands for p (a pointer)
-
-MACRO   JSR( _addr_ )
-        mov     r13,pc,2
-        mov     pc,r0,_addr_
+MACRO JSR( _address_)
+   mov      r13, pc, 0x0005
+   sto      r13, r14
+   mov      r14, r14, 0xffff
+   mov      pc,  r0, _address_
 ENDMACRO
 
-
-MACRO   RTS ()
-        mov     pc,r13
+MACRO RTS()
+    mov     r14, r14, 0x0001
+    ld      pc, r14
 ENDMACRO
+
+#MACRO   JSR( _addr_ )
+#        mov     r13,pc,2
+#        mov     pc,r0,_addr_
+#ENDMACRO
+#
+#MACRO   RTS ()
+#        mov     pc,r13
+#ENDMACRO
 
 # preamble for a bootable program
 # remove this for a monitor-friendly loadable program
