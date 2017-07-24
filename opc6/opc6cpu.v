@@ -33,8 +33,7 @@ module opc6cpu( input[15:0] din, input clk, input reset_b, input[1:0] int_b, inp
     end // always @ ( * )
     always @(posedge clk)
         if (clken) begin
-            {reset_s0_b,reset_s1_b} <= {reset_b,reset_s0_b};
-            predicate_q <= (FSM_q==FETCH0)?predicate_din:predicate_d;            
+            {reset_s0_b,reset_s1_b, predicate_q} <= {reset_b,reset_s0_b,(FSM_q==FETCH0)?predicate_din:predicate_d };
             if (!reset_s1_b)
                 {PC_q,PCI_q,PSRI_q,PSR_q,FSM_q} <= 0;
             else begin
