@@ -62,5 +62,4 @@ while True:
             (swiid,ei,s,c,z) = flag_save if (preserve_flag or dest==0xF ) else (swiid,ei, (regfile[dest]>>15) & 1, c, 1 if (regfile[dest]==0) else 0)
 if len(sys.argv) > 2:  # Dump memory for inspection if required
     with open(sys.argv[2],"w" ) as f:
-        for i in range(0, len(wordmem), 16):
-            f.write( '%s\n' %  ' '.join("%04x"%n for n in wordmem[i:i+16]))
+        f.write( '\n'.join([''.join("%04x " % d for d in wordmem[j:j+16]) for j in [i for i in range(0,len(wordmem),16)]]))
