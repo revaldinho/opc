@@ -10,17 +10,17 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
     reg [3:0]  swiid,PSRI_q;
     reg [7:0]  PSR_q ;
     reg        zero,carry,sign,enable_int,reset_s0_b,reset_s1_b,predicate_q;
-    wire [4:0]  full_opcode     = {IR_q[IRNPRED],IR_q[11:8]};
-    wire [4:0]  full_opcode_d   = { (din[15:13]==3'b001),din[11:8] };         
-    wire        predicate_d 	= (din[15:13]==3'b001) || (din[P2] ^ (din[P1] ? (din[P0] ? sign : zero): (din[P0] ? carry : 1))); // New data,new flags (in exec/fetch)
-    wire        predicate_din 	= (din[15:13]==3'b001) || (din[P2] ^ (din[P1]?(din[P0]?PSR_q[S]:PSR_q[Z]):(din[P0]?PSR_q[C]:1)));  // New data,old flags (in fetch0)
-    wire [15:0] dprf_dout_p2    = (IR_q[7:4]==4'hF) ? PC_q: {16{(IR_q[7:4]!=4'h0)}} & dprf_q[IR_q[7:4]];  // Port 2 always reads source reg
-    wire [15:0] dprf_dout       = (IR_q[3:0]==4'hF) ? PC_q: {16{(IR_q[3:0]!=4'h0)}} & dprf_q[IR_q[3:0]];    // Port 1 always reads dest reg
-    wire [15:0] operand         = (IR_q[IRLEN]||IR_q[IRLD]||(full_opcode==INC)||(full_opcode==DEC)) ? OR_q : dprf_dout_p2;  // For one word instructions operand usu comes from dprf
-    assign {rnw,dout,address}   = {!(FSM_q==WRM), dprf_dout_p2,(FSM_q==WRM||FSM_q == RDM)? ((full_opcode==POP)? dprf_dout: OR_q)  : PC_q};
-    assign {vpa,vda,vio}        = {((FSM_q==FET0)||(FSM_q==FET1)||(FSM_q==EXEC)),({2{(FSM_q==RDM)||(FSM_q==WRM)}} & {!((full_opcode==IN)||(full_opcode==OUT)),(full_opcode==IN)||(full_opcode==OUT)})};
+    wire [4:0]  full_op       = {IR_q[IRNPRED],IR_q[11:8]};
+    wire [4:0]  full_op_d     = { (din[15:13]==3'b001),din[11:8] };
+    wire        predicate_d   = (din[15:13]==3'b001) || (din[P2] ^ (din[P1] ? (din[P0] ? sign : zero): (din[P0] ? carry : 1))); // New data,new flags (in exec/fetch)
+    wire        predicate_din = (din[15:13]==3'b001) || (din[P2] ^ (din[P1]?(din[P0]?PSR_q[S]:PSR_q[Z]):(din[P0]?PSR_q[C]:1))); // New data,old flags (in fetch0)
+    wire [15:0] dprf_dout_p2  = (IR_q[7:4]==4'hF) ? PC_q: {16{(IR_q[7:4]!=4'h0)}} & dprf_q[IR_q[7:4]];                          // Port 2 always reads source reg
+    wire [15:0] dprf_dout     = (IR_q[3:0]==4'hF) ? PC_q: {16{(IR_q[3:0]!=4'h0)}} & dprf_q[IR_q[3:0]];                          // Port 1 always reads dest reg
+    wire [15:0] operand       = (IR_q[IRLEN]||IR_q[IRLD]||(full_op==INC)||(full_op==DEC)||(IR_q[IRWBK]))?OR_q:dprf_dout_p2;     // One word instructions operand usu comes from dprf
+    assign {rnw,dout,address} = {!(FSM_q==WRM), dprf_dout_p2,(FSM_q==WRM||FSM_q==RDM)? ((full_op==POP)? dprf_dout: OR_q)  : PC_q};
+    assign {vpa,vda,vio}      = {((FSM_q==FET0)||(FSM_q==FET1)||(FSM_q==EXEC)),({2{(FSM_q==RDM)||(FSM_q==WRM)}} & {!((full_op==IN)||(full_op==OUT)),(full_op==IN)||(full_op==OUT)})};
     always @( * ) begin
-        case (full_opcode)
+        case (full_op)
             AND,OR               :{carry,result} = {PSR_q[C],(IR_q[8])?(dprf_dout & operand):(dprf_dout | operand)};
             ADD,ADC,INC          :{carry,result} = dprf_dout + operand + (IR_q[8] & PSR_q[C]);
             SUB,SBC,CMP,CMPC,DEC :{carry,result} = dprf_dout + (operand ^ 16'hFFFF) + ((IR_q[8])?PSR_q[C]:1);
@@ -29,7 +29,7 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
             ROR,ASR,LSR          :{result,carry} = {(IR_q[10]==0)?PSR_q[C]:(IR_q[8]==1)?operand[15]:1'b0,operand};
             default              :{carry,result} = {PSR_q[C],operand} ; //LD,MOV,STO,JSR,IN,OUT,PUSH,POP and everything else
         endcase // case ( IR_q )
-        {swiid,enable_int,sign,carry,zero} = (full_opcode==PPSR)?operand[7:0]:(IR_q[3:0]!=4'hF)?{PSR_q[7:3],result[15],carry,!(|result)}:PSR_q;
+        {swiid,enable_int,sign,carry,zero} = (full_op==PPSR)?operand[7:0]:(IR_q[3:0]!=4'hF)?{PSR_q[7:3],result[15],carry,!(|result)}:PSR_q;
     end // always @ ( * )
     always @(posedge clk)
         if (clken) begin
@@ -38,27 +38,27 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
                 {PC_q,PCI_q,PSRI_q,PSR_q,FSM_q} <= 0;
             else begin
                 case (FSM_q)
-                    FET0   : FSM_q <= (din[IRLEN]) ? FET1 : (!predicate_din) ? FET0 : ((din[11:8]==LD)||(din[11:8]==STO)) ? EAD : EXEC;
-                    FET1   : FSM_q <= (!predicate_q )? FET0: ((IR_q[3:0]!=0) || (IR_q[IRLD]) || IR_q[IRSTO]) ? EAD : EXEC;
+                    FET0   : FSM_q <= (din[IRLEN]) ? FET1 : (!predicate_din) ? FET0 : ((din[11:8]==LD)||(din[11:8]==STO)||(full_op_d==PUSH)||(full_op_d==POP)) ? EAD : EXEC;
+                    FET1   : FSM_q <= (!predicate_q )? FET0: ((IR_q[3:0]!=0) || (IR_q[IRLD])||IR_q[IRSTO])?EAD:EXEC;
                     EAD    : FSM_q <= (IR_q[IRLD]) ? RDM : (IR_q[IRSTO]) ? WRM : EXEC;
-                    EXEC   : FSM_q <= ((!(&int_b) & PSR_q[EI])||( (full_opcode==PPSR) && (|swiid)))?INT:((IR_q[3:0]==4'hF)||(full_opcode==JSR))?FET0:
-                                    (din[IRLEN]) ? FET1 : ((din[11:8]==LD)||(din[11:8]==STO)) ? EAD : (predicate_d) ? EXEC : FET0;
+                    EXEC   : FSM_q <= ((!(&int_b) & PSR_q[EI])||( (full_op==PPSR) && (|swiid)))?INT:((IR_q[3:0]==4'hF)||(full_op==JSR))?FET0:
+                                    (din[IRLEN]) ? FET1 : ((din[11:8]==LD)||(din[11:8]==STO)||(full_op_d==POP)||(full_op_d==PUSH))?EAD:(predicate_d)?EXEC:FET0;
                     WRM    : FSM_q <= (!(&int_b) & PSR_q[EI])?INT:FET0;
                     default: FSM_q <= (FSM_q==RDM)? EXEC : FET0;  // Apply to INT and RDM states
                 endcase // case (FSM_q)
-                OR_q <= ((FSM_q==FET0)||(FSM_q==EXEC))?{12'b0, (full_opcode_d==DEC)||(full_opcode_d==INC)?din[7:4]:4'b0}:(FSM_q==EAD)?dprf_dout_p2+OR_q:din;
+                OR_q <= ((FSM_q==FET0)||(FSM_q==EXEC))?({16{full_op_d==PUSH}}^({12'b0,(full_op_d==DEC)||(full_op_d==INC)?din[7:4]:{3'b0,(full_op_d==POP)}})):(FSM_q==EAD)?dprf_dout_p2+OR_q:din;
                 if ( FSM_q == INT )
                     {PC_q,PCI_q,PSRI_q,PSR_q[EI]} <= {(!int_b[1])?INT_VECTOR1:INT_VECTOR0,PC_q,PSR_q[3:0],1'b0} ; // Always clear EI on taking interrupt
                 else if ((FSM_q==FET0)||(FSM_q==FET1)) 
                     PC_q  <= PC_q + 1;
                 else if ( FSM_q == EXEC) begin
-                    PC_q <= (full_opcode==RTI)?PCI_q: ((IR_q[3:0]==4'hF)||(full_opcode==JSR))?result:(((!(&int_b)) && PSR_q[EI])||((full_opcode==PPSR)&&(|swiid)))?PC_q:PC_q + 1;
-                    PSR_q <= (full_opcode==RTI)?{4'b0,PSRI_q}:{swiid,enable_int,sign,carry,zero}; // Clear SWI bits on return
+                    PC_q <= (full_op==RTI)?PCI_q: ((IR_q[3:0]==4'hF)||(full_op==JSR))?result:(((!(&int_b)) && PSR_q[EI])||((full_op==PPSR)&&(|swiid)))?PC_q:PC_q + 1;
+                    PSR_q <= (full_op==RTI)?{4'b0,PSRI_q}:{swiid,enable_int,sign,carry,zero}; // Clear SWI bits on return
                 end
-                if ( ((FSM_q==EXEC) && !((full_opcode==CMP)||(full_opcode==CMPC)))|| (((FSM_q==WRM)||(FSM_q==RDM)) && IR_q[IRWBK]) )
-                    dprf_q[IR_q[3:0]] <= (full_opcode==JSR)? PC_q : result ;
+                if ( ((FSM_q==EXEC) && !((full_op==CMP)||(full_op==CMPC)))|| (((FSM_q==WRM)||(FSM_q==RDM)) && IR_q[IRWBK]) )
+                    dprf_q[IR_q[3:0]] <= (full_op==JSR)? PC_q : result ;
                 if ((FSM_q==FET0)||(FSM_q==EXEC))
-                    IR_q <= {(full_opcode_d==PUSH)||(full_opcode_d==POP),(din[15:13]==3'b001),(din[11:8]==STO)||(full_opcode_d==PUSH),(din[11:8]==LD)||(full_opcode_d==POP),din};
+                    IR_q <= {(full_op_d==PUSH)||(full_op_d==POP),(din[15:13]==3'b001),(din[11:8]==STO)||(full_op_d==PUSH),(din[11:8]==LD)||(full_op_d==POP),din};
                 else if (((FSM_q==EAD && (IR_q[IRLD]||IR_q[IRSTO]))||(FSM_q==RDM)))
                   IR_q[7:0] <= {IR_q[3:0],IR_q[7:4]}; // Swap IR_q source/dest in EA for reads and writes to allow writeback of source reg in push/pop .. and swap back again in RDMEM
             end // else: !if(!reset_s1_b)

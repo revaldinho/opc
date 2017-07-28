@@ -1,24 +1,23 @@
-
 MACRO   PUSH( _data_, _ptr_)
-        push    _data_, _ptr_, -1
+        push    _data_, _ptr_
 ENDMACRO
 
 MACRO   PUSH4( _d0_,_d1_,_d2_,_d3_, _ptr_)
-        push     _d0_,_ptr_, -1
-        push     _d1_,_ptr_, -1
-        push     _d2_,_ptr_, -1
-        push     _d3_,_ptr_, -1
+        push     _d0_,_ptr_
+        push     _d1_,_ptr_
+        push     _d2_,_ptr_
+        push     _d3_,_ptr_
 ENDMACRO
 
 MACRO   POP( _data_, _ptr_)
-        pop  _data_, _ptr_, 1
+        pop  _data_, _ptr_
 ENDMACRO
 
 MACRO   POP4( _d0_,_d1_,_d2_,_d3_, _ptr_)
-        pop      _d3_, _ptr_,1
-        pop      _d2_, _ptr_,1
-        pop      _d1_, _ptr_,1
-        pop      _d0_, _ptr_,1
+        pop      _d3_, _ptr_
+        pop      _d2_, _ptr_
+        pop      _d1_, _ptr_
+        pop      _d0_, _ptr_
 ENDMACRO
 
 MACRO   CLC()
