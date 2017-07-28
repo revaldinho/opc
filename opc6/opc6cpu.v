@@ -17,7 +17,7 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
     wire [15:0] dprf_dout_p2    = (IR_q[7:4]==4'hF) ? PC_q: {16{(IR_q[7:4]!=4'h0)}} & dprf_q[IR_q[7:4]];  // Port 2 always reads source reg
     wire [15:0] dprf_dout       = (IR_q[3:0]==4'hF) ? PC_q: {16{(IR_q[3:0]!=4'h0)}} & dprf_q[IR_q[3:0]];    // Port 1 always reads dest reg
     wire [15:0] operand         = (IR_q[IRLEN]||IR_q[IRLD]||(full_opcode==INC)||(full_opcode==DEC)) ? OR_q : dprf_dout_p2;  // For one word instructions operand usu comes from dprf
-    assign {rnw,dout,address}   = { !(FSM_q==WRM), dprf_dout_p2,(FSM_q==WRM || FSM_q == RDM)? ((full_opcode==POP)? dprf_dout: OR_q)  : PC_q };
+    assign {rnw,dout,address}   = {!(FSM_q==WRM), dprf_dout_p2,(FSM_q==WRM||FSM_q == RDM)? ((full_opcode==POP)? dprf_dout: OR_q)  : PC_q};
     assign {vpa,vda,vio}        = {((FSM_q==FET0)||(FSM_q==FET1)||(FSM_q==EXEC)),({2{(FSM_q==RDM)||(FSM_q==WRM)}} & {!((full_opcode==IN)||(full_opcode==OUT)),(full_opcode==IN)||(full_opcode==OUT)})};
     always @( * ) begin
         case (full_opcode)
@@ -44,23 +44,23 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
                     EXEC   : FSM_q <= ((!(&int_b) & PSR_q[EI])||( (full_opcode==PPSR) && (|swiid)))?INT:((IR_q[3:0]==4'hF)||(full_opcode==JSR))?FET0:
                                     (din[IRLEN]) ? FET1 : ((din[11:8]==LD)||(din[11:8]==STO)) ? EAD : (predicate_d) ? EXEC : FET0;
                     WRM    : FSM_q <= (!(&int_b) & PSR_q[EI])?INT:FET0;
-                    default: FSM_q <= (FSM_q==RDM)? EXEC : FET0;
+                    default: FSM_q <= (FSM_q==RDM)? EXEC : FET0;  // Apply to INT and RDM states
                 endcase // case (FSM_q)
-                OR_q <= ((FSM_q==FET0)||(FSM_q==EXEC))?((full_opcode_d==DEC)||(full_opcode_d==INC)?{12'b0,din[7:4]}:16'b0):(FSM_q==EAD)?dprf_dout_p2+OR_q:din;
+                OR_q <= ((FSM_q==FET0)||(FSM_q==EXEC))?{12'b0, (full_opcode_d==DEC)||(full_opcode_d==INC)?din[7:4]:4'b0}:(FSM_q==EAD)?dprf_dout_p2+OR_q:din;
                 if ( FSM_q == INT )
                     {PC_q,PCI_q,PSRI_q,PSR_q[EI]} <= {(!int_b[1])?INT_VECTOR1:INT_VECTOR0,PC_q,PSR_q[3:0],1'b0} ; // Always clear EI on taking interrupt
                 else if ((FSM_q==FET0)||(FSM_q==FET1)) 
                     PC_q  <= PC_q + 1;
                 else if ( FSM_q == EXEC) begin
-                    PC_q <= (full_opcode==RTI)?PCI_q: ( (IR_q[3:0]==4'hF) || (full_opcode==JSR))?result:(((!(&int_b)) && PSR_q[EI])||((full_opcode==PPSR)&&(|swiid)))?PC_q:PC_q + 1;
+                    PC_q <= (full_opcode==RTI)?PCI_q: ((IR_q[3:0]==4'hF)||(full_opcode==JSR))?result:(((!(&int_b)) && PSR_q[EI])||((full_opcode==PPSR)&&(|swiid)))?PC_q:PC_q + 1;
                     PSR_q <= (full_opcode==RTI)?{4'b0,PSRI_q}:{swiid,enable_int,sign,carry,zero}; // Clear SWI bits on return
                 end
                 if ( ((FSM_q==EXEC) && !((full_opcode==CMP)||(full_opcode==CMPC)))|| (((FSM_q==WRM)||(FSM_q==RDM)) && IR_q[IRWBK]) )
                     dprf_q[IR_q[3:0]] <= (full_opcode==JSR)? PC_q : result ;
                 if ((FSM_q==FET0)||(FSM_q==EXEC))
-                    IR_q <= { (full_opcode_d==PUSH)||(full_opcode_d==POP),(din[15:13]==3'b001),(din[11:8]==STO)||(full_opcode_d==PUSH),(din[11:8]==LD)||(full_opcode_d==POP),din};
-                else if ( ((FSM_q==EAD && (IR_q[IRLD]||IR_q[IRSTO]))||(FSM_q==RDM)))
-                  IR_q[7:0] <= {IR_q[3:0],IR_q[7:4]};    // Swap over IR_q source/dest in EA for reads and writes to allow writeback of source reg in push/pop .. and swap back again in RDMEM
+                    IR_q <= {(full_opcode_d==PUSH)||(full_opcode_d==POP),(din[15:13]==3'b001),(din[11:8]==STO)||(full_opcode_d==PUSH),(din[11:8]==LD)||(full_opcode_d==POP),din};
+                else if (((FSM_q==EAD && (IR_q[IRLD]||IR_q[IRSTO]))||(FSM_q==RDM)))
+                  IR_q[7:0] <= {IR_q[3:0],IR_q[7:4]}; // Swap IR_q source/dest in EA for reads and writes to allow writeback of source reg in push/pop .. and swap back again in RDMEM
             end // else: !if(!reset_s1_b)
         end
 endmodule
