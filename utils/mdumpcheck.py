@@ -8,7 +8,7 @@ import sys, re
 emumem = [0]*65536
 simmem = [0]*65536
 
-ignore_above = -1 if len(sys.argv) < 4 else int(sys.argv[3],0)
+ignore_above = 0xFFFF if len(sys.argv) < 4 else int(sys.argv[3],0)
 swi_count = -1 if len(sys.argv) < 5 else int(sys.argv[4],0)
 hwi_count = -1 if len(sys.argv) < 6 else int(sys.argv[5],0)
 
