@@ -14,7 +14,7 @@ def expand_macro(line, macro):  # recursively expand macros, passing on instance
                 newline = newline.replace(s,r) if s else newline
             text.extend(expand_macro(newline, macro))
     return(text)
-(wordmem, macro, macroname, newtext) = ( [0x0000]*64*1024,dict(),None,[])
+(wordmem, macro, macroname, newtext,wcount) = ( [0x0000]*64*1024,dict(),None,[],0)
 for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
     mobj =  re.match("\s*?MACRO\s*(?P<name>\w*)\s*?\((?P<params>.*)\)", line, re.IGNORECASE)
     if mobj:
@@ -29,7 +29,7 @@ for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
     else:
         newtext.extend(expand_macro(line, macro))
 for iteration in range (0,2): # Two pass assembly
-    nextmem = 0
+    (wcount,nextmem) = (0,0)
     for line in newtext:
         mobj = re.match('^(?:(?P<label>\w+):)?\s*((?:(?P<pred>((pl)|(mi)|(nc)|(nz)|(c)|(z)|(1)|(0)?)?)\.))?(?P<instr>\w+)?\s*(?P<operands>.*)',re.sub("#.*","",line))
         (label, pred, instr,operands) = [ mobj.groupdict()[item] for item in ("label","pred", "instr","operands")]
@@ -53,14 +53,13 @@ for iteration in range (0,2): # Two pass assembly
                 if instr in op:
                     (dst,src,val) = (words+[0])[:3]
                     words = [((len(words)==3)<<12)|predicates[pred]|((op.index(instr)&0x0F)<<8)|(src<<4)|dst,val][:len(words)-(len(words)==2)]
-            (wordmem[nextmem:nextmem+len(words)], nextmem )  = (words, nextmem+len(words))
+            (wordmem[nextmem:nextmem+len(words)], nextmem,wcount )  = (words, nextmem+len(words),wcount+len(words))
         elif instr == "ORG":
             nextmem = eval(operands,globals(),symtab)
         elif instr :
             sys.exit("Error: unrecognized instruction %s" % instr)
         if iteration > 0 :
             print("%04x  %-20s  %s"%(memptr,' '.join([("%04x" % i) for i in words]),line.rstrip()))
-print ("\nSymbol Table:\n", dict([(x, symtab[x]) for x in symtab if not re.match("r\d*|pc",x)]))
+print ("\nAssembled %d words of code.\n\nSymbol Table:\n\n%s\n" % (wcount, '\n'.join(["%-32s 0x%04X (%06d)" % (k,v,v) for k,v in sorted(symtab.items()) if not re.match("r\d*|pc|psr",k)])))
 with open(sys.argv[2],"w" ) as f:
-    for i in range(0, len(wordmem), 24):
-        f.write( '%s\n' %  ' '.join("%04x"%n for n in wordmem[i:i+24]))
+    f.write( '\n'.join([''.join("%04x " % d for d in wordmem[j:j+24]) for j in [i for i in range(0,len(wordmem),24)]]))

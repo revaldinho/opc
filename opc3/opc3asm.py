@@ -15,7 +15,7 @@ def expand_macro(line, macro):  # recursively expand macros, passing on instance
             text.extend(expand_macro(newline, macro))
     return(text)
 
-(symtab, wordmem, macro, macroname, newtext) = (dict(), [0x0000]*64*1024,dict(),None,[])
+(symtab, wordmem, macro, macroname, newtext,wcount) = (dict(), [0x0000]*64*1024,dict(),None,[],0)
 for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
     mobj =  re.match("\s*?MACRO\s*(?P<name>\w*)\s*?\((?P<params>.*)\)", line, re.IGNORECASE)
     if mobj:
@@ -31,7 +31,7 @@ for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
         newtext.extend(expand_macro(line, macro))
 
 for iteration in range (0,2): # Two pass assembly
-    nextmem = 0
+    (wcount,nextmem) = (0,0)
     for line in newtext:
         (words,operandwords,gr)=([],[],re.match('^(\w+)?:?\s*(\w+(?:\.i|\.p)?)?\s*(.*)',re.sub("#.*","",line)).groups())
         if gr[0]:
@@ -57,9 +57,7 @@ for iteration in range (0,2): # Two pass assembly
             for ptr in range(0,len(words)):
                 wordmem[ptr+nextmem] =  words[ptr]
             print("%04x  %-20s  %s"%(nextmem,' '.join([("%04x" % i) for i in words]),line.rstrip()))
-        nextmem += len(words)
-
-print ("\nSymbol Table:\n", symtab)
+        (nextmem,wcount) = (nextmem + len(words), wcount + len(words))
+print ("\nAssembled %d words of code.\n\nSymbol Table:\n\n%s\n" % (wcount, '\n'.join(["%-32s 0x%04X (%06d)" % (k,v,v) for k,v in sorted(symtab.items()) if not re.match("r\d*|pc|psr",k)])))
 with open(sys.argv[2],"w" ) as f:
-    for i in range(0, len(wordmem), 24):
-        f.write( '%s\n' %  ' '.join("%04x"%n for n in wordmem[i:i+24]))
+    f.write( '\n'.join([''.join("%04x " % d for d in wordmem[j:j+24]) for j in [i for i in range(0,len(wordmem),24)]]))
