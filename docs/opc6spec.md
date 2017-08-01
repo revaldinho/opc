@@ -46,6 +46,18 @@ handling.
   * Zero  - set on every instruction based on the state of the destination register
   * Sign  - set when the MSB of the result is a '1'
 
+Instruction Set
+---------------
+
+![alt text](https://revaldinho.github.io/opc/opc6_instruction_set.png "OPC6 Instruction Set")
+
+Notes:
+
+  * Where a [p.] is shown in the table, the instruction can be prefixed with a predicate (see table below) for conditional execution dependent on the state of the chosen flags
+  * All effective data/address calculations are truncated to 16bits and do not affect any of the processor flags
+  * add rd,rd can be used to synthesize an arithmetic shift left (asl) instruction
+  * adc rd,rd can be used to synthesize a rotate left through carry instruction
+
 Predication
 -----------
 
@@ -62,7 +74,14 @@ a prefix on the instruction mnemonic in the assembler.
   |  1 |  0 |  1 | nc.        | Execute if Carry flag is clear                     |
   |  1 |  1 |  0 | mi.        | Execute if Sign flag is set                        |
   |  1 |  1 |  1 | pl.        | Execute if Sign flag is clear                      |
-
-Instruction Set
----------------
-
+  
+  Interrupts
+  ----------
+  
+  OPC6 has two interrupt inputs for hardware interrupts: int\_b[1:0].
+  
+  If either of these inputs is taken low, then the processor with finish executing the current instruction and jump to a restart vector at either 0x0002 (for int\_b[0]) or 0x0004 (for int\_b[1]). If both interrupt pins are low at the same time then the processor will just to 0x0004 to service int\_b[1] first.
+  
+  Additionally there is an ability to cause software interrupts by writing a non-zero value to the SWI bits (see above) using the PUTPSR instruction. Software interrupts are also vectored to address 0x0002 in common with the hardware interrupt for int\_b[0]. The interrupt service routine is responsible for reading to processor status register to determine the interrupt source.
+  
+  
