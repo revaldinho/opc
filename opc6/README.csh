@@ -44,7 +44,7 @@ foreach test ( $testlist )
     foreach option ( NEGEDGE_MEMORY POSEDGE_MEMORY )
         printf "%32s :" ${test}_${option}
         if "${test}" =~ "*int" then
-            python3 ../utils/mdumpcheck.py ${test}.dump  ${vpath}${test}_${option}.vdump 0xF000 0x4000 0xFFFF
+            python3 ../utils/mdumpcheck.py ${test}.dump  ${vpath}${test}_${option}.vdump 0xF000 0x0500 0xFFFF
         else
             python3 ../utils/mdumpcheck.py ${test}.dump  ${vpath}${test}_${option}.vdump
         endif
