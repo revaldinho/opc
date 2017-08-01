@@ -226,7 +226,7 @@ printdec32:
 pd32_l1:        
         ld r5,r9,pd32_table    # get 32b divisor from table low word first
         ld r6,r9,pd32_table+1  # .. then high word
-        mov r8,0               # set Q = 0
+        mov r8,r0              # set Q = 0
 pd32_l1a:
         cmp  r3,r5             # Is number > decimal divisor
         cmpc r4,r6             # 
