@@ -75,13 +75,14 @@ a prefix on the instruction mnemonic in the assembler.
   |  1 |  1 |  0 | mi.        | Execute if Sign flag is set                        |
   |  1 |  1 |  1 | pl.        | Execute if Sign flag is clear                      |
   
-  Interrupts
-  ----------
   
-  OPC6 has two interrupt inputs for hardware interrupts: int\_b[1:0].
+Interrupts
+----------
   
-  If either of these inputs is taken low, then the processor with finish executing the current instruction and jump to a restart vector at either 0x0002 (for int\_b[0]) or 0x0004 (for int\_b[1]). If both interrupt pins are low at the same time then the processor will just to 0x0004 to service int\_b[1] first.
+OPC6 has two interrupt inputs for hardware interrupts: int\_b[1:0].
   
-  Additionally there is an ability to cause software interrupts by writing a non-zero value to the SWI bits (see above) using the PUTPSR instruction. Software interrupts are also vectored to address 0x0002 in common with the hardware interrupt for int\_b[0]. The interrupt service routine is responsible for reading to processor status register to determine the interrupt source.
+If either of these inputs is taken low, then the processor with finish executing the current instruction and jump to a restart vector at either 0x0002 (for int\_b[0]) or 0x0004 (for int\_b[1]). If both interrupt pins are low at the same time then the processor will just to 0x0004 to service int\_b[1] first.
+  
+Additionally there is an ability to cause software interrupts by writing a non-zero value to the SWI bits (see above) using the PUTPSR instruction. Software interrupts are also vectored to address 0x0002 in common with the hardware interrupt for int\_b[0]. The interrupt service routine is responsible for reading to processor status register to determine the interrupt source.
   
   
