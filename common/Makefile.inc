@@ -45,7 +45,7 @@ $(PROG).hex: $(ROOT)/$(PROG_SRC)
 
 # This is for use in the FPGA
 $(PROG).mem: $(PROG).hex
-	tr " " "\n" < $(PROG).hex | sed -n $$((1+16#$(ROMSTART))),$$((16#$(ROMSTART) + 16#$(ROMLEN)))p > $(PROG).mem
+	xxd -r -p < $(PROG).hex | dd ibs=2 conv=swab skip=$((16#$(ROMSTART))) count=$((16#$(ROMLEN))) | od -An -w2 -tx2 -v > $(PROG).mem
 
 # This is for use in PiTubeDirect (this is specific to copro)
 $(PROG).c: $(PROG).hex

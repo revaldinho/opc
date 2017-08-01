@@ -73,13 +73,11 @@ MACRO RTS()
 ENDMACRO
 
 MACRO   PUSH( _data_)
-    mov     r14, r14, -1
-    sto     _data_, r14, 1
+    push    _data_, r14
 ENDMACRO
 
 MACRO   POP( _data_ )
-    ld      _data_, r14, 1
-    mov     r14, r14, 1
+    pop     _data_, r14
 ENDMACRO
 
 MACRO   IN(_reg_, _address_)
