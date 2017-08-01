@@ -1,11 +1,9 @@
 MACRO PUSH( _r_)
-    mov     r14, r14, -1
-    sto     _r_, r14, 1
+    push    _r_, r14, -1
 ENDMACRO
 
 MACRO POP( _r_)
-    ld      _r_, r14, 1
-    mov     r14, r14, 0x0001
+    pop     _r_, r14, 1
 ENDMACRO
 
 MACRO   CLC()

@@ -1,27 +1,24 @@
+
 MACRO   PUSH( _data_, _ptr_)
-        sto     _data_,_ptr_
-        add   _ptr_,r0,1
+        push    _data_, _ptr_
 ENDMACRO
 
 MACRO   PUSH4( _d0_,_d1_,_d2_,_d3_, _ptr_)
-        sto     _d0_,_ptr_
-        sto     _d1_,_ptr_,1
-        sto     _d2_,_ptr_,2
-        sto     _d3_,_ptr_,3
-        add   _ptr_,r0,4
+        push     _d0_,_ptr_
+        push     _d1_,_ptr_
+        push     _d2_,_ptr_
+        push     _d3_,_ptr_
 ENDMACRO
 
 MACRO   POP( _data_, _ptr_)
-        add   _ptr_,r0,-1
-        ld      _data_, _ptr_
+        pop  _data_, _ptr_
 ENDMACRO
 
 MACRO   POP4( _d0_,_d1_,_d2_,_d3_, _ptr_)
-        add   _ptr_,r0,-4
-        ld      _d3_, _ptr_
-        ld      _d2_, _ptr_,1
-        ld      _d1_, _ptr_,2
-        ld      _d0_, _ptr_,3
+        pop      _d3_, _ptr_
+        pop      _d2_, _ptr_
+        pop      _d1_, _ptr_
+        pop      _d0_, _ptr_
 ENDMACRO
 
 MACRO   SEC()

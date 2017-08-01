@@ -1,6 +1,6 @@
 #!/bin/tcsh -f
 # Remove non primary data files
-rm -rf *~ *sim *trace *vcd *dump `ls -1 | egrep -v '(\.v$|\.csh|\.ucf|\.py|\.s$|spartan|xc95|opc6system|opc6copro)'`
+rm -rf *~ *sim *trace *vcd *dump `ls -1 | egrep -v '(\.v$|\.csh|\.ucf|\.py|\.s$|spartan|xc95|opc6system|opc6copro|Make*)'`
 
 if ( $#argv > 0 ) then 
     if ( $argv[1] == "clean" ) exit
@@ -44,7 +44,7 @@ foreach test ( $testlist )
     foreach option ( NEGEDGE_MEMORY POSEDGE_MEMORY )
         printf "%32s :" ${test}_${option}
         if "${test}" =~ "*int" then
-            python3 ../utils/mdumpcheck.py ${test}.dump  ${vpath}${test}_${option}.vdump 0xF000 0x8000 0xFFFF
+            python3 ../utils/mdumpcheck.py ${test}.dump  ${vpath}${test}_${option}.vdump 0xF000 0x0500 0xFFFF
         else
             python3 ../utils/mdumpcheck.py ${test}.dump  ${vpath}${test}_${option}.vdump
         endif
