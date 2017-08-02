@@ -19,15 +19,11 @@ for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
     mobj =  re.match("\s*?MACRO\s*(?P<name>\w*)\s*?\((?P<params>.*)\)", line, re.IGNORECASE)
     if mobj:
         (macroname,macro[macroname])=(mobj.groupdict()["name"],([x.strip() for x in (mobj.groupdict()["params"]).split(",")],[]))
-        newtext.append("# %s" % line)
-    elif re.match("\s*?ENDMACRO.*", line, re.IGNORECASE):
-        macroname = None
-        newtext.append("# %s" % line)
+    elif re.match("\s*?ENDMACRO.*", line, re.IGNORECASE):        
+        (macroname, line) = (None, '# ' + line)
     elif macroname:
         macro[macroname][1].append(line)
-        newtext.append("# %s" % line)
-    else:
-        newtext.extend(expand_macro(line, macro))
+    newtext.extend(expand_macro(('' if not macroname else '# ') + line, macro))
 for iteration in range (0,2): # Two pass assembly
     (wcount,nextmem) = (0,0)
     for line in newtext:
@@ -48,12 +44,14 @@ for iteration in range (0,2): # Two pass assembly
                     warnings.append("Warning: suspected register field missing in %s... %s" % (" "*14,line.strip()))
                 try:
                     exec("PC=%d+%d" % (nextmem,len(opfields)-1), globals(), symtab) # calculate PC as it will be in EXEC state
-                    words = [eval( f,globals(), symtab) & 0xFFFF for f in opfields ];
+                    words = [eval( f,globals(), symtab) for f in opfields ];
                 except (ValueError, NameError, TypeError,SyntaxError):
                     (words,errors)=([0]*3,errors+["Error: illegal or undefined register name or expression in ... %s" % line.strip() ])
                 if inst in op:
-                    (dst,src,val) = (words+[0])[:3]
-                    words = [((len(words)==3)<<12)|(pdict[pred] if ((op.index(inst)&0x10)==0) else 0x2000)|((op.index(inst)&0x0F)<<8)|(src<<4)|dst,val][:len(words)-(len(words)==2)]
+                    (dst,src,val,abs_src) = (words+[0])[:3] + [words[1] if words[1]>0 else -words[1]]
+                    errors=(errors+["Error: short constant out of range in%s... %s"%(' '*22, line.strip())]) if (inst in('inc','dec') and (abs_src>0xF)) else errors
+                    (inst,src) = ( 'dec',(~src +1)&0xF) if inst=='inc' and (src&0x8000) else (inst,src) #spot increment with negative immediate and swap to dec
+                    words=[((len(words)==3)<<12)|(pdict[pred] if ((op.index(inst)&0x10)==0) else 0x2000)|((op.index(inst)&0x0F)<<8)|(src<<4)|dst,val&0xFFFF][:len(words)-(len(words)==2)]
             (wordmem[nextmem:nextmem+len(words)], nextmem,wcount )  = (words, nextmem+len(words),wcount+len(words))
         elif inst == "ORG":
             nextmem = eval(operands,globals(),symtab)
