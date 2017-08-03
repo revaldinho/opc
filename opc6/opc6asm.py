@@ -50,13 +50,13 @@ for iteration in range (0,2): # Two pass assembly
                 if inst in op:
                     (dst,src,val,abs_src) = (words+[0])[:3] + [words[1] if words[1]>0 else -words[1]]
                     errors=(errors+["Error: short constant out of range in%s... %s"%(' '*22, line.strip())]) if (inst in('inc','dec') and (abs_src>0xF)) else errors
-                    (inst,src) = ( 'dec',(~src +1)&0xF) if inst=='inc' and (src&0x8000) else (inst,src) #spot increment with negative immediate and swap to dec
+                    (inst,src) = ( 'dec',(~src +1)&0xF) if inst=='inc' and (src&0x8000) else (inst,src) #spot increment with negative immediate and swap to dec                    
                     words=[((len(words)==3)<<12)|(pdict[pred] if ((op.index(inst)&0x10)==0) else 0x2000)|((op.index(inst)&0x0F)<<8)|(src<<4)|dst,val&0xFFFF][:len(words)-(len(words)==2)]
             (wordmem[nextmem:nextmem+len(words)], nextmem,wcount )  = (words, nextmem+len(words),wcount+len(words))
         elif inst == "ORG":
             nextmem = eval(operands,globals(),symtab)
-        elif inst and (inst != "EQU")  :
-            sys.exit("Error: unrecognized instuction %s" % inst)
+        elif inst and (inst != "EQU") and iteration>0 :
+            errors.append("Error: unrecognized instuction %16s in%s... %s" % (inst,' '*6,line.strip()))
         if iteration > 0 :
             print("%04x  %-20s  %s"%(memptr,' '.join([("%04x" % i) for i in words]),line.rstrip()))
 print ("\nAssembled %d words of code with %d error%s and %d warning%s." % (wcount,len(errors),'' if len(errors)==1 else 's',len(warnings),'' if len(warnings)==1 else 's'))
