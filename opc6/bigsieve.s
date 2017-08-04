@@ -36,27 +36,27 @@ MACRO   RTS ()
         mov     pc,r13
 ENDMACRO
 MACRO   PUSHALL()
-        push     r13, r14, -1
-        push     r12, r14, -1
-        push     r11, r14, -1
-        push     r10, r14, -1
-        push      r9, r14, -1
-        push      r8, r14, -1
-        push      r7, r14, -1
-        push      r6, r14, -1
-        push      r5, r14, -1                
+        push     r13, r14
+        push     r12, r14
+        push     r11, r14
+        push     r10, r14
+        push      r9, r14
+        push      r8, r14
+        push      r7, r14
+        push      r6, r14
+        push      r5, r14
 ENDMACRO
 
 MACRO   POPALL()
-        pop     r5, r14, 1
-        pop     r6, r14, 1
-        pop     r7, r14, 1
-        pop     r8, r14, 1
-        pop     r9, r14, 1
-        pop    r10, r14, 1
-        pop    r11, r14, 1
-        pop    r12, r14, 1
-        pop    r13, r14, 1                
+        pop     r5, r14
+        pop     r6, r14
+        pop     r7, r14
+        pop     r8, r14
+        pop     r9, r14
+        pop    r10, r14
+        pop    r11, r14
+        pop    r12, r14
+        pop    r13, r14
 ENDMACRO
 
         mov   r14,r0,0x2000
@@ -96,8 +96,9 @@ L0:     sto   r0,r1,results
         mov   r11,r0,3          # Start sieve at first odd number
         mov   r12,r0
 L1:     mov   r1,r11            # Copy pointer val into r1,r2
-        mov   r2,r12        
-        jsr   r13,r0,get_bit    # Is bit set ?
+        mov   r2,r12
+        mov   r3,r0             # function:0 = get_bit
+        jsr   r13,r0,bit        # Is bit set ?
         nz.mov pc,r0,L3         # If yes then next bit else...
 
         mov   r1,r11
@@ -113,7 +114,8 @@ L1:     mov   r1,r11            # Copy pointer val into r1,r2
 L2:     
         mov   r1, r7            # Copy number into r1,r2
         mov   r2, r8
-        jsr   r13,r0,set_bit    # Set the bit
+        not   r3,r0             # Function: 1 = get_bit
+        jsr   r13,r0,bit        # Set the bit
         add   r7,r11            # Next bit = p2 + ptr
         adc   r8,r12
         cmp   r7,r9
@@ -129,22 +131,23 @@ L3:     inc   r11,2             # skip even numbers so always increment by 2
         halt    r0,r0,0xBEEB
         
         # ----------------------------
-        # get_bit
+        # bit
         #
-        # Return the value of an numbered bit in the sieve area, packed 16 to a word
+        # Set or check and return the value of an numbered bit in the sieve area, packed 16 to a word
         # and since we never store even flags we can make another factor 2 saving
         # Entry:
+        #       r3 = function: LSB=1 setbit, LSB=0 getbit
         #       r2,r1 = bit number (0< r2,r1 < MAX)
         #       r13 = link register
         # Exit:
         #       Z  = bit value 
         #       r2-r4 used for workspace and trashed
         # ----------------------------
-get_bit:
-        lsr     r3,r1           # Check if incoming number is even
+bit:
+        lsr     r4,r1           # Check if incoming number is even
         nc.inc  r1,1            # if even then set the NZ flag, preserve C
         nc.mov  pc,r13          # and bail out
-        
+        push    r3,r14          # save the function type
         lsr     r2,r2           # First divide original number by 2 - storing odds only
         ror     r1,r1
         lsr     r4,r2           # Now complete divide by 16 into r4,r3 
@@ -158,44 +161,14 @@ get_bit:
 
         and     r1,r0,0x000F    # bit position = remainder from original number div 16
         ld      r1,r1,bitmask   # Get the bitmask for that bit position        
-        ld      r3,r3,results   # Load the word
-        and     r3,r1           # Get the bit value in place and return Z or NZ as appropriate
-        RTS     ()
-
-        # ----------------------------
-        # set_bit
-        #
-        # Set the value of an numbered bit in the sieve area, packed 16 to a word
-        #
-        # Entry:
-        #       r2,r1 = bit number (0< r2,r1 < MAX) 
-        # Exit:
-        #       r1-r4 used for workspace and trashed
-        # ----------------------------
-set_bit:
-        lsr     r3,r1           # Check if incoming number is even
-        nc.inc  r1,1            # if even then set the NZ flag, preserve C
-        nc.mov  pc,r13          # and bail out
-        
-        lsr     r2,r2           # First divide original number by 2 - storing odds only
-        ror     r1,r1
-        lsr     r4,r2           # Now complete divide by 16 into r4,r3 
-        ror     r3,r1
-        lsr     r4,r4
-        ror     r3,r3
-        lsr     r4,r4
-        ror     r3,r3           # r4,r3 point at word number, but actually only r3 now relevant (must be in lowest 64K)
-        lsr     r4,r4           # And one more shift because we never store even flags
-        ror     r3,r3        
-        
-        and     r1,r0,0x000F    # bit position = remainder from original number div 16
-        ld      r1,r1,bitmask   # Get the bitmask        
-        ld      r4,r3,results   # Load the word
-        or      r4,r1           # Or in the bitmask value
-        sto     r4,r3,results   # Write back the word
+        ld      r4,r3,results   # Load the word into r4
+        pop     r2,r14          # Pop the function type
+        ror     r2,r2           # rotate LSB of r2 into carry
+        nc.and  r4,r1           # if 'get' then check if bit is set and set Z or NZ (C preserved)
+        c.or    r4,r1           # otherwise 'Or' in the bitmask value if carry set (and C preserved)
+        c.sto   r4,r3,results   # Write back the word (C and Z preserved)
         RTS     ()
         
-
         # ------------------------------------------------------------        
         # printdec32
         #
@@ -280,7 +253,7 @@ pd32_table:
         WORD       1000000 % 65536,   1000000 // 65536 
         WORD      10000000 % 65536,  10000000 // 65536 
         WORD     100000000 % 65536, 100000000 // 65536 
-	WORD    1000000000 % 65536,1000000000 // 65536 
+        WORD    1000000000 % 65536,1000000000 // 65536 
 
         # Bit masks for set_bit, get_bit
 bitmask:
