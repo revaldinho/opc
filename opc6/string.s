@@ -1,4 +1,5 @@
 
+        
 
 
 
@@ -69,7 +70,18 @@ S4:     STRING "...and so is this"
         STRING "12"
         STRING "123"
         STRING "1234"
-
+        ORG 0x1234
+L0:
+        BYTE 0xAA
+L1:     
+        BYTE 0x11, 0x22
+L2:     
+        BYTE 0x33, 0x44, 0x55
+L3:
+        BYTE 0x66, 0x77, 0x88, 0x99
+L4:
+        BYTE int(3.14 * 10),0x00, L0&0xff,(L0>>8)&0xFF
+        
 
 
 results:
