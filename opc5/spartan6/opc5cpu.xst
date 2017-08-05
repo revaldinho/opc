@@ -7,7 +7,7 @@ run
 -ofn opc5cpu
 -ofmt NGC
 -top opc5cpu
--opt_mode Speed
+-opt_mode Area
 -opt_level 2
 -iuc NO
 -lso opc5cpu.lso
