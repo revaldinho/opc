@@ -16,7 +16,7 @@ else
     set pyexec = pypy3
 endif
 
-set testlist = ( fib robfib  hello string  davefib mul32 udiv32 sqrt davefib_int pi-spigot-rev testpsr sqrt_int pi-spigot-bruce sieve e-spigot-rev pi-spigot-rev32 bigsieve )
+set testlist = ( fib robfib  hello string  davefib mul32 udiv32 sqrt davefib_int pi-spigot-rev testpsr sqrt_int pi-spigot-bruce sieve e-spigot-rev pi-spigot-rev32 bigsieve pushpop )
 
 foreach test ( $testlist )
     echo "Running Test $test"
