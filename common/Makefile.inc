@@ -50,8 +50,8 @@ $(PROG).mem: $(PROG).hex
 # This is for use in PiTubeDirect (this is specific to copro)
 $(PROG).c: $(PROG).hex
 	echo '#include "$(PROG).h"' > $(PROG).c
-	echo 'uint16_t $(PROG)[0x800] = {' >> $(PROG).c
-	tr " " "\n" < $(PROG).hex | tail -2048 | awk '{print "0x" $$1 ","}' >> $(PROG).c
+	echo 'uint16_t $(PROG)_$(CPU_NAME)[0x800] = {' >> $(PROG).c
+	xxd -r -p < $(PROG).hex | dd ibs=2 conv=swab skip=$$((16#F800)) count=$$((16#0800)) | od -An -w2 -tx2 -v | awk '{print "0x" $$1 ","}' >> $(PROG).c
 	echo '};' >> $(PROG).c
 
 clean:
