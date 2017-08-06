@@ -1,0 +1,29 @@
+set -tmpdir "tmp"
+set -xsthdpdir "xst"
+run
+-ifn copro.prj
+-sd {../../src/Tube}
+-read_cores YES
+-p xc3s200-vq100-4
+-ifmt mixed
+-ofn copro
+-ofmt NGC
+-top copro
+-opt_mode Speed
+-opt_level 2
+-iuc NO
+-lso copro.lso
+-keep_hierarchy No
+-netlist_hierarchy as_optimized
+-rtlview Yes
+-hierarchy_separator /
+-bus_delimiter <>
+-case maintain
+-fsm_extract YES
+-fsm_encoding Auto
+-safe_implementation No
+-resource_sharing YES
+-iobuf YES
+-equivalent_register_removal YES
+-define {TWOSTATE_PARASITE_INTERRUPTS_D=1 | PARASITE_RNWCLK_INTERFACE_D=1 | OMIT_DMA_PINS_D=1 | SEPARATE_PARASITE_DATABUSSES_D=1 | cpu_#CPU_ARCH#=1 | SPARTAN3=1}
+

@@ -1,0 +1,17 @@
+verilog work "../../src/copro.v"
+verilog work "../../src/ram_8k_16.v"
+verilog work "../../src/memory_controller.v"
+verilog work "../../src/Tube/hp_bytequad.v"
+verilog work "../../src/Tube/ph_flag_m.v"
+verilog work "../../src/Tube/ph_reg3.v"
+verilog work "../../src/Tube/tube.v"
+verilog work "../../src/Tube/hp_flag_m.v"
+verilog work "../../src/Tube/hp_byte.v"
+verilog work "../../src/Tube/ph_bytequad.v"
+verilog work "../../src/Tube/hp_reg3.v"
+verilog work "../../src/Tube/ph_fifo.v"
+verilog work "../../src/Tube/ph_byte.v"
+verilog work "../../src/Tube/ph_fifo_core_spartan3.v"
+verilog work "#CPU_PATH#"
+
+
