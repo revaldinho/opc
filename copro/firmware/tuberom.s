@@ -387,7 +387,7 @@ cmdHelp:
 
 msgHelp:
     CPU_STRING()
-    STRING   " 0.50"
+    STRING   " 0.51"
     WORD     10, 13, 0
 
 # --------------------------------------------------------------
@@ -412,9 +412,9 @@ cmdSrec:
     z.mov  pc, r0, CmdOSEscape
     cmp    r1, r0, 2
     z.mov  pc, r0, cmdSrecChecksumError
-    cmp    r1, r0, 0
-    nz.mov  pc, r0, cmdSrecBadFormatError
-    mov    r1, r0, 1
+    cmp    r1, r0
+    nz.mov pc, r0, cmdSrecBadFormatError
+    POP    (r13)
     RTS    ()
 
 cmdSrecChecksumError:
