@@ -78,7 +78,7 @@ for iteration in range (0,2): # Two pass assembly
                 if inst=="BSTRING":
                     check_alignment(inst)
                 bytes = [ord(c) for c in (''.join(opfields)).strip("\"")]
-                if len(bytes)%2==1:   # pad out odd lengths of BSTRING for backward compatibility
+                if inst=="BSTRING" and len(bytes)%2==1:   # pad out odd lengths of BSTRING for backward compatibility
                     bytes.append(0)
             else:
                 if ((len(opfields)==2 and not reg_re.match(opfields[1])) and inst not in ("inc","dec","WORD","BYTE","UBYTE","UWORD")):
