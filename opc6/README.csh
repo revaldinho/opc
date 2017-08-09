@@ -7,8 +7,6 @@ if ( $#argv > 0 ) then
     if ( $argv[1] == "clean" ) exit
 endif
 
-set vpath = ""
-
 #Check for pypy3
 pypy3 --version > /dev/null
 if ( $status) then
@@ -17,8 +15,8 @@ else
     set pyexec = pypy3
 endif
 
-set assembler = opc6asm.py
-#set assembler = opc6byteasm.py
+set assembler = ../opc6asm.py
+#set assembler = ../opc6byteasm.py
 
 set testlist = ( fib robfib  hello string  davefib mul32 udiv32 sqrt davefib_int pi-spigot-rev testpsr sqrt_int pi-spigot-bruce sieve e-spigot-rev pi-spigot-rev32 bigsieve pushpop )
 
@@ -27,18 +25,18 @@ foreach test ( $testlist )
     # Assemble the test
     python3 ${assembler} ${test}.s ${test}.hex >  ${test}.lst
     # Run the emulator
-    ${pyexec} opc6emu.py ${test}.hex ${test}.dump > ${test}.trace
+    ${pyexec} ../opc6emu.py ${test}.hex ${test}.dump > ${test}.trace
     # Test bench expects the hex file to be called 'test.hex'
     cp ${test}.hex test.hex
     # Run icarus verilog to compile the testbench
 
     foreach option ( NEGEDGE_MEMORY POSEDGE_MEMORY )
-        iverilog -D_simulation=1 -D${option}=1 opc6tb.v ${vpath}opc6cpu.v
+        iverilog -D_simulation=1 -D${option}=1 ../opc6tb.v ../opc6cpu.v
         # Execute the test bench
-        ./a.out | tee ${vpath}${test}_${option}.sim
+        ./a.out | tee ${test}_${option}.sim
         # Save the results
-        mv dump.vcd ${vpath}${test}_${option}.vcd
-        mv test.vdump ${vpath}${test}_${option}.vdump
+        mv dump.vcd ${test}_${option}.vcd
+        mv test.vdump ${test}_${option}.vdump
     end
 end
 
@@ -49,9 +47,9 @@ foreach test ( $testlist )
     foreach option ( NEGEDGE_MEMORY POSEDGE_MEMORY )
         printf "%32s :" ${test}_${option}
         if "${test}" =~ "*int" then
-            python3 ../utils/mdumpcheck.py ${test}.dump  ${vpath}${test}_${option}.vdump 0xF000 0x0500 0xFFFF
+            python3 ../../utils/mdumpcheck.py ${test}.dump  ${test}_${option}.vdump 0xF000 0x0500 0xFFFF
         else
-            python3 ../utils/mdumpcheck.py ${test}.dump  ${vpath}${test}_${option}.vdump
+            python3 ../../utils/mdumpcheck.py ${test}.dump  ${test}_${option}.vdump
         endif
     end
 end
