@@ -2,7 +2,7 @@
 # Remove non primary data files
 rm -rf *~ *sim *trace *vcd *dump `ls -1 | egrep -v '(\.v$|\.csh|\.ucf|\.py|\.s$|spartan|xc95|opc6system|opc6copro|Make*)'`
 
-if ( $#argv > 0 ) then 
+if ( $#argv > 0 ) then
     if ( $argv[1] == "clean" ) exit
 endif
 
@@ -16,12 +16,15 @@ else
     set pyexec = pypy3
 endif
 
+set assembler = opc6asm.py
+#set assembler = opc6byteasm.py
+
 set testlist = ( fib robfib  hello string  davefib mul32 udiv32 sqrt davefib_int pi-spigot-rev testpsr sqrt_int pi-spigot-bruce sieve e-spigot-rev pi-spigot-rev32 bigsieve pushpop )
 
 foreach test ( $testlist )
     echo "Running Test $test"
     # Assemble the test
-    python3 opc6asm.py ${test}.s ${test}.hex >  ${test}.lst
+    python3 ${assembler} ${test}.s ${test}.hex >  ${test}.lst
     # Run the emulator
     ${pyexec} opc6emu.py ${test}.hex ${test}.dump > ${test}.trace
     # Test bench expects the hex file to be called 'test.hex'
