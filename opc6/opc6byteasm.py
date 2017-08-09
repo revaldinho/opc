@@ -127,7 +127,6 @@ for s in byte_symtab:
     if s in symtab:
         warnings.append("Warning: symbol %s is defined in both byte and word symbol tables" % s)
 
-
 print ("\nAssembled %d bytes of code with %d error%s and %d warning%s." % (bcount,len(errors),'' if len(errors)==1 else 's',len(warnings),'' if len(warnings)==1 else 's'))
 if len(byte_symtab)>0:
     print ("\nByte Symbol Table:\n\n%s\n" % ('\n'.join(["%-32s 0x%04X (%06d)" % (k,v,v) for k,v in sorted(byte_symtab.items()) if not re.match("r\d*|pc|psr",k)])))
