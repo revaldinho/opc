@@ -1,7 +1,6 @@
 import sys, re
 op = "mov,and,or,xor,add,adc,sto,ld,ror,jsr,sub,sbc,inc,lsr,dec,asr,halt,bswp,putpsr,getpsr,rti,not,out,in,push,pop,cmp,cmpc".split(",")
 symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
-byte_symtab = dict()
 pdict = {"1":0x00,"z":0x40,"nz":0x60,"c":0x80,"nc":0xA0,"mi":0xC0,"pl":0xE0,"":0x00} ##0x2000 reseved for non-predicated instuctions
 (bytemem,macro,macroname,newtext,bcount,errors,warnings,reg_re,mnum,nextmnum,nextbyte)=([0x0000]*128*1024,dict(),None,[],0,[],[],re.compile("(r\d*|psr|pc)"),0,1,0)
 
@@ -48,8 +47,8 @@ for iteration in range (0,2): # Two pass assembly
             # OPC Labels can only point at words so assume that alignment will be performed if the label is unaligned
             # PLASMA VM labels can be unaligned...
             if mobj.groupdict()["table"]=="B":
-                errors = (errors + ["Error: Symbol %16s redefined in ...\n         %s" % (label,line.strip())]) if label in byte_symtab else errors
-                exec ("%s= %s" % ((label,str(nextbyte)) if label!= None else (opfields[0], opfields[1])), globals(), byte_symtab )
+                errors = (errors + ["Error: Symbol %16s redefined in ...\n         %s" % (label,line.strip())]) if label in symtab else errors
+                exec ("%s= %s" % ((label,str(nextbyte)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
             else:
                 check_alignment("word label",error=True)
                 errors = (errors + ["Error: Symbol %16s redefined in ...\n         %s" % (label,line.strip())]) if label in symtab else errors
@@ -87,6 +86,7 @@ for iteration in range (0,2): # Two pass assembly
                 try:
                     nextword = (nextbyte+1)//2
                     exec("PC=%d+%d" % (nextword,len(opfields)-1), globals(), symtab) # calculate PC as it will be in EXEC state
+                    exec("_BPC_=%d+%d" % (nextbyte,len(opfields)-1), globals(), symtab) # calculate Byte PC for VM
                     words = [eval( f,globals(), symtab) for f in opfields ]
                 except (ValueError, NameError, TypeError,SyntaxError):
                     (words,errors)=([0]*3,errors+["Error: illegal or undefined register name or expression in ...\n         %s" % line.strip() ])
@@ -120,16 +120,9 @@ for iteration in range (0,2): # Two pass assembly
             errors.append("Error: unrecognized instruction or macro %s in ...\n         %s" % (inst,line.strip()))
         if iteration > 0 :
             memptr = nextbyte - len(bytes) # recalculate here in case it was realigned during processing
-            print("%04x (%04x)  %-20s  %s"%(memptr,(memptr+1)//2,' '.join([("%02x" % i) for i in bytes]),line.rstrip()))
-
-# Sanity check of symbol tables
-for s in byte_symtab:
-    if s in symtab:
-        warnings.append("Warning: symbol %s is defined in both byte and word symbol tables" % s)
+            print("%04x %-20s  %s"%(memptr,' '.join([("%02x" % i) for i in bytes]),line.rstrip()))
 
 print ("\nAssembled %d bytes of code with %d error%s and %d warning%s." % (bcount,len(errors),'' if len(errors)==1 else 's',len(warnings),'' if len(warnings)==1 else 's'))
-if len(byte_symtab)>0:
-    print ("\nByte Symbol Table:\n\n%s\n" % ('\n'.join(["%-32s 0x%04X (%06d)" % (k,v,v) for k,v in sorted(byte_symtab.items()) if not re.match("r\d*|pc|psr",k)])))
 print ("\nSymbol Table:\n\n%s\n\n%s\n%s" % ('\n'.join(["%-32s 0x%04X (%06d)" % (k,v,v) for k,v in sorted(symtab.items()) if not re.match("r\d*|pc|psr",k)]),'\n'.join(errors),'\n'.join(warnings)))
 
 with open("/dev/null" if len(errors)>0 else sys.argv[2],"w" ) as f:   ## write to hex file only if no errors else send result to null file
