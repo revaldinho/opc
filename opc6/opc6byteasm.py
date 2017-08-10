@@ -50,7 +50,8 @@ for iteration in range (0,2): # Two pass assembly
                 errors = (errors + ["Error: Symbol %16s redefined in ...\n         %s" % (label,line.strip())]) if label in symtab else errors
                 exec ("%s= %s" % ((label,str(nextbyte)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
             else:
-                check_alignment("word label",error=True)
+                if inst != "EQU":
+                    check_alignment("word label",error=True)
                 errors = (errors + ["Error: Symbol %16s redefined in ...\n         %s" % (label,line.strip())]) if label in symtab else errors
                 exec ("%s= %s" % ((label,str((nextbyte+1)//2)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
         if (inst=="ALIGN"):
