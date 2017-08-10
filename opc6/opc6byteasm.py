@@ -86,7 +86,7 @@ for iteration in range (0,2): # Two pass assembly
                 try:
                     nextword = (nextbyte+1)//2
                     exec("PC=%d+%d" % (nextword,len(opfields)-1), globals(), symtab) # calculate PC as it will be in EXEC state
-                    exec("_BPC_=%d+%d" % (nextbyte,len(opfields)-1), globals(), symtab) # calculate Byte PC for VM
+                    exec("_BPC_=%d" % (nextbyte, globals(), symtab) # calculate Byte PC for VM as current position
                     words = [eval( f,globals(), symtab) for f in opfields ]
                 except (ValueError, NameError, TypeError,SyntaxError):
                     (words,errors)=([0]*3,errors+["Error: illegal or undefined register name or expression in ...\n         %s" % line.strip() ])
