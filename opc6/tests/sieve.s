@@ -63,8 +63,8 @@ L0:     sto   r0,r1,results
         mov   r1,r0,2
         jsr   r13,r0,PrintDec   # Print it
         mov   r1,r0,13
-        jsr   r13,r0,PrintDec   # Print it                
-        
+        jsr   r13,r0,oswrch     # Print a newline        
+       
         # Now start the sieve at value 3
         mov   r12,r0,3
 L1:     lsr   r8,r12
