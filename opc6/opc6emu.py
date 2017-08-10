@@ -3,9 +3,12 @@ mnemonics="mov,and,or,xor,add,adc,sto,ld,ror,jsr,sub,sbc,inc,lsr,dec,asr,halt,bs
 op = dict([(opcode,mnemonics.index(opcode)) for opcode in mnemonics])
 dis = dict([(mnemonics.index(opcode),opcode) for opcode in mnemonics])
 pred_dict = {0:"",1:"0.",2:"z.",3:"nz.",4:"c.",5:"nc.",6:"mi.",7:"pl."}
-with open(sys.argv[1],"r") as f:
+def print_memory_access( type, address, data):
+    ch = '%s' % chr(data) if ( 0x1F < data < 0x7F) else '.'
+    print( "%5s:   Address : 0x%04x (%5d)         :        Data : 0x%04x (%5d) %s" % (type,address,address,data,data,ch))
+with open(sys.argv[1],"r") as f: 
     wordmem = [ (int(x,16) & 0xFFFF) for x in f.read().split() ]
-(regfile, acc, c, z, pcreg, c_save, s, ei, swiid, stdout, interrupt, iomem) = ([0]*16,0,0,0,15,0,0,0,0,"",0, [0]*65536) # initialise machine state inc PC = reg[15]
+(regfile, acc, c, z, pcreg, c_save, s, ei, swiid, interrupt, iomem) = ([0]*16,0,0,0,15,0,0,0,0,0, [0]*65536) # initialise machine state inc PC = reg[15]
 print ("PC   : Mem       : Instruction            : SWI I S C Z : %s\n%s" % (''.join([" r%2d " % d for d in range(0,16)]), '-'*130))
 while True:
     (pc_save,flag_save,regfile[0],preserve_flag) = (regfile[pcreg],(swiid,ei,s,c,z),0,False)    # always overwrite regfile location 0 and then dont care about assignments
@@ -18,8 +21,9 @@ while True:
     instr_str += ("%s%d%s" % (("r" if opcode not in (op["inc"],op["dec"]) else ""),source, (",0x%04x" % operand) if instr_len==2 else ''))
     instr_str = re.sub("r0","psr",instr_str,1) if (opcode in (op["putpsr"],op["getpsr"])) else instr_str
     (mem_str, source) = (" %04x %4s " % (instr_word, "%04x" % (operand) if instr_len==2 else ''), (0 if opcode in (op["dec"],op["inc"]) else source))
-    regfile[15] += instr_len # EA_ED must be computed after PC is brought up to date
-    ea_ed = wordmem[(regfile[source] + operand*(opcode!=op["pop"]))&0xFFFF] if (opcode in(op["ld"],op["pop"])) else (iomem[(regfile[source] + operand)&0xFFFF] if rdmem else (regfile[source] + operand)&0xFFFF)
+    regfile[15] += instr_len
+    eff_addr = (regfile[source] + operand*(opcode!=op["pop"]))&0xFFFF  # EA_ED must be computed after PC is brought up to date
+    ea_ed = wordmem[eff_addr] if (opcode in(op["ld"],op["pop"])) else iomem[eff_addr] if rdmem else eff_addr
     if interrupt : # software interrupts dont care about EI bit
         (interrupt, regfile[pcreg], pc_int, psr_int , ei) = (0, 0x0002, pc_save, (swiid,ei,s,c,z), 0)
     else:
@@ -41,6 +45,8 @@ while True:
                 (c, regfile[dest])  = ( (res>>16) & 1, res & 0xFFFF)
             elif opcode in (op["mov"], op["ld"], op["not"], op["in"], op["pop"]):
                 (regfile[source],regfile[dest]) = (regfile[source] if opcode !=op["pop"] else ((regfile[source]+operand)&0xFFFF), (~ea_ed if opcode==op["not"] else ea_ed) & 0xFFFF)
+                if opcode in (op["ld"],op["in"],op["pop"]):
+                    print_memory_access( "IN" if op=="in" else "LOAD" , eff_addr, ea_ed)
             elif opcode in (op["sub"], op["sbc"], op["cmp"], op["cmpc"], op["dec"]) :
                 res = (regfile[dest] + ((~ea_ed)&0xFFFF) + (c if (opcode in (op["cmpc"],op["sbc"])) else 1)) & 0x1FFFF
                 dest = 0 if opcode in( op["cmp"], op["cmpc"]) else dest # retarget r0 with result of comparison
@@ -55,10 +61,10 @@ while True:
                 regfile[dest] = ((swiid&0xF)<<4) | (ei<<3) | (s<<2) | (c<<1) | z
             elif opcode in (op["sto"],op["push"]):
                 (regfile[source],preserve_flag,wordmem[ea_ed]) = (ea_ed if opcode==op["push"] else regfile[source], True,regfile[dest])
+                print_memory_access("STORE",ea_ed,regfile[dest])
             elif opcode == op["out"]:
-                (preserve_flag,stdout, iomem[ea_ed]) = (True, chr(regfile[dest]) if ea_ed==0xfe09 else stdout, regfile[dest])
-                if ea_ed==0xfe09: ## swap to IO space !
-                    print (stdout)
+                (preserve_flag,iomem[ea_ed], ch) = (True, regfile[dest], '%s' % chr(regfile[dest]) if ( 0x1F < regfile[dest] < 0x7F) else '.')
+                print_memory_access("OUT",ea_ed,regfile[dest])           
             (swiid,ei,s,c,z) = flag_save if (preserve_flag or dest==0xF ) else (swiid,ei, (regfile[dest]>>15) & 1, c, 1 if (regfile[dest]==0) else 0)
 if len(sys.argv) > 2:  # Dump memory for inspection if required
     with open(sys.argv[2],"w" ) as f:
