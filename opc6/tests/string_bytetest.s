@@ -81,7 +81,6 @@ L3:
         BYTE 0x66, 0x77, 0x88, 0x99
 L4:
         BYTE int(3.14 * 10),0x00, L0&0xff,(L0>>8)&0xFF
-
 L10:B
         UBYTE 0xAA
 L11:B
@@ -90,9 +89,15 @@ L12:B
         UBYTE 0x33, 0x44, 0x55
 L13:B
         UBYTE 0x66, 0x77, 0x88, 0x99
+        UWORD _BPC_
+        UWORD _BPC_
+        UBYTE _BPC_ - L12
 L14:B
         UBYTE int(3.14 * 10),0x00, L0&0xff,(L0>>8)&0xFF
         UBYTE abc
+
+        # Now some and words referencing byte Labels
+        UWORD L13, L14
 
         ALIGN
 L20:B    WORD 0x1234
@@ -107,4 +112,8 @@ L99:B   UBYTE 78
         ALIGN
 L99:W
 
+        UBYTE 10
+        EQU   blah,1234
+        UBYTE 24
+        EQU   blah,2345
 results:
