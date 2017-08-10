@@ -132,3 +132,4 @@ with open("/dev/null" if len(errors)>0 else sys.argv[2],"w" ) as f:   ## write t
             if ( bytenum + i < len(bytemem)):
                 words.append(  "%04x " % (bytemem[i+bytenum] + 256*bytemem[i+1+bytenum]))
         f.write( (''.join(words))+'\n')
+sys.exit( len(errors)>0)
