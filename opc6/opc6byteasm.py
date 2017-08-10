@@ -49,11 +49,12 @@ for iteration in range (0,2): # Two pass assembly
             if mobj.groupdict()["table"]=="B":
                 errors = (errors + ["Error: Symbol %16s redefined in ...\n         %s" % (label,line.strip())]) if label in symtab else errors
                 exec ("%s= %s" % ((label,str(nextbyte)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
-            else:
+            elif iteration ==0 : # all symbols defined on pass 0
                 if inst != "EQU":
                     check_alignment("word label",error=True)
-                errors = (errors + ["Error: Symbol %16s redefined in ...\n         %s" % (label,line.strip())]) if label in symtab else errors
-                exec ("%s= %s" % ((label,str((nextbyte+1)//2)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
+                (symbol, value) = (label,str((nextbyte+1)//2))  if inst != "EQU" else (opfields[0], opfields[1])
+                errors = (errors + ["Error: Symbol %16s redefined in ...\n         %s" % (symbol,line.strip())]) if symbol in symtab else errors
+                exec ("%s= %s" % (symbol,value), globals(), symtab )
         if (inst=="ALIGN"):
             if not check_alignment(inst,error=False):
                 nextbyte+=1
