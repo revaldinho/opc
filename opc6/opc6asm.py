@@ -2,13 +2,13 @@ import sys, re
 op = "mov,and,or,xor,add,adc,sto,ld,ror,jsr,sub,sbc,inc,lsr,dec,asr,halt,bswp,putpsr,getpsr,rti,not,out,in,push,pop,cmp,cmpc".split(",")
 symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
 pdict = {"1":0x0000,"z":0x4000,"nz":0x6000,"c":0x8000,"nc":0xA000,"mi":0xC000,"pl":0xE000,"":0x0000} ##0x2000 reseved for non-predicated instuctions
-(wordmem,macro,macroname,newtext,wcount,errors,warnings,reg_re,mnum,nextmnum)=([0x0000]*64*1024,dict(),None,[],0,[],[],re.compile("(r\d*|psr|pc)"),0,1)
+(wordmem,macro,macroname,newtext,wcount,errors,warnings,reg_re,mnum,nextmnum)=([0x0000]*64*1024,dict(),None,[],0,[],[],re.compile("(r\d*|psr|pc)"),0,0)
 def expand_macro(line, macro, mnum):  # recursively expand macros, passing on instances not (yet) defined
     global nextmnum
     (text,mobj)=([line],re.match("^(?P<label>\w*\:)?\s*(?P<name>\w+)\s*?\((?P<params>.*?)\)",line))
     if mobj and mobj.groupdict()["name"] in macro:
-        (label,instname,paramstr,nextmnum) = (mobj.groupdict()["label"],mobj.groupdict()["name"],mobj.groupdict()["params"],max(nextmnum,mnum+1))
-        (text, instparams) = (["#%s" % line], [x.strip() for x in paramstr.split(",")])
+        (label,instname,paramstr)= (mobj.groupdict()["label"],mobj.groupdict()["name"],mobj.groupdict()["params"])
+        (text, instparams,mnum,nextmnum) = (["#%s" % line], [x.strip() for x in paramstr.split(",")],nextmnum,nextmnum+1)
         if label:
             text.append("%s%s"% (label, ":" if (label != "" and label != "None" and not (label.endswith(":"))) else ""))
         for newline in macro[instname][1]:

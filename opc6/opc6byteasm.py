@@ -2,7 +2,7 @@ import sys, re
 op = "mov,and,or,xor,add,adc,sto,ld,ror,jsr,sub,sbc,inc,lsr,dec,asr,halt,bswp,putpsr,getpsr,rti,not,out,in,push,pop,cmp,cmpc".split(",")
 symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
 pdict = {"1":0x00,"z":0x40,"nz":0x60,"c":0x80,"nc":0xA0,"mi":0xC0,"pl":0xE0,"":0x00} ##0x2000 reseved for non-predicated instuctions
-(bytemem,macro,macroname,newtext,bcount,errors,warnings,reg_re,mnum,nextmnum,nextbyte)=([0x0000]*128*1024,dict(),None,[],0,[],[],re.compile("(r\d*|psr|pc)"),0,1,0)
+(bytemem,macro,macroname,newtext,bcount,errors,warnings,reg_re,mnum,nextmnum,nextbyte)=([0x0000]*128*1024,dict(),None,[],0,[],[],re.compile("(r\d*|psr|pc)"),0,0,0)
 
 def check_alignment(inst,error=True):
     global nextbyte, errors
@@ -17,8 +17,8 @@ def expand_macro(line, macro, mnum):  # recursively expand macros, passing on in
     global nextmnum
     (text,mobj)=([line],re.match("^(?P<label>\w*\:)?\s*(?P<name>\w+)\s*?\((?P<params>.*?)\)",line))
     if mobj and mobj.groupdict()["name"] in macro:
-        (label,instname,paramstr,nextmnum) = (mobj.groupdict()["label"],mobj.groupdict()["name"],mobj.groupdict()["params"],max(nextmnum,mnum+1))
-        (text, instparams) = (["#%s" % line], [x.strip() for x in paramstr.split(",")])
+        (label,instname,paramstr) = (mobj.groupdict()["label"],mobj.groupdict()["name"],mobj.groupdict()["params"])
+        (text, instparams,mnum,nextmnum) = (["#%s" % line], [x.strip() for x in paramstr.split(",")],nextmnum,nextmnum+1)        
         if label:
             text.append("%s%s"% (label, ":" if (label != "" and label != "None" and not (label.endswith(":"))) else ""))
         for newline in macro[instname][1]:
@@ -125,7 +125,7 @@ for iteration in range (0,2): # Two pass assembly
             print("%04x %-20s  %s"%(memptr,' '.join([("%02x" % i) for i in bytes]),line.rstrip()))
 
 print ("\nAssembled %d bytes of code with %d error%s and %d warning%s." % (bcount,len(errors),'' if len(errors)==1 else 's',len(warnings),'' if len(warnings)==1 else 's'))
-print ("\nSymbol Table:\n\n%s\n\n%s\n%s" % ('\n'.join(["%-32s 0x%04X (%06d)" % (k,v,v) for k,v in sorted(symtab.items()) if not re.match("r\d*|pc|psr",k)]),'\n'.join(errors),'\n'.join(warnings)))
+print ("\nSymbol Table:\n\n%s\n\n%s\n%s" % ('\n'.join(["%-32s 0x%05X (%06d)" % (k,v,v) for k,v in sorted(symtab.items()) if not re.match("r\d*|pc|psr",k)]),'\n'.join(errors),'\n'.join(warnings)))
 
 with open("/dev/null" if len(errors)>0 else sys.argv[2],"w" ) as f:   ## write to hex file only if no errors else send result to null file
     for bytenum in range (0, len(bytemem),48):
