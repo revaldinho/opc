@@ -5,7 +5,7 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
     parameter FET0=3'h0,FET1=3'h1,EAD=3'h2,RDM=3'h3,EXEC=3'h4,WRM=3'h5,INT=3'h6;
     parameter EI=3,S=2,C=1,Z=0,P0=15,P1=14,P2=13,IRLEN=12,IRLD=16,IRSTO=17,IRNPRED=18,INT_VECTOR0=16'h0002,INT_VECTOR1=16'h0004;
     reg [15:0] OR_q,PC_q,PCI_q,result;
-    reg [19:0] IR_q; (* RAM_STYLE="DISTRIBUTED" *)
+    reg [18:0] IR_q; (* RAM_STYLE="DISTRIBUTED" *)
     reg [15:0] RF_q[15:0];
     reg [2:0]  FSM_q;
     reg [3:0]  swiid,PSRI_q;
@@ -38,7 +38,7 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
             else begin
                 case (FSM_q)
                     FET0   : FSM_q <= (din[IRLEN]) ? FET1 :  EAD;
-                    FET1   : FSM_q <= EAD;                    
+                    FET1   : FSM_q <= (!pred)? FET0: EAD;                    
                     EAD    : FSM_q <= (!pred)? FET0: (IR_q[IRLD]) ? RDM : (IR_q[IRSTO]) ? WRM : EXEC;
                     EXEC   : FSM_q <= ((!(&int_b) & PSR_q[EI])||((op==PPSR) && (|swiid)))?INT:((IR_q[3:0]==4'hF)||(op==JSR))?FET0:
                                       (din[IRLEN]) ? FET1 :EAD;
