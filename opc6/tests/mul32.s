@@ -1,11 +1,9 @@
 MACRO   PUSH( _data_)
-        sto     _data_,r14
-        inc     r14,1
+        push     _data_,r14
 ENDMACRO
 
 MACRO   POP( _data_)
-        dec     r14,1
-        ld      _data_, r14
+        pop      _data_, r14
 ENDMACRO
 
         mov    r14, r0,STACK    # Setup global stack pointer
