@@ -8,7 +8,7 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
     reg [18:0] IR_q; (* RAM_STYLE="DISTRIBUTED" *)
     reg [15:0] RF_q[15:0];
     reg [2:0]  FSM_q;
-    reg [3:0]  swiid;    
+    reg [3:0]  swiid,PSRI_q;
     reg [7:0]  PSR_q ;
     reg        zero,carry,sign,enable_int,reset_s0_b,reset_s1_b;
     wire [4:0]  op            = {IR_q[IRNPRED],IR_q[11:8]};
@@ -34,7 +34,7 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
         if (clken) begin
             {reset_s0_b,reset_s1_b} <= {reset_b,reset_s0_b};
             if (!reset_s1_b)
-                {PC_q,PSR_q,FSM_q} <= 0;
+                {PC_q,PSRI_q,PSR_q,FSM_q} <= 0;
             else begin
                 case (FSM_q)
                     FET0   : FSM_q <= (din[IRLEN]) ? FET1 :  EAD;
@@ -50,19 +50,19 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
                         (FSM_q==EAD)?
                         (op==INC)||(op==DEC)?(OR_q|{12'b0,IR_q[7:4]}):RF_w_p2+OR_q:din;
                 if ( FSM_q == INT )
-                  {RF_q[IR_q[3:0]],PSR_q[EI],IR_q[3:0]} <= {{12'b0,PSR_q[3:0]},1'b0,4'hF} ; // Always clear EI on taking interrupt
+                  {PSRI_q,PSR_q[EI],IR_q[3:0]} <= {PSR_q[3:0],1'b0,4'hF} ; // Always clear EI on taking interrupt
                 else if (FSM_q == INT1)
                   {PC_q, RF_q[IR_q[3:0]]} <= {(!int_b[1])?INT_VECTOR1:INT_VECTOR0,PC_q};                
                 else if ((FSM_q==FET0)||(FSM_q==FET1)) 
                     PC_q  <= PC_q + 1;
                 else if ( FSM_q == EXEC) begin
                     PC_q <= (op==RTI)?RF_q[IR_q[7:4]]: ((IR_q[3:0]==4'hF)||(op==JSR))?result:(((!(&int_b)) && PSR_q[EI])||((op==PPSR)&&(|swiid)))?PC_q:PC_q + 1;
-                    PSR_q <= (op==RTI)?{RF_q[IR_q[7:4]]}:{swiid,enable_int,sign,carry,zero}; // Clear SWI bits on return
+                    PSR_q <= (op==RTI)?{4'b0,PSRI_q}:{swiid,enable_int,sign,carry,zero}; // Clear SWI bits on return
                 end
                 if (((FSM_q==EXEC) && !((op==CMP)||(op==CMPC)))|| (((FSM_q==WRM)&&(op==PUSH))||((FSM_q==RDM)&&(op==POP))))
                     RF_q[IR_q[3:0]] <= (op==JSR)? PC_q : result ;
                 if ((FSM_q==FET0)||(FSM_q==EXEC))
-                    IR_q <= {(din[15:13]==3'b001),(din[11:8]==STO)||(op_d==PUSH),(din[11:8]==LD)||(op_d==POP),din[15:4],((!(&int_b) & PSR_q[EI])||((op==PPSR) && (|swiid)))?4'b0:din[3:0]};
+                    IR_q <= {(din[15:13]==3'b001),(din[11:8]==STO)||(op_d==PUSH),(din[11:8]==LD)||(op_d==POP),din};
                 else if (((FSM_q==EAD && (IR_q[IRLD]||IR_q[IRSTO]))||(FSM_q==RDM)))
                   IR_q[7:0] <= {IR_q[3:0],IR_q[7:4]}; // Swap source/dest reg in EA for reads and writes for writeback of 'source' in push/pop .. swap back again in RDMEM
             end 
