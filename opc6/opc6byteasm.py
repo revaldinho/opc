@@ -48,7 +48,7 @@ for iteration in range (0,2): # Two pass assembly
             # PLASMA VM labels can be unaligned...
             if mobj.groupdict()["table"]=="B":
                 errors = (errors + ["Error: Symbol %16s redefined in ...\n         %s" % (label,line.strip())]) if label in symtab else errors
-                exec ("%s= %s" % ((label,str(nextbyte)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
+                exec ("%s= int(%s)" % ((label,str(nextbyte)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
             elif iteration ==0 : # all symbols defined on pass 0
                 if inst != "EQU":
                     check_alignment("word label",error=True)
@@ -89,7 +89,7 @@ for iteration in range (0,2): # Two pass assembly
                     nextword = (nextbyte+1)//2
                     exec("PC=%d+%d" % (nextword,len(opfields)-1), globals(), symtab) # calculate PC as it will be in EXEC state
                     exec("_BPC_=%d" % (nextbyte), globals(), symtab) # calculate Byte PC for VM as current position
-                    words = [eval( f,globals(), symtab) for f in opfields ]
+                    words = [int(eval( f,globals(), symtab)) for f in opfields ]
                 except (ValueError, NameError, TypeError,SyntaxError):
                     (words,errors)=([0]*3,errors+["Error: illegal or undefined register name or expression in ...\n         %s" % line.strip() ])
                 if inst in op:

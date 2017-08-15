@@ -33,7 +33,7 @@ for iteration in range (0,2): # Two pass assembly
         (pred, opfields,words, memptr) = ("1" if pred==None else pred, [ x.strip() for x in operands.split(",")],[], nextmem)
         if (iteration==0 and (label and label != "None") or (inst=="EQU")):
             errors = (errors + ["Error: Symbol %16s redefined in ...\n         %s" % (label,line.strip())]) if label in symtab else errors
-            exec ("%s= %s" % ((label,str(nextmem)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
+            exec ("%s= int(%s)" % ((label,str(nextmem)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
         if (inst in("WORD","BYTE") or inst in op) and iteration < 1:
             nextmem += (len(opfields) if inst=="WORD" else ((len(opfields)+1)//2) if inst=="BYTE" else len(opfields)-1) # If two operands are provide instuction will be one word
         elif inst in op or inst in ("BYTE","WORD","STRING","BSTRING"):
@@ -45,14 +45,14 @@ for iteration in range (0,2): # Two pass assembly
                     warnings.append("Warning: suspected register field missing in ...\n         %s" % (line.strip()))
                 try:
                     exec("PC=%d+%d" % (nextmem,len(opfields)-1), globals(), symtab) # calculate PC as it will be in EXEC state
-                    words = [eval( f,globals(), symtab) for f in opfields ] + ([0] if inst=="BYTE" else []) # pad out BYTE lines wih a single zero
+                    words = [int(eval( f,globals(), symtab)) for f in opfields ] + ([0] if inst=="BYTE" else []) # pad out BYTE lines wih a single zero
                     words = ([(words[i+1]&0xFF)<<8|(words[i]&0xFF) for i in range(0,len(words)-1,2)]) if inst=="BYTE" else words # pack bytes 2 to a word
                 except (ValueError, NameError, TypeError,SyntaxError):
                     (words,errors)=([0]*3,errors+["Error: illegal or undefined register name or expression in ...\n         %s" % line.strip() ])
                 if inst in op:
                     (dst,src,val,abs_src) = (words+[0])[:3] + [words[1] if words[1]>0 else -words[1]]
                     errors=(errors+["Error: short constant out of range in ...\n         %s"%(line.strip())]) if (inst in('inc','dec') and (abs_src>0xF)) else errors
-                    (inst,src) = ('dec' if inst=='inc' else 'inc',(~src +1)&0xF) if inst in('inc','dec') and (src&0x8000) else (inst,src) 
+                    (inst,src) = ('dec' if inst=='inc' else 'inc',(~src +1)&0xF) if inst in('inc','dec') and (src&0x8000) else (inst,src)
                     words=[((len(words)==3)<<12)|(pdict[pred] if ((op.index(inst)&0x10)==0) else 0x2000)|((op.index(inst)&0x0F)<<8)|(src<<4)|dst,val&0xFFFF][:len(words)-(len(words)==2)]
             (wordmem[nextmem:nextmem+len(words)], nextmem,wcount )  = (words, nextmem+len(words),wcount+len(words))
         elif inst == "ORG":
