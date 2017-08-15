@@ -11,7 +11,6 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
     reg [7:0]  PSR_q ;
     reg        zero,carry,sign,enable_int,reset_s0_b,reset_s1_b;
     wire [4:0]  op            = {IR_q[IRNPRED],IR_q[11:8]};
-    wire [4:0]  op_d          = { (din[15:13]==3'b001),din[11:8] };
     wire        pred          = (IR_q[15:13]==3'b001) || (IR_q[P2] ^ (IR_q[P1]?(IR_q[P0]?PSR_q[S]:PSR_q[Z]):(IR_q[P0]?PSR_q[C]:1))); // New data,old flags (in fetch0)    
     wire [15:0] RF_w_p2       = (IR_q[7:4]==4'hF) ? PC_q: {16{(IR_q[7:4]!=4'h0)}} & RF_q[IR_q[7:4]];                          // Port 2 always reads source reg
     wire [15:0] RF_dout       = (IR_q[3:0]==4'hF) ? PC_q: {16{(IR_q[3:0]!=4'h0)}} & RF_q[IR_q[3:0]];                          // Port 1 always reads dest reg
@@ -36,26 +35,27 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
                 {PC_q,PCI_q,PSRI_q,PSR_q,FSM_q} <= 0;
             else begin
                 case (FSM_q)
-                    FET0   : FSM_q <= (din[IRLEN]) ? FET1 :  EAD;
-                    FET1   : FSM_q <= EAD;                    
-                    EAD    : FSM_q <= (!pred)? FET0: (IR_q[IRLD]) ? RDM : (IR_q[IRSTO]) ? WRM : EXEC;
+                    FET0   : FSM_q <= FET1 ;
+                    FET1   : FSM_q <= (!pred)? FET0: EAD;                    
+                    EAD    : FSM_q <= (IR_q[IRLD]) ? RDM : (IR_q[IRSTO]) ? WRM : EXEC;
                     EXEC   : FSM_q <= ((!(&int_b) & PSR_q[EI])||((op==PPSR) && (|swiid)))?INT: FET0;                    
                     WRM    : FSM_q <= (!(&int_b) & PSR_q[EI])?INT:FET0;
                     default: FSM_q <= (FSM_q==RDM)? EXEC : FET0;  // Applies to INT and RDM plus undefined states
                 endcase // case (FSM_q)
-                if ( FSM_q == INT )
+                if ( FSM_q == INT ) begin
                    {PSRI_q,PSR_q[EI]} <= {PSR_q[3:0],1'b0} ; // Always clear EI on taking interrupt                
-                   {PC_q, PCI_q} <= {(!int_b[1])?INT_VECTOR1:INT_VECTOR0,PC_q};                
+                   {PC_q, PCI_q} <= {(!int_b[1])?INT_VECTOR1:INT_VECTOR0,PC_q};
+                end
                 if (FSM_q==FET0) begin
                     PC_q <= PC_q + 1;
-                    IR_q <= {(din[15:13]==3'b001),(din[11:8]==STO)||(op_d==PUSH),(din[11:8]==LD)||(op_d==POP),din};   
-                    OR_q <=  ({16{op_d==PUSH}}^({15'b0,(op_d==POP)})) ;                    
+                    IR_q <= {(din[15:13]==3'b001),2'b0,din};   
                 end      
                 if (FSM_q==EAD)
                   OR_q <= (op==INC)||(op==DEC)?(OR_q|{12'b0,IR_q[7:4]}):RF_w_p2+OR_q;
                 if (FSM_q==FET1) begin
-                    PC_q  <= PC_q + 1;
-                    OR_q <= din;
+                    PC_q  <= PC_q + (IR_q[IRLEN]);
+                    OR_q <= (IR_q[IRLEN])? din: {16{op==PUSH}}^{15'b0,(op==POP)} ;
+                    IR_q <= {IR_q[18],(IR_q[11:8]==STO)||(op==PUSH),(IR_q[11:8]==LD)||(op==POP),IR_q[15:0]};                       
                 end
                 if (FSM_q==RDM) 
                     OR_q <= din;
