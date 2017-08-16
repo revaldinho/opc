@@ -18,6 +18,8 @@ module uart ( input[15:0] din, output[15:0] dout, input a0, input rnw, input clk
    reg        rxd2;
    reg        rx_full;
    reg [7:0]  rx_data;
+   wire       rx_busy;
+   wire       tx_busy;
 
    // Assignments
    assign rx_busy = rx_shift_reg != 10'b1111111111;
