@@ -1,5 +1,3 @@
-`define cpu_opc6
-
 module system (
                input        clk100,
                output       led1,
