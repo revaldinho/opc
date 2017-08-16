@@ -7,7 +7,8 @@
 
 ##include "macros.s"
 
-EQU        BASE, 0xC000
+# Inject _BASE_from the build script (C000 on Xilinx, F000 on ICE40)        
+EQU        BASE, _BASE_
 EQU        CODE, 0xF800
 
 EQU   UART_ADDR, 0xFE08
