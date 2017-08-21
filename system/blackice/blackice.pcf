@@ -18,8 +18,8 @@ set_io sw3   63 # B1 (active low)
 set_io sw4   64 # B2 (active low)
 
 # PMOD UART connections
-set_io txd   97 # P11 (i_tx) - Pmod 3/4 pin 5
-set_io rxd   96 # P15 (i_rx) - Pmod 3/4 pin 6
+set_io txd   97 # P11 (i_tx) - Pmod 3/4 pin 5 (top row)
+set_io rxd   96 # P15 (i_rx) - Pmod 3/4 pin 6 (bottom row)
 
 # USB UART / Pi Connector
 #
