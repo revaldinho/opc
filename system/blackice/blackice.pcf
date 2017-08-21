@@ -41,6 +41,47 @@ set_io rxd   96 # P15 (i_rx) - Pmod 3/4 pin 6 (bottom row)
 #set_io txd  85
 #set_io rxd  88
 
+# SRAM
+set_io ADR[0] 137
+set_io ADR[1] 138
+set_io ADR[2] 139
+set_io ADR[3] 141
+set_io ADR[4] 142
+set_io ADR[5] 42
+set_io ADR[6] 43
+set_io ADR[7] 44
+set_io ADR[8] 73
+set_io ADR[9] 74
+set_io ADR[10] 75
+set_io ADR[11] 76
+set_io ADR[12] 115
+set_io ADR[13] 116
+set_io ADR[14] 117
+set_io ADR[15] 118
+set_io ADR[16] 119
+set_io ADR[17] 78
+#set_io ADR[18] 62
+
+set_io DAT[0] 135
+set_io DAT[1] 134
+set_io DAT[2] 130
+set_io DAT[3] 128
+set_io DAT[4] 125
+set_io DAT[5] 124
+set_io DAT[6] 122
+set_io DAT[7] 121
+set_io DAT[8] 61
+set_io DAT[9] 60
+set_io DAT[10] 56
+set_io DAT[11] 55
+set_io DAT[12] 52
+set_io DAT[13] 49
+set_io DAT[14] 48
+set_io DAT[15] 47
+
+set_io RAMOE_b 45
+set_io RAMWE_b 120
+set_io RAMCS_b 136
 
 
 ################################################################################
