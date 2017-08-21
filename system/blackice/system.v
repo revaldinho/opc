@@ -72,6 +72,7 @@ module system (
 
    wire         PLL_BYPASS = 0;
    wire         PLL_RESETB = 1;
+   wire         LOCK;
    SB_PLL40_CORE #(
         .FEEDBACK_PATH("SIMPLE"),
         .DELAY_ADJUSTMENT_MODE_FEEDBACK("FIXED"),
@@ -88,8 +89,8 @@ module system (
         .REFERENCECLK   (clk100),
         .PLLOUTGLOBAL   (clk),
         .BYPASS         (PLL_BYPASS),
-        .RESETB         (PLL_RESETB)
-        //.LOCK (LOCK )
+        .RESETB         (PLL_RESETB),
+        .LOCK           (LOCK )
    );
 
    always @(posedge clk)
@@ -105,10 +106,11 @@ module system (
           clk_counter <= clk_counter + 1;
      end
 
-   assign led1 = clk_counter[23] | sw2_1;
-   assign led2 = clk_counter[22] | sw2_2;
-   assign led3 = clk_counter[21] | sw1_1;
-   assign led4 = clk_counter[20] | sw1_2;
+   assign led1 = ~reset_b; // blue
+   assign led2 = LOCK;     // green
+   assign led3 = ~rxd;     // yellow
+   assign led4 = ~txd;     // red
+
 
    // The CPU
 `ifdef cpu_opc6
