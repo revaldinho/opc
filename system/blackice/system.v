@@ -73,15 +73,15 @@ module system (
    wire         PLL_BYPASS = 0;
    wire         PLL_RESETB = 1;
    SB_PLL40_CORE #(
-        .FEEDBACK_PATH("PHASE_AND_DELAY"),
+        .FEEDBACK_PATH("SIMPLE"),
         .DELAY_ADJUSTMENT_MODE_FEEDBACK("FIXED"),
         .DELAY_ADJUSTMENT_MODE_RELATIVE("FIXED"),
-        .PLLOUT_SELECT("SHIFTREG_0deg"),
+        .PLLOUT_SELECT("GENCLK"),
         .SHIFTREG_DIV_MODE(1'b0),
         .FDA_FEEDBACK(4'b0000),
         .FDA_RELATIVE(4'b0000),
         .DIVR(4'b0100),
-        .DIVF(7'b0000001),
+        .DIVF(7'b0011111),
         .DIVQ(3'b100),
         .FILTER_RANGE(3'b010),
    ) uut (
