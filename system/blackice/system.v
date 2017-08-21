@@ -33,6 +33,7 @@ module system (
    wire [15:0] uart_dout;
    wire [15:0] address;
    wire        rnw;
+   reg         sw4_sync;
    reg         reset_b;
    wire        uart_cs_b = !({address[15:1],  1'b0} == 16'hfe08);
 
@@ -90,14 +91,16 @@ module system (
         .PLLOUTGLOBAL   (clk),
         .BYPASS         (PLL_BYPASS),
         .RESETB         (PLL_RESETB),
-        .LOCK           (LOCK )
+        .LOCK           (LOCK)
    );
 
    always @(posedge clk)
      begin
-          reset_b <= sw3;
+          sw4_sync <= sw4;
      end
 
+   assign reset_b = sw4_sync & LOCK;
+ 
    always @(posedge clk)
      begin
         if (!reset_b)
