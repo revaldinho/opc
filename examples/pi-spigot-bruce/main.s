@@ -20,8 +20,7 @@
         ;; r12 stands for p (a pointer)
 
 MACRO JSR( _address_)
-    mov     r13, pc, 0x0002
-    mov     pc,  r0, _address_
+    jsr     r13, r0, _address_
 ENDMACRO
 
 MACRO RTS()
@@ -29,13 +28,11 @@ MACRO RTS()
 ENDMACRO
 
 MACRO   PUSH( _data_)
-    mov     r14, r14, -1
-    sto     _data_, r14, 1
+    push    _data_, r14
 ENDMACRO
 
 MACRO   POP( _data_ )
-    ld      _data_, r14, 1
-    mov     r14, r14, 1
+    pop     _data_, r14
 ENDMACRO
 
 EQU  oswrch, 0xffee

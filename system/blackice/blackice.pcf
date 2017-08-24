@@ -1,0 +1,235 @@
+# User Constraint File for BlackIce OPC6
+
+# Onboard 100MHz oscillator
+set_io clk100 129
+
+# LEDs (active high)
+set_io led1  71
+set_io led2  67
+set_io led3  68
+set_io led4  70
+
+# Switches
+set_io sw1_2 37 # DIG19
+set_io sw1_1 38 # DIG18
+set_io sw2_2 39 # DIG17
+set_io sw2_1 41 # DIG16
+set_io sw3   63 # B1 (active low)
+set_io sw4   64 # B2 (active low)
+
+# PMOD UART connections
+#set_io txd   97 # P11 (i_tx) - Pmod 3/4 pin 5 (top row)
+#set_io rxd   96 # P15 (i_rx) - Pmod 3/4 pin 6 (bottom row)
+
+# USB UART / Pi Connector
+#
+# From the schematic it looks like:
+#
+# Pin 2 of the CH340G (TxD output) is connected to
+# - Pin 8 of the Pi Header (TxD0 output)
+# - STM32F103RET6 pin 43 (PA10)
+# - net is called RX
+# - and also via a resistor to PMOD P2, FPGA Pin 88
+#
+# Pin 3 of the CH340G (RxD input) is connected to
+# - Pin 10 of the Pi Header (RxD0 input)
+# - STM32F103RET6 pin 42 (PA9)
+# - net is called TX
+# - and also via a resistor to PMOD P3, FPGA Pin 85
+#
+# NOTE: It appears the conenections to the Pi Header are swapped (i.e. Pi output to USB UART output)
+set_io txd  85
+set_io rxd  88
+
+# SRAM
+set_io ADR[0] 137
+set_io ADR[1] 138
+set_io ADR[2] 139
+set_io ADR[3] 141
+set_io ADR[4] 142
+set_io ADR[5] 42
+set_io ADR[6] 43
+set_io ADR[7] 44
+set_io ADR[8] 73
+set_io ADR[9] 74
+set_io ADR[10] 75
+set_io ADR[11] 76
+set_io ADR[12] 115
+set_io ADR[13] 116
+set_io ADR[14] 117
+set_io ADR[15] 118
+set_io ADR[16] 119
+set_io ADR[17] 78
+#set_io ADR[18] 62
+
+set_io DAT[0] 135
+set_io DAT[1] 134
+set_io DAT[2] 130
+set_io DAT[3] 128
+set_io DAT[4] 125
+set_io DAT[5] 124
+set_io DAT[6] 122
+set_io DAT[7] 121
+set_io DAT[8] 61
+set_io DAT[9] 60
+set_io DAT[10] 56
+set_io DAT[11] 55
+set_io DAT[12] 52
+set_io DAT[13] 49
+set_io DAT[14] 48
+set_io DAT[15] 47
+
+set_io RAMOE_b 45
+set_io RAMWE_b 120
+set_io RAMCS_b 136
+
+
+################################################################################
+##                                                                             #
+## Copyright 2016 myStorm Copyright and related                                #
+## rights are licensed under the Solderpad Hardware License, Version 0.51      #
+## (the “License”); you may not use this file except in compliance with        #
+## the License. You may obtain a copy of the License at                        #
+## http://solderpad.org/licenses/SHL-0.51. Unless required by applicable       #
+## law or agreed to in writing, software, hardware and materials               #
+## distributed under this License is distributed on an “AS IS” BASIS,          #
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or             #
+## implied. See the License for the specific language governing                #
+## permissions and limitations under the License.                              #
+##                                                                             #
+################################################################################
+#
+#
+##pmod 1
+#
+#set_io PMOD[0] 94 # rd6
+#set_io PMOD[1] 91 # rd4
+#set_io PMOD[2] 88 # rd2
+#set_io PMOD[3] 85 # rd0
+#
+##pmod 2
+#set_io PMOD[4] 95 # rd7
+#set_io PMOD[5] 93 # rd5
+#set_io PMOD[6] 90 # rd3
+#set_io PMOD[7] 87 # rd1
+#
+##pmod 3 GPIO
+#set_io PMOD[8] 105 # c5
+#set_io PMOD[9] 102 # c3
+#set_io PMOD[10] 99 # c1
+#set_io PMOD[11] 97 # i_tx
+#
+##pmod 4
+#set_io PMOD[12] 104 # c4
+#set_io PMOD[13] 101 # c2
+#set_io PMOD[14] 98 # c0
+#set_io PMOD[15] 96 # i_rx
+#
+##pmod 5 GPIO
+#set_io PMOD[16] 143 #g2
+#set_io PMOD[17] 114 #c11
+#set_io PMOD[18] 112 #c9
+#set_io PMOD[19] 107 #c7
+#
+##pmod 6 GPIO
+#set_io PMOD[20] 144 #G1
+#set_io PMOD[21] 113 #C10
+#set_io PMOD[22] 110 #C8
+#set_io PMOD[23] 106 #C6
+#
+#pmod 7 lvds pairs 2 & 5
+#set_io PMOD[24] 10 # 5b
+#set_io PMOD[25] 9 # 5a
+#set_io PMOD[26] 2 # 2b
+#set_io PMOD[27] 1 # 2a
+#
+##pmod 8 lvds pairs 3 & 4
+#set_io PMOD[28] 8 # 4b
+#set_io PMOD[29] 7 # 4a
+#set_io PMOD[30] 4 # 3b
+#set_io PMOD[31] 3 # 3a
+#
+##pmod 9 lvds pairs 10 & 13
+#set_io PMOD[32] 20 # 13b
+#set_io PMOD[33] 19 # 13a
+#set_io PMOD[34] 16 # 10b
+#set_io PMOD[35] 15 # 10a
+#
+##pmod 10 lvds pairs 8 & 12
+#set_io PMOD[36] 18 # 12b
+#set_io PMOD[37] 17 # 12a
+#set_io PMOD[38] 12 # 8b
+#set_io PMOD[39] 11 # 8a
+#
+##pmod 11 lvds pairs 14 & 25
+#set_io PMOD[40] 34 # 25b
+#set_io PMOD[41] 33 # 25a
+#set_io PMOD[42] 22 # 14B
+#set_io PMOD[43] 21 # 14a
+#
+##pmod 12 lvds pairs 18 & 24
+#set_io PMOD[44] 32 # 24b
+#set_io PMOD[45] 31 # 24a
+#set_io PMOD[46] 26 # 18b
+#set_io PMOD[47] 25 # 18a
+#
+##pmod 13 lvds pairs 17 & 23
+#set_io PMOD[48] 29 # 23b
+#set_io PMOD[49] 28 # 23a
+#set_io PMOD[50] 24 # 17b
+#set_io PMOD[51] 23 # 17a
+#
+#pmod 14 SPI muxed with leds
+#set_io PMOD[52] 71 #LD4,!SS,p14_1
+#set_io PMOD[53] 67 #LD3,MISO,p14_2
+#set_io PMOD[54] 68 #LD2,MOSI,p14_3
+#set_io PMOD[55] 70 #LD1,SCL,p14_4
+#
+# SRAM
+#set_io ADR[0] 137
+#set_io ADR[1] 138
+#set_io ADR[2] 139
+#set_io ADR[3] 141
+#set_io ADR[4] 142
+#set_io ADR[5] 42
+#set_io ADR[6] 43
+#set_io ADR[7] 44
+#set_io ADR[8] 73
+#set_io ADR[9] 74
+#set_io ADR[10] 75
+#set_io ADR[11] 76
+#set_io ADR[12] 115
+#set_io ADR[13] 116
+#set_io ADR[14] 117
+#set_io ADR[15] 118
+#set_io ADR[16] 119
+#set_io ADR[17] 78
+#set_io ADR[18] 62
+
+#set_io DAT[0] 135
+#set_io DAT[1] 134
+#set_io DAT[2] 130
+#set_io DAT[3] 128
+#set_io DAT[4] 125
+#set_io DAT[5] 124
+#set_io DAT[6] 122
+#set_io DAT[7] 121
+#set_io DAT[8] 61
+#set_io DAT[9] 60
+#set_io DAT[10] 56
+#set_io DAT[11] 55
+#set_io DAT[12] 52
+#set_io DAT[13] 49
+#set_io DAT[14] 48
+#set_io DAT[15] 47
+
+#set_io RAMOE 45
+#set_io RAMWE 120
+#set_io RAMCS 136
+
+## Onboard 100Mhz oscillator
+#set_io clk 129
+#set_io PMOD[0] 71 #LD4,!SS,p14_1
+#set_io PMOD[1] 67 #LD3,MISO,p14_2
+#set_io PMOD[2] 68 #LD2,MOSI,p14_3
+#set_io PMOD[3] 70 #LD1,SCL,p14_4

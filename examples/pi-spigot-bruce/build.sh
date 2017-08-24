@@ -11,15 +11,7 @@ function beeb_file {
 
     echo $*
 
-    # Work out lines to extract from hex file
-    L1=$((1+16#$START))
-    L2=$((16#$START + 16#$LEN))
-    tr " " "\n" <${HEX} | sed -n ${L1},${L2}p > tmp.out
-
-    # Swap the lo/hi bytes and convert to binary
-    cut -c1,2 <tmp.out > tmp.hi
-    cut -c3,4 <tmp.out > tmp.lo
-    paste tmp.lo tmp.hi | xxd -p -r > ${BIN}
+    xxd -r -p < ${HEX} | dd ibs=2 conv=swab skip=$((16#${START})) count=$((16#${LEN})) > ${BIN}
 
     # Create the inf file
     echo -e "\$.`basename ${BIN}`\t${START}\t${EXEC}" > ${BIN}.inf
