@@ -10,13 +10,11 @@ MACRO   CLC()
 ENDMACRO
 
 MACRO   PUSH( _data_)
-        mov     r14, r14, -1
-        sto     _data_, r14, 1
+        push    _data_, r14
 ENDMACRO
 
 MACRO   POP( _data_ )
-        ld      _data_, r14, 1
-        mov     r14, r14, 1
+        pop     _data_, r14
 ENDMACRO
 
 MACRO   SEC()
@@ -130,10 +128,10 @@ ENDMACRO
         EQU     cols,     1+(6*10//3)            # 1 + (digits * 10/3)
 
         mov   r13,r0                  # Initialise r13 to stop PUSH/POP ever loading X's to stack for regression runs        
-        mov   r14,r0,0xFDFF           # Set stack to grow down from here for monitor
-        mov   pc,r0,0x100             # Program start at 0x100 for use with monitor/copro
+        mov   r14,r0,0x0FFE           # Set stack to grow down from here for monitor
+        mov   pc,r0,0x1000            # Program start at 0x1000 for use with monitor/copro
 
-        ORG   0x100
+        ORG   0x1000
 start:
         PUSH  (r13)
         
@@ -247,12 +245,6 @@ mul16s_loop0:
         c.add   r11,r2                  # add last copy of multiplicand into accumulator if carry
         RTS     ()
 
-Limit:
-        EQU dummy, 0 if (Limit < 0x200) else limit_error
-
-        ORG 0x200
-        
-        
 mypi:    WORD 0                          # Space for pi digit storage
          ORG mypi + digits + 8
 remain:  WORD 0                          # Array space for remainder data

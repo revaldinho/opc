@@ -35,18 +35,20 @@ ENDMACRO
         # r4,5,6,7 = unused
         # r1..r3  = local registers
 
-        EQU     digits,   24            # Digits to be printed
+        EQU     digits,   32            # Digits to be printed
         EQU     saved_digits, 16        # Max digits to be save in memory (for regression)
         EQU     cols,     digits+2      # Needs a few more columns than digits to avoid occasional errors in last digit or few
 
 # preamble for a bootable program
 # remove this for a monitor-friendly loadable program
-    	ORG 0
-    	mov r14, r0, 0x2000
-    	mov pc, r0, start
+        ORG 0
+        mov r14, r0, 0x0FFE             # Stack below code (will be taken care of by monitor on hw)
+        mov r13,r0                      # Initialise r13 for simulation
+        mov pc, r0, start
 
         ORG 0x1000
 start:
+        push    r13,r14                 # Save r13 return address if running via the monitor
         mov     r8,r0,my_e+1
 
         ;; trivial banner + first digit and decimal point
@@ -96,6 +98,7 @@ L6:     mov     r1, r11, 48             # Convert quotient into ASCII digit
         nz.mov  pc,r0,L3                # jump back into main program
 
         halt    r0,r0
+        pop     r13,r14                 # restore return address for monitor
         RTS     ()
 
         # --------------------------------------------------------------
@@ -122,13 +125,24 @@ udiv16:
 udiv16_loop:
         ASL     (r11)                   # shift left the quotient/dividend
         ROL     (r2)                    #
-        cmp     r2,r10                   # check if quotient is larger than divisor
-        c.sub   r2,r10                   # if yes then do the subtraction for real
+        cmp     r2,r10                  # check if quotient is larger than divisor
+        c.sub   r2,r10                  # if yes then do the subtraction for real
         c.adc   r11,r0                  # ... set LSB of quotient using (new) carry
         inc     r1,1                    # increment loop counter zeroing carry
         nz.dec  pc,PC-udiv16_loop       # loop again if not finished 
         RTS     ()                      # and return with quotient/remainder in r1/r2
 
+banner:  STRING "OK 2."                 # Banner and first digit and dp
+         WORD 0        
+my_e:    WORD 0                         # reserve space for digits to be stored for regression
+
+        ORG    my_e + saved_digits + 2
+         WORD 0
+remain:  WORD 2                         # Array space for remainder date
+         WORD 2
+
+
+        ORG  0xFFEE
         # --------------------------------------------------------------
         #
         # oswrch
@@ -147,9 +161,3 @@ oswrch_loop:
         nz.dec  pc, PC-oswrch_loop
         out     r1, r0, 0xfe09
         RTS     ()
-banner:  STRING "OK 2."                  # Banner and first digit and dp
-         WORD 0        
-my_e:    WORD 2                          # Space for e digit storage
-
-        ORG  0x2000                      # Can use all of space above stack for remainder data
-remain:  WORD 0                          # Array space for remainder date
