@@ -42,11 +42,8 @@ ENDMACRO
 # 7 digits in 42589 instructions, 108368 cycles
 # 8 digits in 52659 instructions, 133981 cycles
 
-        ORG 6 # Original target 359 digits
-ndigits:
-
-        ORG 21 # 1193  should be 1+ndigits*10/3
-psize:
+        EQU     ndigits,   16              # Original target 359 digits
+        EQU     psize,     1+ndigits*10//3 # 
 
         ORG 0x1000
 start:
@@ -119,6 +116,11 @@ l5:     mov r1, r3              # tya
 l6:     mov r2, r2, -1          # dex
         nz.mov pc, r0, l1       # bne l1
         JSR (oswrch)
+
+        mov     r1, r0, 10              # Print Newline to finish off
+        jsr     r13,r0,oswrch
+        mov     r1, r0, 13
+        jsr     r13,r0,oswrch
         halt r0, r0, 0x3142     # RTS()
         pop  r13,r14
         RTS ()
@@ -158,8 +160,6 @@ d2:     adc r11, r11            # rol q
         RTS()
 
         
-#base:   WORD 0,0,0,0,0,0,0,0,0  # reserve some stack space
-#stack:  WORD 0
 p:      WORD 0  # needs 1193 words but there's nothing beyond
 
 

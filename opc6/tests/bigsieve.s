@@ -59,7 +59,7 @@ MACRO   POPALL()
         pop    r13, r14
 ENDMACRO
 
-        mov   r14,r0,0x2000
+        mov   r14,r0,0x0FFE
         # Initialise registers to stop PUSHALL/POPALL ever loading X's to stack for regression runs
         mov   r13,r0
         mov   r12,r0
@@ -74,8 +74,9 @@ ENDMACRO
         mov   pc,r0,start
 
         ORG   0x1000
-        EQU   MAX,100          # set max number to sift through (<1.7M)
-start:  
+        EQU   MAX,1000                          # set max number to sift through (<1.7M)
+start:
+        push  r13,r14                           # for running via monitor
         mov   r10,r0, (MAX & 0xFFFF0000) >> 16  # upper word
         mov   r9, r0, MAX & 0xFFFF              # lower word
 
@@ -89,6 +90,8 @@ L0:     sto   r0,r1,results
 
         # output 2 to console - first prime number
         mov   r1,r0,2 + 48
+        jsr   r13,r0,oswrch
+        mov   r1,r0,10
         jsr   r13,r0,oswrch
         mov   r1,r0,13
         jsr   r13,r0,oswrch
@@ -104,8 +107,6 @@ L1:     mov   r1,r11            # Copy pointer val into r1,r2
         mov   r1,r11
         mov   r2,r12
         jsr   r13,r0,printdec32
-        mov   r1, r0, 13
-        jsr   r13,r0,oswrch
         
         mov   r8,r12            # p2 <- 2 * ptr
         mov   r7,r11
@@ -129,6 +130,8 @@ L3:     inc   r11,2             # skip even numbers so always increment by 2
         nz.mov pc,r0,L1
 
         halt    r0,r0,0xBEEB
+        pop     r13,r14         # for running via monitor
+        RTS     ()
         
         # ----------------------------
         # bit
@@ -173,7 +176,8 @@ bit:
         # printdec32
         #
         # Print unsigned decimal integer from a 32b number to console
-        # suppressing leading zeroes.
+        # suppressing leading zeroes and including a linefeed/CR at the
+        # end
         #
         # Entry:
         #       r1,r2 holds 32 b number to print, r1 = LSW
@@ -219,30 +223,16 @@ pd32_l3:
         pl.mov pc,r0, pd32_l1  # If entry number >= 0 then loop again
         mov r1,r3,48           # otherwise convert remainder low word to ASCII
         jsr r13,r0,oswrch      # and print it
+        
+        mov   r1, r0, 10       # LF/CR pair to finish
+        jsr   r13,r0,oswrch
+        mov   r1, r0, 13
+        jsr   r13,r0,oswrch
 
         POPALL  ()             # Restore all high registers and return
         RTS()
 
-
-        # --------------------------------------------------------------
-        #
-        # oswrch
-        #
-        # Output a single ascii character to the uart
-        #
-        # Entry:
-        #       r1 is the character to output
-        # Exit:
-        #       r2 used as temporary
-        # ---------------------------------------------------------------
-oswrch:
-oswrch_loop:
-        in      r2, r0, 0xfe08
-        and     r2, r0, 0x8000
-        nz.dec  pc, PC-oswrch_loop
-        out     r1, r0, 0xfe09
-        RTS     ()
-
+        
         # Divisor table for printdec32, all in  little endian format
 pd32_table:
         WORD            10 % 65536,        10 // 65536 
@@ -263,6 +253,25 @@ bitmask:
         WORD 0x1000,0x2000,0x4000,0x8000
 
 
-        # Stack starts at 0x2000 and grows downwards
-        ORG 0x2001
-results: 
+results: WORD   0       # results will go here
+
+
+        ORG 0xFFEE
+        # --------------------------------------------------------------
+        #
+        # oswrch
+        #
+        # Output a single ascii character to the uart
+        #
+        # Entry:
+        #       r1 is the character to output
+        # Exit:
+        #       r2 used as temporary
+        # ---------------------------------------------------------------
+oswrch:
+oswrch_loop:
+        in      r2, r0, 0xfe08
+        and     r2, r0, 0x8000
+        nz.dec  pc, PC-oswrch_loop
+        out     r1, r0, 0xfe09
+        RTS     ()

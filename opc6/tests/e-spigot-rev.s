@@ -35,7 +35,7 @@ ENDMACRO
         # r4,5,6,7 = unused
         # r1..r3  = local registers
 
-        EQU     digits,   32            # Digits to be printed
+        EQU     digits,   64            # Digits to be printed
         EQU     saved_digits, 16        # Max digits to be save in memory (for regression)
         EQU     cols,     digits+2      # Needs a few more columns than digits to avoid occasional errors in last digit or few
 
@@ -96,6 +96,11 @@ L6:     mov     r1, r11, 48             # Convert quotient into ASCII digit
 
         dec     r9,1                    # dec loop counter
         nz.mov  pc,r0,L3                # jump back into main program
+
+        mov     r1, r0, 10              # Print Newline to finish off
+        jsr     r13,r0,oswrch
+        mov     r1, r0, 13
+        jsr     r13,r0,oswrch
 
         halt    r0,r0
         pop     r13,r14                 # restore return address for monitor

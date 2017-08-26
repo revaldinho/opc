@@ -124,8 +124,8 @@ ENDMACRO
 # r3..r5 = local registers
 # r1,r2  = temporary registers, parameters and return registers
 
-        EQU     digits,   6
-        EQU     cols,     1+(6*10//3)            # 1 + (digits * 10/3)
+        EQU     digits,   16
+        EQU     cols,     1+(digits*10//3)            # 1 + (digits * 10/3)
 
         mov   r13,r0                  # Initialise r13 to stop PUSH/POP ever loading X's to stack for regression runs        
         mov   r14,r0,0x0FFE           # Set stack to grow down from here for monitor
@@ -183,6 +183,12 @@ L4:
 
         #SINGLE_DIGIT_CORRECTION()
         MULTI_DIGIT_CORRECTION()
+
+        mov     r1, r0, 10              # Print Newline to finish off
+        jsr     r13,r0,oswrch
+        mov     r1, r0, 13
+        jsr     r13,r0,oswrch
+        
         halt    r0,r0,0xBEEB
         POP     (r13)
         RTS     ()

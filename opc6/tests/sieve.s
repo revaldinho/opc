@@ -43,11 +43,16 @@ MACRO   ROL(_reg_)
         adc     _reg_, _reg_
 ENDMACRO
         
-        mov   r14,r0,0x2000           # Set stack to grow down from here for monitor
-        mov   pc,r0,0x1000            # Program start at 0x1000 for use with monitor
+        mov   r14,r0,0x0FFE           # Set stack to grow down from here for monitor
+        mov   r13,r0                  # Initialise r13 for regressins
+        mov   pc,r0,start             # Program start at 0x1000 for use with monitor
 
         ORG   0x1000
         EQU   MAX,200                # Can use up to 65535 here
+
+
+start:
+        push  r13,r14                 # save r13 if called via monitor
         mov   r10,r0,MAX              # Counter will run to MAX 
         mov   r2,r0,1+MAX//2          # But we're only going to store odd markers so init an array half that size
         not   r9, r0                  # non-zero marker
@@ -62,8 +67,6 @@ L0:     sto   r0,r1,results
         # Print out the first primes
         mov   r1,r0,2
         jsr   r13,r0,PrintDec   # Print it
-        mov   r1,r0,13
-        jsr   r13,r0,oswrch     # Print a newline        
        
         # Now start the sieve at value 3
         mov   r12,r0,3
@@ -72,8 +75,6 @@ L1:     lsr   r8,r12
         nz.inc pc,L3-PC         # If yes then next bit else...
         mov   r1, r12           # Copy number into r1
         jsr   r13,r0,PrintDec   # Print it
-        mov   r1,r0,13
-        jsr   r13,r0,oswrch     # Print a newline        
         mov   r11,r12           # p2 <- 2*ptr
         add   r11,r11
 L2:     lsr   r2,r11            # shift right into r2 to inspect LSB in carry 
@@ -86,6 +87,8 @@ L3:     inc   r12,2             # next odd
         nc.mov pc,r0,L1
 
         halt    r0,r0,0xBEEB
+        pop     r13,r14         # restore r13 if called via monitor
+        RTS     ()
         
         # -------------------------------
         # PrintDec
@@ -123,8 +126,25 @@ PrintDec4:
         mov     r1, r0, 0x1003
         dec     r3, 1
         pl.mov  pc,r0,PrintDec1
-        mov     pc,r5             # Return to link value in r5
 
+        mov   r1,r0,10
+        jsr   r13,r0,oswrch     # Print a newline        
+        mov   r1,r0,13
+        jsr   r13,r0,oswrch     # Print a newline        
+        
+        mov     pc,r5             # Return to link value in r5
+        
+DecTable:
+        WORD        8 * (2**11)
+        WORD       80 * (2** 8)
+        WORD      800 * (2** 5)
+        WORD     8000 * (2** 2)
+        WORD    40000 * (2** 0)
+
+results: 
+        WORD    0       # Results will go here
+
+        ORG 0xFFEE
         # --------------------------------------------------------------
         #
         # oswrch
@@ -144,13 +164,3 @@ oswrch_loop:
         out     r1, r0, 0xfe09
         RTS     ()
 
-        
-DecTable:
-    WORD        8 * (2**11)
-    WORD       80 * (2** 8)
-    WORD      800 * (2** 5)
-    WORD     8000 * (2** 2)
-    WORD    40000 * (2** 0)
-
-        ORG 0x2000
-results: 
