@@ -31,7 +31,8 @@ ENDMACRO
 # preamble for a bootable program
 # remove this for a monitor-friendly loadable program
         ORG 0
-        mov r14, r0, 0x2000
+        mov r14, r0, 0x0FFE
+        mov r13,r0
         mov pc, r0, start
 
 # 3 digits in 10431 instructions, 26559 cycles
@@ -49,6 +50,7 @@ psize:
 
         ORG 0x1000
 start:
+        push r13,r14
         ;; trivial banner
         mov r1, r0, 0x4f
         JSR(oswrch)
@@ -118,6 +120,7 @@ l6:     mov r2, r2, -1          # dex
         nz.mov pc, r0, l1       # bne l1
         JSR (oswrch)
         halt r0, r0, 0x3142     # RTS()
+        pop  r13,r14
         RTS ()
 
 init:
@@ -154,6 +157,13 @@ d2:     adc r11, r11            # rol q
         nz.dec pc, PC-d1        # bne d1
         RTS()
 
+        
+#base:   WORD 0,0,0,0,0,0,0,0,0  # reserve some stack space
+#stack:  WORD 0
+p:      WORD 0  # needs 1193 words but there's nothing beyond
+
+
+        ORG 0xFFEE
 # --------------------------------------------------------------
 #
 # oswrch
@@ -173,7 +183,3 @@ oswrch_loop:
     nz.dec  pc, PC-oswrch_loop
     out     r1, r0, 0xfe09
     RTS     ()
-
-base:   WORD 0,0,0,0,0,0,0,0,0  # reserve some stack space
-stack:  WORD 0
-p:      WORD 0  # needs 1193 words but there's nothing beyond
