@@ -27,6 +27,18 @@
         # >876 (Nodes evaluated)
         # >_
         #
+        # Result is stored in A[1..8] (ie not starting at 0) for a board numbered
+        #
+        #    1 2 3 4 5 6 7 8
+        #  1   # Q #   #   #    First Solution = 8,4,1,3,6,2,7,5
+        #  2 #   #   # Q #
+        #  3   #   Q   #   #
+        #  4 # Q #   #   #
+        #  5   #   #   #   Q     
+        #  6 #   #   Q   #
+        #  7   #   #   # Q # 
+        #  8 Q   #   #   #
+        #
 MACRO   RTS ()
         mov     pc,r13
 ENDMACRO
@@ -105,6 +117,25 @@ L140:   ld      r1,r10,results  # r1 = A(X)
 L180:   mov     r2,r0
         mov     r1,r11
         jsr     r13,r0,printdec32 # Print S
+        mov      r1,r0,10
+        jsr     r13,r0,oswrch
+        mov      r1,r0,13
+        jsr     r13,r0,oswrch
+
+        # Dump contents of the results area (from index 1 upwards)
+        mov     r12,r0
+P1:     ld      r1,r12,results+1
+        mov     r2,r0
+        jsr     r13,r0,printdec32 # Print number
+        mov      r1,r0,10
+        jsr     r13,r0,oswrch
+        mov      r1,r0,13
+        jsr     r13,r0,oswrch
+        inc     r12,1
+        cmp     r12,r0,8
+        nz.mov  pc,r0,P1
+
+        
         halt    r0,r0,0xBEEB
         pop     r13,r14         # for running via monitor
         RTS     ()
