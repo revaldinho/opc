@@ -22,7 +22,7 @@ foreach test ( $testlist )
     set newname = `echo $test | awk '{gsub("-.*-","");print substr($0,0,7)}'`
     echo "Building test $test as $newname"
     python ../${ASM} -g bin --start_adr 0x2000 --size 0x200 -f ../tests/${test}.s -o ${newname} > ../tests/${test}.lst
-    echo $newname | awk '{printf("$.%s\t1000\t1000",$1)}' > ${newname}.inf
+    echo $newname | awk '{printf("\$.%s\t1000\t1000",$1)}' > ${newname}.inf
 end
 popd
 
