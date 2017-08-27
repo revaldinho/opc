@@ -42,6 +42,9 @@
 MACRO   RTS ()
         mov     pc,r13
 ENDMACRO
+MACRO   JSR (_addr_)
+        jsr     r13,r0,_addr_
+ENDMACRO
 MACRO   PUSHALL()
         push     r13, r14
         push     r12, r14
@@ -64,6 +67,12 @@ MACRO   POPALL()
         pop    r11, r14
         pop    r12, r14
         pop    r13, r14
+ENDMACRO
+MACRO   PRINT_NL()
+        mov     r1,r0,10
+        jsr     r13,r0,oswrch        
+        mov     r1,r0,13
+        jsr     r13,r0,oswrch
 ENDMACRO
 
         mov   r14,r0,0x0FFE
@@ -97,7 +106,7 @@ L40:    cmp     r10,r12         # L1: IF X=R THEN L180
 L70:    inc     r11,1           # S = S+1
         mov     r9,r10          # Y = X
 L90:    dec     r9,1            # Y = Y-1
-        z.inc   pc,r0,L40-PC    # IF Y=0 THEN L40
+        z.inc   pc,L40-PC       # IF Y=0 THEN L40
         ld      r1,r10,results  # r1 = A(X)
         ld      r2,r9,results   # r2 = A(Y)
         sub     r1,r2           # T= A(X)-A(Y)
@@ -113,7 +122,7 @@ L140:   ld      r1,r10,results  # r1 = A(X)
         sto     r1,r10,results  # A(X) = A(X)-1
         nz.mov  pc,r0,L70       # IF A(X) GOTO L70
         dec     r10,1           # X = X-1
-        nz.inc  pc,r0,L140-PC   # IF X GOTO L140
+        nz.inc  pc,L140-PC      # IF X GOTO L140
 L180:   mov     r2,r0
         mov     r1,r11
         jsr     r13,r0,printdec32 # Print S
@@ -123,17 +132,57 @@ L180:   mov     r2,r0
         jsr     r13,r0,oswrch
 
         # Dump contents of the results area (from index 1 upwards)
-        mov     r12,r0
-P1:     ld      r1,r12,results+1
-        mov     r2,r0
-        jsr     r13,r0,printdec32 # Print number
-        mov      r1,r0,10
-        jsr     r13,r0,oswrch
-        mov      r1,r0,13
-        jsr     r13,r0,oswrch
-        inc     r12,1
-        cmp     r12,r0,8
+        mov     r10,r0
+P1:     ld      r1,r10,results+1
+        mov     r1,r1,48        # Turn digit to ASCII
+        JSR     (oswrch)        # Print digit
+        mov     r1,r0,32        # Space
+        JSR     (oswrch)
+        inc     r10,1
+        cmp     r10,r0,8
         nz.mov  pc,r0,P1
+        PRINT_NL()
+        PRINT_NL()        
+        
+        # Now attempt to show the results on a matrix, header first
+        mov     r1,r0,32        # SPACE
+        JSR     (oswrch)
+        mov     r1,r0,32        # SPACE
+        JSR     (oswrch)
+        mov     r1,r0,32        # SPACE
+        JSR     (oswrch)
+        mov     r12,r0,1
+P2:     mov     r1,r12,48
+        JSR     (oswrch)
+        mov     r1,r0,32
+        JSR     (oswrch)
+        inc     r12,1
+        cmp     r12,r0,9
+        mi.mov  pc,r0,P2        
+        PRINT_NL()
+
+        # Now print row by row
+        mov     r12,r0,1
+P3:     mov     r1,r12,48       # turn row number to ASCII
+        JSR     (oswrch)
+        mov     r1,r0,32        # SPACE
+        JSR     (oswrch)        
+        ld      r6,r12,results  # get Q column number
+        mov     r5,r0,1
+P4:     mov     r1,r0,32        # SPACE
+        JSR     (oswrch)
+        cmp     r5,r6
+        z.mov   pc,r0,P5
+        mov     r1,r0,32        # SPACE        
+        JSR     (oswrch)
+        inc     r5,1
+        mov     pc,r0,P4
+P5:     mov     r1,r0,ord('Q')
+        JSR     (oswrch)
+        PRINT_NL()
+        inc     r12,1
+        cmp     r12,r0,9
+        nz.mov  pc,r0,P3
 
         
         halt    r0,r0,0xBEEB
