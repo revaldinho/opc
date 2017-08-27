@@ -18,7 +18,7 @@ endif
 set assembler = ../opc6asm.py
 #set assembler = ../opc6byteasm.py
 
-set testlist = ( fib robfib  hello string  davefib mul32 udiv32 sqrt davefib_int pi-spigot-rev testpsr sqrt_int pi-spigot-bruce sieve e-spigot-rev pi-spigot-rev32 bigsieve pushpop )
+set testlist = ( fib robfib  hello string  davefib mul32 udiv32 sqrt davefib_int pi-spigot-rev testpsr sqrt_int pi-spigot-bruce sieve e-spigot-rev pi-spigot-rev32 bigsieve pushpop nqueens )
 
 foreach test ( $testlist )
     echo "Running Test $test"
