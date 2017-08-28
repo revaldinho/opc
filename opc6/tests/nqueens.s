@@ -4,29 +4,6 @@
         #
         # http://www.hpmuseum.org/cgi-sys/cgiwrap/hpmuseum/articles.cgi?read=700
         #
-        #  10  CLEAR:DEFINT A-Z         (DEFINT used if faster)
-        #  20  R=8                      (R>=1)
-        #  30  REM DIM A(R)             (DIM used if necessary)
-        #  40  IF X=R THEN 180          (140 for all solutions)
-        #  50  X=X+1
-        #  60  A(X)=R
-        #  70  S=S+1
-        #  80  Y=X
-        #  90  Y=Y-1
-        # 100  IF Y=0 THEN 40
-        # 110  T=A(X)-A(Y)
-        # 120  IF T=0 THEN 140
-        # 130  IF X-Y<>ABS(T) THEN 90
-        # 140  A(X)=A(X)-1
-        # 150  IF A(X)<>0 THEN 70       (<>0 omitted if possible)
-        # 160  X=X-1
-        # 170  IF X<>0 THEN 140         (<>0 omitted if possible)
-        # 180  PRINT S
-        #
-        # >RUN
-        # >876 (Nodes evaluated)
-        # >_
-        #
         # Result is stored in A[1..8] (ie not starting at 0) for a board numbered
         #
         #    1 2 3 4 5 6 7 8
@@ -69,10 +46,7 @@ MACRO   POPALL()
         pop    r13, r14
 ENDMACRO
 MACRO   PRINT_NL()
-        mov     r1,r0,10
-        jsr     r13,r0,oswrch        
-        mov     r1,r0,13
-        jsr     r13,r0,oswrch
+        jsr     r13,r0,print_nl
 ENDMACRO
 
         mov   r14,r0,0x0FFE
@@ -99,8 +73,11 @@ start:
         mov     r11,r0          # r11 == S
         mov     r10,r0          # r10 == X
         mov     r9,r0           # r9  == Y
-L40:    cmp     r10,r12         # L1: IF X=R THEN L180
-        z.mov   pc,r0,L180
+L40:    cmp     r10,r12         # L1: IF X=R THEN L140 (all results)
+        nz.inc  pc,L40s-PC      # Skip display if X!=R
+        JSR     (display_result)
+        mov     pc,r0,L140      # Run another iteration
+L40s:   
         inc     r10,1           # X = X+1
         sto     r12,r10,results # A(X)=R
 L70:    inc     r11,1           # S = S+1
@@ -110,13 +87,13 @@ L90:    dec     r9,1            # Y = Y-1
         ld      r1,r10,results  # r1 = A(X)
         ld      r2,r9,results   # r2 = A(Y)
         sub     r1,r2           # T= A(X)-A(Y)
-        z.mov   pc,r0,L140      # IF T=0 THEN L140
+        z.inc   pc,L140-PC      # IF T=0 THEN L140
         pl.inc  pc,L90a-PC      #(not isnt predicated so skip if positive)
         not     r1,r1,-1        # T = ABS(T)
 L90a:                           # IF X-Y != ABS(T) GOTO L90
         sub     r1,r10          # [if ABS(T)-X+Y!=0]
         add     r1,r9           # 
-        nz.mov  pc,r0,L90       
+        nz.inc  pc,L90-PC       
 L140:   ld      r1,r10,results  # r1 = A(X)
         dec     r1,1
         sto     r1,r10,results  # A(X) = A(X)-1
@@ -130,8 +107,14 @@ L180:   mov     r2,r0
         jsr     r13,r0,oswrch
         mov      r1,r0,13
         jsr     r13,r0,oswrch
-
+        halt    r0,r0,0xBEEB
+        pop     r13,r14         # for running via monitor
+        RTS     ()
+        
+display_result:
+        PUSHALL ()
         # Dump contents of the results area (from index 1 upwards)
+        PRINT_NL()        
         mov     r10,r0
 P1:     ld      r1,r10,results+1
         mov     r1,r1,48        # Turn digit to ASCII
@@ -183,12 +166,20 @@ P5:     mov     r1,r0,ord('Q')
         inc     r12,1
         cmp     r12,r0,9
         nz.mov  pc,r0,P3
+        POPALL()
+        RTS()
 
-        
-        halt    r0,r0,0xBEEB
-        pop     r13,r14         # for running via monitor
+
+
+print_nl:
+        push    r13,r14
+        mov     r1,r0,10
+        jsr     r13,r0,oswrch        
+        mov     r1,r0,13
+        jsr     r13,r0,oswrch
+        pop     r13,r14
         RTS     ()
-                
+        
         # ------------------------------------------------------------        
         # printdec32
         #
