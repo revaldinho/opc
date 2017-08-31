@@ -1,4 +1,4 @@
-import sys, re
+import sys, re, codecs
 op = "mov,and,or,xor,add,adc,sto,ld,ror,not,sub,sbc,cmp,cmpc,bswp,psr,halt".split(',')+[""]*14+["rti"] #halt aliassed to mov, rti to psr (modulo 16)
 symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
 predicates = {"1":0x0000,"0":0x2000,"z":0x4000,"nz":0x6000,"c":0x8000,"nc":0xA000,"mi":0xC000,"pl":0xE000,"":0x0000}
@@ -40,7 +40,7 @@ for iteration in range (0,2): # Two pass assembly
             nextmem += len(opfields)
         elif instr in op or instr in ("WORD","STRING","BSTRING"):
             if  instr=="STRING" or instr=="BSTRING":
-                (step, wordstr) =  ( 2 if instr=="BSTRING" else 1, (''.join(opfields)).strip('"')+chr(0))
+                (step, wordstr) =  ( 2 if instr=="BSTRING" else 1, codecs.decode((''.join(opfields)).strip('"')+chr(0),'unicode_escape'))
                 (words) = ([(ord(wordstr[i]) | ((ord(wordstr[i+1])<<8) if instr=="BSTRING" else 0)) for  i in range(0,len(wordstr)-1,step) ])
             else:
                 try:

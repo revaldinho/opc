@@ -53,7 +53,7 @@ wret:
 
 S1:     BSTRING "Hello - this is a byte string"
         WORD 0x0
-S2:     BSTRING "...and so is this"
+S2:     BSTRING "...and so is this\n"
         WORD 0x0
         # Check alignment on next few
         BSTRING "1"
@@ -61,9 +61,9 @@ S2:     BSTRING "...and so is this"
         BSTRING "123"
         BSTRING "1234"
 
-S3:     STRING "This is a word string"
+S3:     STRING "This is a word string\r"
         WORD 0x0
-S4:     STRING "...and so is this"
+S4:     STRING "...and so is \tthis"
         # Check alignment on next few
         WORD 0x0
         STRING "1"

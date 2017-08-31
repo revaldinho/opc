@@ -1,4 +1,4 @@
-import sys, re
+import sys, re, codecs
 op = "mov,and,or,xor,add,adc,sto,ld,ror,jsr,sub,sbc,inc,lsr,dec,asr,halt,bswp,putpsr,getpsr,rti,not,out,in,push,pop,cmp,cmpc".split(",")
 symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
 pdict = {"1":0x0000,"z":0x4000,"nz":0x6000,"c":0x8000,"nc":0xA000,"mi":0xC000,"pl":0xE000,"":0x0000} ##0x2000 reseved for non-predicated instuctions
@@ -38,7 +38,7 @@ for iteration in range (0,2): # Two pass assembly
             nextmem += (len(opfields) if inst=="WORD" else ((len(opfields)+1)//2) if inst=="BYTE" else len(opfields)-1) # If two operands are provide instuction will be one word
         elif inst in op or inst in ("BYTE","WORD","STRING","BSTRING"):
             if  inst=="STRING" or inst=="BSTRING":
-                (step, wordstr) =  ( 2 if inst=="BSTRING" else 1, (''.join(opfields)).strip('"')+chr(0))
+                (step, wordstr) =  ( 2 if inst=="BSTRING" else 1, codecs.decode((''.join(opfields)).strip('"')+chr(0), 'unicode_escape'))
                 (words) = ([(ord(wordstr[i]) | ((ord(wordstr[i+1])<<8) if inst=="BSTRING" else 0)) for  i in range(0,len(wordstr)-1,step) ])
             else:
                 if ((len(opfields)==2 and not reg_re.match(opfields[1])) and inst not in ("inc","dec","WORD","BYTE")):
