@@ -64,12 +64,11 @@ ENDMACRO
         mov   pc,r0,start
 
         ORG   0x1000
-        EQU   MAX,1000          # set max number to sift through (<1.7M)
+        EQU   NQUEENS,8        # set number of queens and n x n board (usu 8)
+
 start:
         push  r13,r14           # for running via monitor
-
-
-        mov     r12,r0,8        # r12 == R = 8 
+        mov     r12,r0,NQUEENS  # r12 == R
         mov     r11,r0          # r11 == S
         mov     r10,r0          # r10 == X
         mov     r9,r0           # r9  == Y
@@ -122,7 +121,7 @@ P1:     ld      r1,r10,results+1
         mov     r1,r0,32        # Space
         JSR     (oswrch)
         inc     r10,1
-        cmp     r10,r0,8
+        cmp     r10,r0,NQUEENS
         nz.mov  pc,r0,P1
         PRINT_NL()
         PRINT_NL()        
@@ -140,7 +139,7 @@ P2:     mov     r1,r12,48
         mov     r1,r0,32
         JSR     (oswrch)
         inc     r12,1
-        cmp     r12,r0,9
+        cmp     r12,r0,NQUEENS+1
         mi.mov  pc,r0,P2        
         PRINT_NL()
 
@@ -164,7 +163,7 @@ P5:     mov     r1,r0,ord('Q')
         JSR     (oswrch)
         PRINT_NL()
         inc     r12,1
-        cmp     r12,r0,9
+        cmp     r12,r0,NQUEENS+1
         nz.mov  pc,r0,P3
         POPALL()
         RTS()
