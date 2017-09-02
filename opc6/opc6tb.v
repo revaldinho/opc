@@ -14,7 +14,10 @@ module opc6tb();
    // OPC CPU instantiation
    opc6cpu  dut0_u (.address(addr), .din(data0), .dout(data1), .rnw(rnw), .clk(clk), .reset_b(reset_b), .int_b({1'b1, interrupt_b}), .clken(clken), .vpa(vpa), .vda(vda), .vio(vio));
    initial begin
-      $dumpvars;
+
+`ifdef _dumpvcd
+     $dumpvars;
+`endif
       $readmemh("test.hex", mem); // Problems with readmemb - use readmemh for now
       iomem[16'hfe08] = 16'b0; 
       { clk, int_clk, reset_b}  = 0;
@@ -23,7 +26,11 @@ module opc6tb();
 `endif
       interrupt_b = 1;
       #3005 reset_b = 1;
-      #5000000000 $finish;
+     #500000000 ;
+     #500000000 ;
+     #500000000 ;
+     #500000000 ;     
+     $finish;
    end
    always @ (posedge clk or negedge reset_b)
      if ( !reset_b)
@@ -49,11 +56,13 @@ module opc6tb();
           iomem[addr]<= data1;      
        data0 <= (!mreq_b) ? mem[addr]: iomem[addr]; 
    end
+`ifndef _verilator  
    always @ (posedge int_clk)
      if ( (($random(seed) %100)> 85) && interrupt_b ==1'b1)
        interrupt_b = 1'b0;
      else
        interrupt_b = 1'b1;
+`endif  
    always begin
       #273   int_clk = !int_clk;
       #5000  int_clk = !int_clk;
@@ -62,10 +71,15 @@ module opc6tb();
       #500 clk = !clk;
    end
    // Always stop simulation on encountering the halt pseudo instruction
+  
    always @ (negedge clk)
      if (dut0_u.IR_q[10:0]== `HALT && dut0_u.FSM_q==`EXEC) begin
-        $display("Simulation terminated with halt instruction at time", $time);
-        $writememh("test.vdump",mem);
-        $finish;
+`ifdef _verilator       
+       $display("Simulation terminated with halt instruction ");       
+`else
+       $display("Simulation terminated with halt instruction at time", $time);       
+       $writememh("test.vdump",mem);
+`endif       
+       $finish;
      end
 endmodule
