@@ -18,68 +18,59 @@ module opc6tb();
 `ifdef _dumpvcd
      $dumpvars;
 `endif
-      $readmemh("test.hex", mem); // Problems with readmemb - use readmemh for now
-      iomem[16'hfe08] = 16'b0; 
-      { clk, int_clk, reset_b}  = 0;
+     $readmemh("test.hex", mem); // Problems with readmemb - use readmemh for now
+     iomem[16'hfe08] = 16'b0; 
+     { clk, int_clk, reset_b}  = 0;
 `ifndef POSEDGE_MEMORY
       clken = 1'b1;
 `endif
-      interrupt_b = 1;
-      #3005 reset_b = 1;
-     #500000000 ;
-     #500000000 ;
-     #500000000 ;
-     #500000000 ;     
+     interrupt_b = 1;
+     #3005 reset_b = 1;
+     #5000000000 ;
      $finish;
    end
-   always @ (posedge clk or negedge reset_b)
-     if ( !reset_b)
-       m1 = 1'b0;
-     else if (mreq_b == 1)
-       m1 <= 0;
-     else
-       m1 <= !m1;
+  always @ (posedge clk or negedge reset_b)
+    if ( !reset_b)
+      m1 = 1'b0;
+    else if (mreq_b == 1)
+      m1 <= 0;
+    else
+      m1 <= !m1;
 `ifdef POSEDGE_MEMORY
-   always @ (negedge clk or negedge reset_b)
-     if ( !reset_b)
-       clken = 1'b1;
-     else
-       clken <= (mreq_b | m1 | !reset_b) ;
-   always @ (posedge clk) begin
+  always @ (negedge clk or negedge reset_b)
+    if ( !reset_b)
+      clken = 1'b1;
+    else
+      clken <= (mreq_b | m1 | !reset_b) ;
+  always @ (posedge clk) begin
 `else // Negedge memory
-   always @ (negedge clk) begin
+    always @ (negedge clk) begin
 `endif
       if (!rnw && !ceb && oeb && reset_b)
         if ( !mreq_b)
           mem[addr] <= data1;
         else 
           iomem[addr]<= data1;      
-       data0 <= (!mreq_b) ? mem[addr]: iomem[addr]; 
-   end
-`ifndef _verilator  
-   always @ (posedge int_clk)
-     if ( (($random(seed) %100)> 85) && interrupt_b ==1'b1)
-       interrupt_b = 1'b0;
-     else
-       interrupt_b = 1'b1;
-`endif  
-   always begin
-      #273   int_clk = !int_clk;
-      #5000  int_clk = !int_clk;
-   end
-   always begin
-      #500 clk = !clk;
-   end
-   // Always stop simulation on encountering the halt pseudo instruction
+      data0 <= (!mreq_b) ? mem[addr]: iomem[addr]; 
+    end
+  always @ (posedge int_clk)
+    if ( (($random(seed) %100)> 85) && interrupt_b ==1'b1)
+      interrupt_b = 1'b0;
+    else
+      interrupt_b = 1'b1;
+  always begin
+    #273   int_clk = !int_clk;
+    #5000  int_clk = !int_clk;
+  end
+  always begin
+    #500 clk = !clk;
+  end
+  // Always stop simulation on encountering the halt pseudo instruction
   
-   always @ (negedge clk)
-     if (dut0_u.IR_q[10:0]== `HALT && dut0_u.FSM_q==`EXEC) begin
-`ifdef _verilator       
-       $display("Simulation terminated with halt instruction ");       
-`else
-       $display("Simulation terminated with halt instruction at time", $time);       
-       $writememh("test.vdump",mem);
-`endif       
-       $finish;
-     end
+  always @ (negedge clk)
+    if (dut0_u.IR_q[10:0]== `HALT && dut0_u.FSM_q==`EXEC) begin
+      $display("Simulation terminated with halt instruction at time", $time);       
+      $writememh("test.vdump",mem);
+      $finish;
+    end
 endmodule
