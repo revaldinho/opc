@@ -11,8 +11,8 @@ mkdir -p disk
 set ASM = opc6byteasm.py
 set MMB = ../utils/mmb_utils/beeb
 set SSD = OPC6DEMO.ssd
-set testlist = ( pi-spigot-rev pi-spigot-bruce e-spigot-rev bigsieve sieve nqueens rdwrch )
-set bcpltestlist = ( fact queens enig rdchtest enigma-m3 apfel anseq  monbfns  )
+set testlist = ( pi-spigot-rev pi-spigot-bruce e-spigot-rev bigsieve sieve nqueens )
+set bcpltestlist = ( fact queens enig enigma-m3 apfel anseq monbfns )
 
 rm -f ${SSD}
 
