@@ -38,7 +38,9 @@ for iteration in range (0,2): # Two pass assembly
             nextmem += (len(opfields) if inst=="WORD" else ((len(opfields)+1)//2) if inst=="BYTE" else len(opfields)-1) # If two operands are provide instuction will be one word
         elif inst in op or inst in ("BYTE","WORD","STRING","BSTRING"):
             if  inst=="STRING" or inst=="BSTRING":
-                (step, wordstr) =  ( 2 if inst=="BSTRING" else 1, codecs.decode((''.join(opfields)).strip('"')+chr(0), 'unicode_escape'))
+                strings = re.match('.*STRING\s*\"(.*?)\"(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?.*?', line.rstrip())
+                string_data = ''.join([ x for x in strings.groups() if x != None])
+                (step, wordstr) =  ( 2 if inst=="BSTRING" else 1, codecs.decode(string_data, 'unicode_escape') + chr(0))                
                 (words) = ([(ord(wordstr[i]) | ((ord(wordstr[i+1])<<8) if inst=="BSTRING" else 0)) for  i in range(0,len(wordstr)-1,step) ])
             else:
                 if ((len(opfields)==2 and not reg_re.match(opfields[1])) and inst not in ("inc","dec","WORD","BYTE")):

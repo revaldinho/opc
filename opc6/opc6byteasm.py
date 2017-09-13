@@ -149,12 +149,16 @@ def assemble(filename, listingon=True):
             elif inst in op or inst in ("BYTE","WORD","UBYTE","UWORD","STRING","BSTRING","UBSTRING"):
                 if  inst=="STRING":
                     check_alignment(inst)
-                    for c in codecs.decode((''.join(opfields)).strip("\""), 'unicode_escape'):
+                    strings = re.match('.*STRING\s*\"(.*?)\"(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?.*?', line.rstrip())
+                    string_data = ''.join([ x for x in strings.groups() if x != None])                    
+                    for c in codecs.decode(string_data, 'unicode_escape'):                    
                         bytes.extend([ord(c),0])
                 elif inst in ("BSTRING", "UBSTRING"):
                     if inst=="BSTRING":
                         check_alignment(inst)
-                    bytes = [ord(c) for c in codecs.decode(str(("".join(opfields)).strip("\"")), 'unicode_escape')]
+                    strings = re.match('.*STRING\s*\"(.*?)\"(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?.*?', line.rstrip())
+                    string_data = ''.join([ x for x in strings.groups() if x != None])                        
+                    bytes = [ord(c) for c in codecs.decode(string_data, 'unicode_escape')]                                        
                     if inst=="BSTRING" and len(bytes)%2==1:   # pad out odd lengths of BSTRING for backward compatibility
                         bytes.append(0)
                 else:
