@@ -1,5 +1,8 @@
 #!/bin/tcsh -f
 
+# Clean up first
+rm *tmp* *lst *dump *output *trace *hex 
+
 
 set testnames = ( fact enig rdchtest enigma-m3 apfel monbfns anseq queens )
 
