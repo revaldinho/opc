@@ -270,9 +270,9 @@ ORG     0xFFEE
         # ---------------------------------------------------------------
 oswrch:
 oswrch_loop:
-        in      r2, r0, 0xfe08
-        and     r2, r0, 0x8000
-        nz.dec  pc, PC-oswrch_loop
+#        in      r2, r0, 0xfe08
+#        and     r2, r0, 0x8000
+#        nz.dec  pc, PC-oswrch_loop
         out     r1, r0, 0xfe09
         RTS     ()
 

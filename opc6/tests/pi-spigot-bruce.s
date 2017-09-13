@@ -178,8 +178,8 @@ p:      WORD 0  # needs 1193 words but there's nothing beyond
 
 oswrch:
 oswrch_loop:
-    in      r8, r0, 0xfe08
-    and     r8, r0, 0x8000
-    nz.dec  pc, PC-oswrch_loop
+#    in      r8, r0, 0xfe08
+#    and     r8, r0, 0x8000
+#    nz.dec  pc, PC-oswrch_loop
     out     r1, r0, 0xfe09
     RTS     ()

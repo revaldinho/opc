@@ -70,6 +70,9 @@ S4:     STRING "...and so is \tthis"
         STRING "12"
         STRING "123"
         STRING "1234"
+        STRING "1234 , 5678", "io"
+        STRING "1234 , 5678\010\013"
+        STRING "1","2","3","4"        
         ORG 0x1234
 L0:
         BYTE 0xAA
