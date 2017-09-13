@@ -3,6 +3,11 @@ mnemonics="mov,and,or,xor,add,adc,sto,ld,ror,jsr,sub,sbc,inc,lsr,dec,asr,halt,bs
 op = dict([(opcode,mnemonics.index(opcode)) for opcode in mnemonics])
 dis = dict([(mnemonics.index(opcode),opcode) for opcode in mnemonics])
 pred_dict = {0:"",1:"0.",2:"z.",3:"nz.",4:"c.",5:"nc.",6:"mi.",7:"pl."}
+if len(sys.argv) > 3:
+    with open(sys.argv[3],"r") as f:
+        input_text = iter(''.join(f.readlines()))
+else:
+    input_text = iter([chr(0)]*100000)
 def print_memory_access( type, address, data):
     ch = '%s' % chr(data) if ( 0x1F < data < 0x7F) else '.'
     print( "%5s:   Address : 0x%04x (%5d)         :        Data : 0x%04x (%5d) %s" % (type,address,address,data,data,ch))
@@ -24,6 +29,11 @@ while True:
     regfile[15] += instr_len
     eff_addr = (regfile[source] + operand*(opcode!=op["pop"]))&0xFFFF  # EA_ED must be computed after PC is brought up to date
     ea_ed = wordmem[eff_addr] if (opcode in(op["ld"],op["pop"])) else iomem[eff_addr] if rdmem else eff_addr
+    if opcode == op["in"]:
+        try:
+            ea_ed = ord(input_text.__next__())
+        except:
+            ea_ed = 0
     if interrupt : # software interrupts dont care about EI bit
         (interrupt, regfile[pcreg], pc_int, psr_int , ei) = (0, 0x0002, pc_save, (swiid,ei,s,c,z), 0)
     else:
