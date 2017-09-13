@@ -18,7 +18,7 @@ LET start() = VALOF
 //  FOR n = 0 TO 31 DO writef("%b5 %bW*n", n, succs!n)
 
   FOR n = 0 TO 5 DO
-    writef("There are %i4 monotonic boolean functions of %n variables*n",
+    writef("There are %i4 monotonic boolean functions of %n variables*n*c",
                       mbfns(0, 1<<n, 0), n)
   RESULTIS 0
 }
