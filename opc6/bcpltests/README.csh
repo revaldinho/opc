@@ -6,7 +6,6 @@ rm *tmp* *lst *dump *output *trace *hex
 
 set testnames = ( pi-spigot-bcpl fact monbfns anseq  enig  enigma-m3 apfel queens )
 
-set testnames = ( pi-spigot-bcpl )
 
 # Update the library
 cintsys -c bcpl2sial bcpllib.b to bcpllib.sial
@@ -44,8 +43,8 @@ foreach testname ( $testnames )
             set stdin = ""
         endif
         python3 ../opc6asm.py ${testname}.s ${testname}.hex  | tee ${testname}.lst
-        ${pyexe} ../opc6emu.py ${testname}.hex ${testname}.dump ${stdin} | tee ${testname}.trace | grep OUT | tee ${testname}.tmp
-        python3 ../../utils/show_stdout.py ${testname}.tmp > ${testname}.output
+        ${pyexe} ../opc6emu.py ${testname}.hex ${testname}.dump ${stdin} | grep OUT | tee ${testname}.tmp
+        python3 ../../utils/show_stdout.py ${testname}.tmp | tee ${testname}.output
     endif
         
 end
