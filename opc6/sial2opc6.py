@@ -146,10 +146,8 @@ for i in text:
             code("ld r4,r12,%d" % getnum(fields[1]), line)   
             code("add r1,r4")
         elif opcode == f_a:        # a         Kn         a := a + n
-            n = getnum(fields[1])
-            code("add r1,r0,%d" % n, line)   
+            code("add r1,r0,%d" % getnum(fields[1]), line)   
         elif opcode == f_s:        # s         Kn         a := a - n
-            n = getnum(fields[1])
             code("sub r1,r0,%d" % getnum(fields[1]), line)   
         elif opcode == f_lkp:      # lkp       Kk Pn      a := P!n!k
             code("ld r4,r11,%d" % getnum(fields[2]), line)
@@ -289,6 +287,18 @@ for i in text:
         elif opcode == f_jne0:     # jne0      Ln         Jump to Ln if a != 0
             code("cmp r1,r0",line)
             code("nz.mov pc,r0,%s" % fields[1])
+        elif opcode == f_ip:      # ip        Pn           a := P!n + a; P!n := a
+            code("ld r4,r11,%d" % getnum(fields[1]) ,line)
+            code("add r1,r4")
+            code("sto r1,r11,%d" % getnum(fields[1]))
+        elif opcode == f_ig:      # ig        Gn           a := G!n + a; G!n := a
+            code("ld r4,r12,%d" % getnum(fields[1]) ,line)
+            code("add r1,r4")
+            code("sto r1,r12,%d" % getnum(fields[1]))
+        elif opcode == f_il:      # il        Ln           a := !Ln + a; !Ln := a
+            code("ld r4,r0,%d" % getnum(fields[1]) ,line)
+            code("add r1,r4")
+            code("sto r1,r0,%d" % getnum(fields[1]))
         elif opcode == f_ikp:      #  ikp       Kk Pn      a := P!n + k; P!n := a
             code("ld  r1,r11,%d" % getnum(fields[2]), line)
             code("add r1,r0,%d" % getnum(fields[1]))
@@ -327,8 +337,9 @@ for i in text:
             code("mov r2,r4")
             code("jsr r13,r0,__div")     # need to have signed division routine here for a/b
         elif opcode == f_rem:      # rem                  a := b REM a
-            code("jsr r13,r0,__mod", line)     # need to have signed division routine here for a/b
-
+            code("jsr r13,r0,__mod", line)     
+        elif opcode == f_xrem:      # xrem                  a := a REM b ; c := ?            
+            code("jsr r13,r0,__xmod", line)     
         elif opcode == f_eq:           # eq                     a := b = a
             code ("mov r4,r0", line)   # assume answer will be FALSE
             code ("cmp r1,r2")         # compare a with b

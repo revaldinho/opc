@@ -182,13 +182,34 @@ __mod:  ## Find modulus of b MOD a
         mi.mov  r2,r1           # if negative then r2 <- r1
         not     r1,r4,-1        # r1 <- -r4
         mi.mov  r1,r4           # if negative then r1 <- r4
-        jsr     r13,r0,__divu   # do a signed divide/mod operation        
+        jsr     r13,r0,__divu   # do a unsigned divide/mod operation        
                                 # result is quo in r1, rem in r2
                                 # now adjust based on sign of original r2
         not     r1,r2,-1        # put -remainder in r1
         pop     r4,r14          # get original 'b'
         pl.mov  r1,r2           # if was +ve then put rem in r1 instead
         mov     r2,r4           # restore r2 = 'b' 
+        pop     pc,r14          # pop return address into pc to return
+        
+__xmod: ## Find modulus of a MOD b
+        ## NB division by zero should abort !! ABORT 5: Division by zero
+        push    r13, r14        # save return address
+        push    r2,  r14        # save r2 (b)
+        push    r1,  r14        # save r1 (a) for inspection of sign later
+        not     r3,r1,-1        # r1 <- -r1
+        mi.mov  r3,r1           # if negative then r1 <- r1 ie A = ABS(A)
+        mov     r1, r3
+        not     r3,r2,-1        # r2 <- -r2
+        mi.mov  r3,r2           # if negative then r2 <- r2 is A = ABS(B)
+        mov     r2,r3
+        jsr     r13,r0,__divu   # do a unsigned divide/mod operation        
+                                # result is quo in r1, rem in r2
+                                # now adjust based on sign of original r2
+        not     r1,r2,-1        # put -remainder in r1
+        pop     r4,r14          # get original 'a'
+        cmp     r4,r0
+        pl.mov  r1,r2           # if was +ve then put rem in r1 instead
+        pop     r2,r14          # restore original b
         pop     pc,r14          # pop return address into pc to return
 
         # ------------------------------------------------------------
