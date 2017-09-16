@@ -11,12 +11,6 @@ p1:     mov     r10, r0, S2
         mov     r13, r0, p2
         mov     pc,r0,printbstr
 p2:     mov     r10, r0, S3
-        mov     r13, r0, p3
-        mov     pc,r0,printwstr
-p3:     mov     r10, r0, S4
-        mov     r13, r0, DONE
-        mov     pc,r0,printwstr
-
 DONE:
         halt r0,r0,0x999
 
@@ -37,19 +31,6 @@ printbstr:  ld      r1,r10
         mov     pc,r0,printbstr
 ret:
         mov     pc,r13,0
-
-printwstr:  ld      r1,r10
-        mov     r2,r1
-        and     r2,r0,0xFF
-        z.mov   pc, r0, wret
-        out     r2,r0,0xfe09
-        sto     r2, r11
-        add     r11,r0,1
-        add     r10,r0,1
-        mov     pc,r0,printwstr
-wret:
-        mov     pc,r13,0
-
 
 S1:     BSTRING "Hello - this is a byte string"
         WORD 0x0

@@ -33,39 +33,13 @@ __mulstep16:
         ror     r1, r1
         c.add   r3, r2              # Add [r2,-] + [r3,r1] if carry
         inc     r4, 1               # increment counter
-        nz.mov  pc, r0, __mulstep16 # next iteration if not zero
+        nz.inc  pc, __mulstep16 - PC # next iteration if not zero
         add     r0, r0              # final shift needs clear carry
         ror     r3, r3
         ror     r1, r1
 
         POP2    (r3, r4)
         mov     pc, r13             # and return
-
-
-# --------------------------------------------------------------
-#
-# __modu
-#
-# Divide a 16 bit number by a 16 bit number to yield a 16 b quotient and
-# remainder
-#
-# Entry:
-# - r1 16 bit dividend (A)
-# - r2 16 bit divisor (B)
-# - r13 holds return address
-# - r14 is global stack pointer
-# Exit
-# - r3  upwards preserved
-# - r1 = remainder
-# - r2 = trashed
-# --------------------------------------------------------------
-
-__modu:
-    PUSH    (r13)
-    jsr     r13, r0, divmod
-    mov     r1, r2
-    POP     (r13)
-    mov     pc, r13
 
 # --------------------------------------------------------------
 #
@@ -88,11 +62,11 @@ __modu:
 __divu:
 
 divmod:
-        PUSH3   (r3, r4, r5)
-
+        push    r3, r14
+        push    r5, r14
+        
         mov     r3, r2              # Get divisor into r3
         mov     r2, r0              # Get dividend/quotient into double word r1,2
-        mov     r4, r0, udiv16_loop # Stash loop target in r4
         mov     r5, r0, -16         # Setup a loop counter
 udiv16_loop:
         ASL     (r1)                # shift left the quotient/dividend
@@ -101,9 +75,10 @@ udiv16_loop:
         c.sub   r2, r3              # if yes then do the subtraction for real
         c.adc   r1, r0              # ... set LSB of quotient using (new) carry
         inc     r5, 1               # increment loop counter zeroing carry
-        nz.mov  pc, r4              # loop again if not finished (r5=udiv16_loop)
+        nz.inc  pc,udiv16_loop-PC   # loop again if not finished 
 
-        POP3    (r3, r4, r5)
+        pop     r5, r14
+        pop     r3, r14
         mov     pc,r13              # and return with quotient/remainder in r1/r2
 
 
@@ -116,10 +91,6 @@ udiv16_loop:
 #
 # For mul and div, the sign of the result depends on the sign of both arguments
 # - the A for of the wrapper achieves this
-
-# For mod, the sign of the result depends only on the sign of the first arguments
-# - the B for of the wrapper achieves this
-#
 
 MACRO SW16A ( _sub_ )
       PUSH2   (r13, r5)
@@ -143,37 +114,16 @@ l3_@:
       mov     pc, r13
 ENDMACRO
 
-
-
-MACRO SW16B ( _sub_ )
-      PUSH2   (r13, r5)
-      mov     r5, r0         # keep track of signs
-      add     r1, r0
-      pl.inc  pc, l1_@ - PC
-      NEG     (r1)
-      inc     r5, 1
-l1_@:
-      add     r2, r0
-      pl.inc  pc, l2_@ - PC
-      NEG     (r2)
-#     dec     r5, 1          # the second arg sign has no impact on the result sign
-l2_@:
-      jsr     r13, r0, _sub_
-      cmp     r5, r0
-      z.inc   pc, l3_@ - PC
-      NEG2    (r2, r1)
-l3_@:
-      POP2    (r13, r5)
-      mov     pc, r13
-ENDMACRO
-
 __mul:
       SW16A(__mulu)
 
 __div:
       SW16A(__divu)
 
-__mod:  ## Find modulus of b MOD a
+        # For mod, the sign of the result depends only on the sign of the first arguments
+        # - the B for of the wrapper achieves this
+
+__mod:  ## Find signed modulus of b MOD a
         ## NB division by zero should abort !! ABORT 5: Division by zero
         push    r13, r14        # save return address
         push    r2,  r14        # save r2 (b)
@@ -191,7 +141,7 @@ __mod:  ## Find modulus of b MOD a
         mov     r2,r4           # restore r2 = 'b' 
         pop     pc,r14          # pop return address into pc to return
         
-__xmod: ## Find modulus of a MOD b
+__xmod: ## Find signed modulus of a MOD b
         ## NB division by zero should abort !! ABORT 5: Division by zero
         push    r13, r14        # save return address
         push    r2,  r14        # save r2 (b)

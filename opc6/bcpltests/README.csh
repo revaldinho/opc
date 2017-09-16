@@ -1,33 +1,38 @@
 #!/bin/tcsh -f
+#
+#
 
 # Clean up first
 rm *tmp* *lst *dump *output *trace *hex 
 
+pypy3 --version > /dev/null
+if ( $status) then
+    set pyexec = python3
+else
+    set pyexec = pypy3
+endif
 
 set testnames = ( pi-spigot-bcpl fact monbfns anseq  enig  enigma-m3 apfel queens )
 
 
+echo "Updating Library"
 # Update the library
 cintsys -c bcpl2sial bcpllib.b to bcpllib.sial
 
-foreach testname ( $testnames ) 
+# Rename the labels to avoid clashes later    
+perl -0777 -pale 's/ L(\d*)/ L$1_blib/g' bcpllib.sial |\
+perl -0777 -pale 's/ M(\d\d\d\d)/ M$1_blib/g'  > tmplib.sial
+python3 ../sial2opc6.py  tmplib.sial sial.h noheader > bcpllib.s
+
+
+foreach testname ( $testnames )
+    echo "**************************"
+    echo "Processing $testname"
+    echo "**************************"    
     # Make BCPL and SIAL versions of test
     cintsys -c bcpl $testname.b to $testname
     cintsys -c bcpl2sial $testname.b to $testname.sial
 
-
-    pypy3 --version >& /dev/null
-    if ( $status == 0 ) then
-        set pyexe = pypy3
-    else
-        set pyexe = python3
-    endif
-        
-    
-    perl -0777 -pale 's/ L(\d*)/ L$1_blib/g' bcpllib.sial |\
-    perl -0777 -pale 's/ M(\d\d\d\d)/ M$1_blib/g'  > tmplib.sial
-    python3 ../sial2opc6.py  tmplib.sial sial.h noheader > bcpllib.s
-    
     cat ${testname}.sial tmplib.sial > tmp.sial
     python3 ../sial2opc6.py  tmp.sial  sial.h  > tmp.s
     
@@ -42,11 +47,7 @@ foreach testname ( $testnames )
         else
             set stdin = ""
         endif
-        python3 ../opc6asm.py ${testname}.s ${testname}.hex  | tee ${testname}.lst
-        ${pyexe} ../opc6emu.py ${testname}.hex ${testname}.dump ${stdin} | grep OUT | tee ${testname}.tmp
-        python3 ../../utils/show_stdout.py ${testname}.tmp | tee ${testname}.output
-    endif
-        
+        ${pyexec} ../opc6asm.py ${testname}.s ${testname}.hex  > ${testname}.lst
+        ${pyexec} ../opc6emu.py ${testname}.hex ${testname}.dump ${stdin} | grep OUT | ../../utils/show_stdout.py | tee ${testname}.output
+    endif     
 end
-
-

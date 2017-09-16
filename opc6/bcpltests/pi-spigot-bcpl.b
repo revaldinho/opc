@@ -19,11 +19,10 @@ MANIFEST {
 
 LET start() = VALOF
 {  
-  LET rem = VEC COLS                            
-  LET predigit = VEC BUFSIZE                    
-  LET digit = 0 
-  LET c = 0
-
+  LET rem = VEC COLS                             // vector for remainder data
+  LET predigit = VEC BUFSIZE                     // buffer digits in case corrections are needed
+  LET digit = 0                                  
+  LET c = 0                                     
 
   // Preload remainder data
   FOR i=0 TO (COLS-1) DO rem[i] := 2 * BASE/10

@@ -26,6 +26,7 @@ foreach test ( $testlist )
     python3 ${assembler} ${test}.s ${test}.hex >  ${test}.lst
     
     ${pyexec} ../opc6emu.py ${test}.hex ${test}.dump  > ${test}.trace
+    ../../utils/show_stdout.py ${test}.trace
     # Test bench expects the hex file to be called 'test.hex'
     cp ${test}.hex test.hex
     # Run icarus verilog to compile the testbench only if there is no stdin file

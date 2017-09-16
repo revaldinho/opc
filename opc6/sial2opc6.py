@@ -35,23 +35,8 @@ def code ( codestring, source=""):
         trailing = ""
     print( "%s%-32s%s # %s" % (leading,codestring,trailing,source))
 
-text = []
-with open(sys.argv[1],'r') as f:
-    line = f.readline()
-    while (line):
-        newline = f.readline()
-        if ( newline and not newline.startswith("F") ):
-            line += newline.rstrip()
-        else:
-            text.append(line)
-            line = newline.rstrip()
-    if ( line and not line.startswith("F") ):
-        line+= newline
-    text.append(line)
 
-if len(sys.argv) > 3 and sys.argv[3] == "noheader":
-    pass
-else:    
+def print_header():
     print('''
 
         ## --------------------------------------------------------------
@@ -98,6 +83,25 @@ __sys_exit:
         ## BCPL generated code follows
 ''')
 
+text = []
+with open(sys.argv[1],'r') as f:
+    line = f.readline()
+    while (line):
+        newline = f.readline()
+        if ( newline and not newline.startswith("F") ):
+            line += newline.rstrip()
+        else:
+            text.append(line)
+            line = newline.rstrip()
+    if ( line and not line.startswith("F") ):
+        line+= newline
+    text.append(line)
+
+if len(sys.argv) > 3 and sys.argv[3] == "noheader":
+    pass
+else:
+    print_header()
+    
 sectionname = ""
 modulename = "" 
 firstlabel = False
@@ -226,8 +230,8 @@ for i in text:
             code("mov r2,r1", line)            
             code("mov r1,r0,%d" % getnum(fields[1]))
         elif opcode == f_atblp:    # atblp     Pn         b := a; a := P!n            
-            code("mov r2,r1")
-            code("ld r1,r11,%d" % getnum(fields[1]), line)                        
+            code("mov r2,r1", line)
+            code("ld r1,r11,%d" % getnum(fields[1]))                        
         elif opcode == f_atblg:    # atblg     Gn         b := a; a := G!n            
             code("mov r2,r1")
             code("ld r1,r12,%d" % getnum(fields[1]), line)                        
@@ -248,7 +252,6 @@ for i in text:
             code("","Module Entry - %s" % modulename)
             print("__%s:" % modulename)
             firstlabel = True
-
         elif opcode == f_j:       # j        Ln         Jump to Ln 
             code("mov pc,r0,%s" % fields[1])
         elif opcode == f_jeq:     # jeq      Ln         Jump to Ln if a == b
