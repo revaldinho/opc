@@ -12,18 +12,11 @@ else
     set pyexec = pypy3
 endif
 
-set testnames = ( pi-spigot-bcpl fact monbfns anseq  enig  enigma-m3 apfel queens )
-
+set testnames = ( hello  fact  monbfns invert ack pi-spigot-bcpl anseq  enig  enigma-m3 apfel queens )
 
 echo "Updating Library"
 # Update the library
 cintsys -c bcpl2sial bcpllib.b to bcpllib.sial
-
-# Rename the labels to avoid clashes later    
-perl -0777 -pale 's/ L(\d*)/ L$1_blib/g' bcpllib.sial |\
-perl -0777 -pale 's/ M(\d\d\d\d)/ M$1_blib/g'  > tmplib.sial
-python3 ../sial2opc6.py  tmplib.sial sial.h noheader > bcpllib.s
-
 
 foreach testname ( $testnames )
     echo "**************************"
@@ -33,10 +26,10 @@ foreach testname ( $testnames )
     cintsys -c bcpl $testname.b to $testname
     cintsys -c bcpl2sial $testname.b to $testname.sial
 
-    cat ${testname}.sial tmplib.sial > tmp.sial
-    python3 ../sial2opc6.py  tmp.sial  sial.h  > tmp.s
-    
-    cat macro.s tmp.s syslib.s global_vector.s rom.s > ${testname}.s
+    python3 ../sial2opc6.py -f $testname.sial -f bcpllib.sial -s syslib.s > tmp.s
+
+    # A some simple 'ROM' for simulation (not needed for use on the hardware)
+    cat tmp.s rom.s > ${testname}.s
     
     if ( `grep -c "Opcode Not Handled" ${testname}.s` != 0 ) then
         echo "ERROR  - some Opcodes not handled in SIAL to OPC translation"

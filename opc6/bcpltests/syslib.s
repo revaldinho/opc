@@ -1,5 +1,73 @@
 
 
+# -----------------------------------------------------------------------------
+# Macros
+# -----------------------------------------------------------------------------
+
+MACRO   CLC()
+    c.add r0,r0
+ENDMACRO
+
+MACRO   GETPSR(_reg_)
+    getpsr  _reg_, psr
+ENDMACRO
+
+MACRO   PUTPSR(_reg_)
+    putpsr  psr, _reg_
+ENDMACRO
+
+MACRO JSR( _address_)
+    jsr     r13, r0, _address_
+ENDMACRO
+
+MACRO RTS()
+    mov     pc, r13
+ENDMACRO
+
+MACRO   PUSH( _data_)
+    push    _data_, r14
+ENDMACRO
+
+MACRO   POP( _data_ )
+    pop     _data_, r14
+ENDMACRO
+
+MACRO   PUSH2( _d0_,_d1_)
+        push     _d0_,r14
+        push     _d1_,r14
+ENDMACRO
+
+MACRO   POP2( _d0_,_d1_)
+        pop      _d1_,r14
+        pop      _d0_,r14
+ENDMACRO
+
+MACRO   SEC()
+        nc.dec r0,1
+ENDMACRO
+
+MACRO   ASL( _reg_)
+        add _reg_,_reg_
+ENDMACRO
+
+MACRO   ROL( _reg_)
+        adc _reg_,_reg_
+ENDMACRO
+
+MACRO   NEG( _reg_)
+        not _reg_,_reg_, -1
+ENDMACRO
+
+MACRO   NEG2( _regmsw_, _reglsw_)
+        not _reglsw_,_reglsw_
+        not _regmsw_,_regmsw_
+        inc _reglsw_, 1
+        adc _regmsw_, r0
+ENDMACRO
+
+
+        
+
 # --------------------------------------------------------------
 #
 # __mulu
@@ -23,7 +91,8 @@
 #   additions of A_L + B_L and use R2 in addition of A_H + B_H
 # --------------------------------------------------------------
 __mulu:
-        PUSH2   (r3, r4)
+        push    r3, r14
+        push    r4, r14
                                     # Get B into [r2,-]
         mov     r3, r0              # Get A into [r3,r1]
         mov     r4, r0, -16         # Setup a loop counter
@@ -38,7 +107,8 @@ __mulstep16:
         ror     r3, r3
         ror     r1, r1
 
-        POP2    (r3, r4)
+        pop     r3, r14
+        pop     r4, r14
         mov     pc, r13             # and return
 
 # --------------------------------------------------------------
