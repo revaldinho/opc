@@ -2,14 +2,8 @@ SECTION "fact"
 
 GET "libhdr"
 
-LET start() = VALOF {
-  FOR i = 1 TO 7 DO {
-      writes("fact(")
-      writen(i)
-      writes(") = ")
-      writen( fact(i) )
-      newline()
-  }
+LET start() = VALOF
+{ FOR i = 1 TO 7 DO writef("fact(%n) = %i4*n*c", i, fact(i))
   RESULTIS 0
 }
 
