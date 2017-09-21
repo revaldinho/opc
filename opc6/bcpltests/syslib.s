@@ -65,6 +65,11 @@ MACRO   NEG2( _regmsw_, _reglsw_)
         adc _regmsw_, r0
 ENDMACRO
 
+MACRO  MULSTEP (_A_hi, _A_lo, _B_hi)
+        lsr _A_hi, _A_hi
+        ror _A_lo, _A_lo
+        c.add _A_hi, _B_hi        
+ENDMACRO        
 
         
 
@@ -72,7 +77,7 @@ ENDMACRO
 #
 # __mulu
 #
-# Multiply 2 16 bit numbers to yield a 32b result
+# Multiply 2 16 bit numbers to yield a _16b_ result
 #
 # Entry:
 #       r1    16 bit multiplier (A)
@@ -80,8 +85,8 @@ ENDMACRO
 #       r13   holds return address
 #       r14   is global stack pointer
 # Exit
-#       r3    upwards preserved
-#       r1,r2 holds 32b result (LSB in r1)
+#       r2    upwards preserved
+#       r1    holds 16b result (LSB in r1)
 #
 #
 #   A = |___r3___|____r1____|  (lsb)
@@ -91,22 +96,20 @@ ENDMACRO
 #   additions of A_L + B_L and use R2 in addition of A_H + B_H
 # --------------------------------------------------------------
 __mulu:
-        push    r3, r14
         push    r4, r14
+        push    r3, r14        
                                     # Get B into [r2,-]
         mov     r3, r0              # Get A into [r3,r1]
         mov     r4, r0, -16         # Setup a loop counter
-        add     r0, r0              # Clear carry outside of loop - reentry from bottom will always have carry clear
 __mulstep16:
-        ror     r3, r3              # Shift right A
-        ror     r1, r1
-        c.add   r3, r2              # Add [r2,-] + [r3,r1] if carry
-        inc     r4, 1               # increment counter
+        MULSTEP (r3,r1,r2)
+        MULSTEP (r3,r1,r2)
+        MULSTEP (r3,r1,r2)
+        MULSTEP (r3,r1,r2)        
+        inc     r4, 4               # increment counter by number of times loop unrolled
         nz.inc  pc, __mulstep16 - PC # next iteration if not zero
-        add     r0, r0              # final shift needs clear carry
-        ror     r3, r3
+        lsr     r0, r3              # final MSB shift into r0 because its discarded (need only the carry into r1)
         ror     r1, r1
-
         pop     r3, r14
         pop     r4, r14
         mov     pc, r13             # and return
