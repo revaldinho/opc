@@ -169,13 +169,13 @@ AND start() = VALOF
     setmati(m3)
     m3!(i*n+i) := inv(m1!(i*n+i))
     IF tracing DO
-    { writef("Pre-multiply by*n")
+    { writef("Pre-multiply by*n*c")
       prmat("m3", m3)
     }
     matmul(m3,m1,m4)
     copy(m4,m1)
     IF tracing DO
-    { writef("gives*n")
+    { writef("gives*n*c")
       prmat("m1", m1)
     }
     // Accumulate the inverse matrix
@@ -187,13 +187,13 @@ AND start() = VALOF
     setmati(m3)
     FOR j = 0 TO n-1 DO m3!(i + j*n) := m1!(i + j*n)
     IF tracing DO
-    { writef("Pre-multiply by*n")
+    { writef("Pre-multiply by*n*c")
       prmat("m3", m3)
     }
     matmul(m3,m1,m4)
     copy(m4,m1)
     IF tracing DO
-    { writef("gives*n")
+    { writef("gives*n*c")
       prmat("m1", m1)
     }
 
@@ -202,18 +202,18 @@ AND start() = VALOF
   }
 
   IF tracing DO
-  { writef("The inverse matrix is thus*n*n")
+  { writef("The inverse matrix is thus*n*n*c")
     prmat("m2", m2)
   }
 
   initmat(m1)
   matmul(m2,m1,m3)
   
-  writef("Multiplying*n*n")
+  writef("Multiplying*n*n*c")
   prmat("m2", m2)
-  writef("by*n*n")
+  writef("by*n*n*c")
   prmat("m1", m1)
-  writef("gives*n*n")
+  writef("gives*n*n*c")
   prmat("m3", m3)
 
   RESULTIS 0
@@ -243,7 +243,7 @@ AND prmat(str, m) BE
 
 AND inv(x) = VALOF
 { FOR i = 1 TO 255 IF mul(i, x)=1 RESULTIS i
-  writef("*nERROR: Cannot invert x=%n*n*n", x)
+  writef("*nERROR: Cannot invert x=%n*n*n*c", x)
   abort(999)
   RESULTIS 0
 }
