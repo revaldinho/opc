@@ -15,38 +15,21 @@ MANIFEST
   FULL = 'M'; UPPER = '*"'; LOWER = 'm'; EMPTY = '*s'  // ASCII
 }
 
-//LET f(x, y) = VALOF
-//{ LET zr = 0
-//  LET zi = 0
-//  LET cr = x*SCALE/25
-//  LET ci = y*SCALE/20
-//
-//  FOR i = 0 TO 100 DO
-//  { LET ir = zr*zr/SCALE - zi*zi/SCALE;
-//    zi := zr*zi/SCALE + zi*zr/SCALE + ci;
-//    zr := ir + cr;
-//    IF zi > 2*SCALE  | zr > 2*SCALE |
-//       zi < -2*SCALE | zr < -2*SCALE RESULTIS 1
-//  }
-//  RESULTIS 0
-//}
-
 LET f(x, y) = VALOF
 { LET zr = 0
   LET zi = 0
   LET cr = x*SCALE/25
   LET ci = y*SCALE/20
-  LET ref = 2 *SCALE
+
   FOR i = 0 TO 100 DO
-  { LET ir = (zr*zr - zi*zi)/SCALE;
-    zi := (zr*zi + zi*zr)/SCALE + ci;
+  { LET ir = zr*zr/SCALE - zi*zi/SCALE;
+    zi := zr*zi/SCALE + zi*zr/SCALE + ci;
     zr := ir + cr;
-    IF zi > ref  | zr > ref |
-       zi < -ref | zr < -ref RESULTIS 1
+    IF zi > 2*SCALE  | zr > 2*SCALE |
+       zi < -2*SCALE | zr < -2*SCALE RESULTIS 1
   }
   RESULTIS 0
 }
-
 
 LET start() = VALOF
 { LET line = VEC 80
