@@ -206,8 +206,8 @@ def process_sial( sialhdr, sialtext, noheader=False):
     gv_hightide = 0
 
     for i in sialtext:
-        line = i.strip()
-        fields = i.split()
+        line = re.sub( '(?P<label>(L|M)\d*?)', '%s_\g<label>' % sectionname, i.strip())
+        fields = line.split()
         if len(fields)>0 and i.startswith("F"):
             opcode = int(fields[0][1:])
             if opcode == sialop['f_section'] :    # section   Kn C1 ... Cn         Name of section
@@ -244,9 +244,17 @@ def process_sial( sialhdr, sialtext, noheader=False):
                 code("ld r4,r12,%d" % getnum(fields[1]), line)   
                 code("add r1,r4")
             elif opcode == sialop['f_a'] :        # a         Kn         a := a + n
-                code("add r1,r0,%d" % getnum(fields[1]), line)   
+                n = getnum(fields[1])
+                if 0<= n <= 15:
+                    code("inc r1,%d" % n, line)                       
+                else :
+                    code("add r1,r0,%d" % n, line)   
             elif opcode == sialop['f_s'] :        # s         Kn         a := a - n
-                code("sub r1,r0,%d" % getnum(fields[1]), line)   
+                n = getnum(fields[1])
+                if 0<= n <= 15:
+                    code("dec r1,%d" % n, line)                       
+                else :
+                    code("sub r1,r0,%d" % n, line)   
             elif opcode == sialop['f_lkp'] :      # lkp       Kk Pn      a := P!n!k
                 code("ld r4,r11,%d" % getnum(fields[2]), line)
                 code("ld r1,r4,%d" % getnum(fields[1]))
@@ -612,10 +620,8 @@ if __name__ == "__main__" :
             print("Error - cannot open file %s" %f )
             sys.exit(1)
 
-    ## Concatenate all SIAL files in order provided into a single text,
-    ## uniquifying all labels in each file to avoid name clashes and merging
+    ## Concatenate all SIAL files in order provided into a single text, merging
     ## split lines
-    i = 0
     text = []
     for f in filename:
         with open(f,'r') as fh:
@@ -623,15 +629,14 @@ if __name__ == "__main__" :
             newline = ""
             for l in fh.readlines():
                 if not l.startswith("F"):
-                    prev = prev.rstrip() + l
+                    prev = prev.rstrip() + l                    
                 else:
                     newline = l
                     if prev != "":
-                        sialtext.append(re.sub('(L|M\d*?)', '_F%d_\g<1>' % i, prev))
+                        sialtext.append(prev)
                     prev = newline
             # Flush last line
-            sialtext.append(re.sub('(L|M\d*?)', '_F%d_\g<1>' % i, prev))
-        i += 1
+            sialtext.append(prev)
 
     if not noheader:
         print_header()
