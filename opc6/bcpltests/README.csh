@@ -41,6 +41,6 @@ foreach testname ( $testnames )
             set stdin = ""
         endif
         ${pyexec} ../opc6asm.py ${testname}.s ${testname}.hex  > ${testname}.lst
-        ${pyexec} ../opc6emu.py ${testname}.hex ${testname}.dump ${stdin} | grep OUT | ../../utils/show_stdout.py | tee ${testname}.output
+        ${pyexec} ../opc6emu.py ${testname}.hex ${testname}.dump ${stdin} | tee ${testname}.trace | grep OUT | ../../utils/show_stdout.py | tee ${testname}.output
     endif     
 end
