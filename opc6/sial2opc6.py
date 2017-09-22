@@ -312,12 +312,12 @@ def process_sial( sialhdr, sialtext, noheader=False):
             elif opcode == sialop['f_not'] :      # not                  a := ~ a
                 code("not r1,r1", line)            
             elif opcode == sialop['f_abs'] :      # abs                  a := ABS a
-                code("not r1,r1,-1", line)   # 2's complement A
-                code("mi.not r1,r1-1")       # if negative then 2's complement it back
+                code("not r4,r1,-1", line)   # 2's complement A
+                code("pl.mov r1,r4")         # if positive then get the positive version
             elif opcode in (sialop['f_lsh'],sialop['f_rsh']):
                 # lsh                  a := b << a            
                 # rsh                  a := b >> a
-                codestring = "add r1,r1" if opcode==sialop['f_lsh'] else "asr r1,r1"            
+                codestring = "add r1,r1" if opcode==sialop['f_lsh'] else "asr r1,r1"
                 code("mov r4,r1",line) # Get the number of places to shift in r4 + 1
                 code("mov r1,r2")      # r2 preserved so shift in r1
                 code("cmp r4,r0")      # is r4 ==0 (ie shift dist==0)?
@@ -447,17 +447,20 @@ def process_sial( sialhdr, sialtext, noheader=False):
             elif opcode == sialop['f_rem'] :      # rem                  a := b REM a
                 code("jsr r13,r0,__mod", line)     
             elif opcode == sialop['f_xrem'] :      # xrem                  a := a REM b ; c := ?            
-                code("jsr r13,r0,__xmod", line)     
-            elif opcode == sialop['f_eq'] :           # eq                     a := b = a
-                code ("mov r4,r0", line)   # assume answer will be FALSE
-                code ("cmp r1,r2")         # compare a with b
-                code ("z.xor r4,r0,0xFFFF")# invert answer if zero
-                code ("mov r1, r4")        # transfer answer to A                    
-            elif opcode == sialop['f_ne'] :           # ne                     a := b ~= a
-                code ("not r4,r0", line)   # assume answer will be TRUE
-                code ("cmp r1,r2")         # compare a with b
-                code ("z.xor r4,r0,0xFFFF")# invert answer if zero
-                code ("mov r1, r4")        # transfer answer to A                    
+                code("jsr r13,r0,__xmod", line)
+            elif opcode in ( sialop['f_eq'], sialop['f_ne'], sialop['f_eq0'], sialop['f_ne0']) :
+                # f_eq     a := b = a
+                # f_ne     a := b != a
+                # f_eq0    a := b = 0
+                # f_ne0    a := b != 0
+                reference_reg = 'r0' if opcode in ( sialop['f_eq0'], sialop['f_ne0']) else 'r2'
+                # Do not-equal case first
+                code("not r4,r0", line)                   # r4 <- all 1s
+                code("sub r1,%s" % reference_reg)         # subtract reference from r1
+                code("nz.mov r1,r4")                      # If not zero then answer is all 1's (else r1 already zero)
+                if opcode in (sialop['f_eq'], sialop['f_eq0']) :
+                    code("not r1,r1")                     # invert answer for equal case
+
             elif opcode == sialop['f_ls'] :           # ls                     a := b < a  [ie !(b >= a)]
                 code ("not r4,r0", line)   # assume answer will be TRUE
                 code ("cmp r2,r1")         # compare b with a
@@ -478,39 +481,29 @@ def process_sial( sialhdr, sialtext, noheader=False):
                 code ("cmp r2,r1")         # compare b with a
                 code ("mi.xor r4,r0,0xFFFF") # invert answer if b < a
                 code ("mov r1, r4")        # transfer answer to A                               
-    
-            elif opcode == sialop['f_eq0'] :          # eq0                    a := a = 0
-                code ("mov r4,r0", line)   # assume answer will be FALSE
-                code ("cmp r1,r0")         # compare with 0
-                code ("z.xor r4,r0,0xFFFF") # invert answer if a == 0
-                code ("mov r1, r4")        # transfer answer to A                    
-            elif opcode == sialop['f_ne0'] :          # ne0                    a := a ~= 0
-                code ("not r4,r0", line)   # assume answer will be TRUE
-                code ("cmp r1,r0")         # compare with 0
-                code ("z.xor r4,r0,0xFFFF") # invert answer if a == 0
-                code ("mov r1, r4")        # transfer answer to A                    
-            elif opcode == sialop['f_ls0'] :          # ls0                    a := a < 0
-                code ("not r4,r0", line)   # assume answer will be TRUE
-                code ("cmp r1,r0")         # compare with 0
-                code ("pl.xor r4,r0,0xFFFF") # invert answer if a >= 0
-                code ("mov r1, r4")        # transfer answer to A        
-            elif opcode == sialop['f_gr0'] :          #gr0                    a := a > 0 [ie !(0>=A)]
-                code ("not r4,r0", line)   # assume answer will be TRUE
-                code ("cmp r0,r1")         
-                code ("pl.xor r4,r0,0xFFFF")
-                code ("mov r1, r4")        
-            elif opcode == sialop['f_le0'] :          #le0                    a := a <= 0 [ie !(0<A)]
-                code ("not r4,r0", line)   # assume answer will be TRUE
-                code ("cmp r0,r1")         
-                code ("mi.xor r4,r0,0xFFFF") 
-                code ("mov r1, r4")        
-            elif opcode == sialop['f_ge0'] :          # ge0                    a := a >= 0
-                 code ("mov r4,r0", line)   # assume answer will be FALSE
-                 code ("cmp r1,r0")         # compare with 0
-                 code ("pl.xor r4,r0,0xFFFF")# invert answer if a >=0
-                 code ("mov r1, r4")        # transfer answer to A
-     
-                
+            elif opcode in ( sialop['f_ge0'], sialop['f_ls0']) :
+                # f_ge0     a := a >= 0
+                # f_ls0     a := a < 0
+                # Do  >=  case first
+                code("mov r4,r0", line)                   # answer = r4 <- all 0s
+                code("cmp r1,r0")                         # subtract reference from r1
+                code("pl.mov r4,r0,0xFFFF")               # If positive then invert answer is all 1's 
+                if opcode == sialop['f_ge0']:
+                    code("mov r1,r4")                     # return answer for a >= 0
+                else:
+                    code("not r1,r4")                     # invert answer for a < 0
+            elif opcode in ( sialop['f_le0'], sialop['f_gr0']) :
+                # f_gr0     a := a > 0
+                # f_le0     a := a <= 0 [ie 0 >= a]
+                # Do  <=  case first
+                code("mov r4,r0", line)                   # answer = r4 <- all 0s
+                code("cmp r0,r1")                         # subtract r1 from reference 
+                code("pl.mov r4,r0,0xFFFF")               # If positive then answer is all 1's 
+                if opcode == sialop['f_ge0']:
+                    code("mov r1,r4")                     # return answer for 0 >= a
+                else:
+                    code("not r1,r4")                     # invert answer fors a > 0 
+                    
             elif opcode == sialop['f_rtn'] :      # procedure return
                 code("ld r4,r11,1", line) # get return address
                 code("ld r11,r11")        # restore P pointer
