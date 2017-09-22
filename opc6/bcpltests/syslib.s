@@ -65,55 +65,36 @@ MACRO   NEG2( _regmsw_, _reglsw_)
         adc _regmsw_, r0
 ENDMACRO
 
-MACRO  MULSTEP (_A_hi, _A_lo, _B_hi)
-        lsr _A_hi, _A_hi
-        ror _A_lo, _A_lo
-        c.add _A_hi, _B_hi        
-ENDMACRO        
 
-        
-
-# --------------------------------------------------------------
-#
-# __mulu
-#
-# Multiply 2 16 bit numbers to yield a _16b_ result
-#
-# Entry:
-#       r1    16 bit multiplier (A)
-#       r2    16 bit multiplicand (B)
-#       r13   holds return address
-#       r14   is global stack pointer
-# Exit
-#       r2    upwards preserved
-#       r1    holds 16b result (LSB in r1)
-#
-#
-#   A = |___r3___|____r1____|  (lsb)
-#   B = |___r2___|____0_____|  (lsb)
-#
-#   NB no need to actually use a zero word for LSW of B - just skip
-#   additions of A_L + B_L and use R2 in addition of A_H + B_H
-# --------------------------------------------------------------
+        # --------------------------------------------------------------
+        #
+        # mul16s
+        #
+        # Multiply 2 16 bit numbers to yield only a 16b result
+        #
+        # Entry:
+        #       r1    16 bit multiplier (A)
+        #       r2    16 bit multiplicand (B)
+        #       r13   holds return address
+        #       r14   is global stack pointer
+        # Exit
+        #       r4    uses as workspace registers and trashed
+        #       r1    16 bit result
+        #       all other registers preserved (inc. r2)
+        # --------------------------------------------------------------
 __mulu:
-        push    r4, r14
-        push    r3, r14        
-                                    # Get B into [r2,-]
-        mov     r3, r0              # Get A into [r3,r1]
-        mov     r4, r0, -16         # Setup a loop counter
-__mulstep16:
-        MULSTEP (r3,r1,r2)
-        MULSTEP (r3,r1,r2)
-        MULSTEP (r3,r1,r2)
-        MULSTEP (r3,r1,r2)        
-        inc     r4, 4               # increment counter by number of times loop unrolled
-        nz.inc  pc, __mulstep16 - PC # next iteration if not zero
-        lsr     r0, r3              # final MSB shift into r0 because its discarded (need only the carry into r1)
-        ror     r1, r1
-        pop     r3, r14
-        pop     r4, r14
-        mov     pc, r13             # and return
-
+        push    r2,r14
+        lsr     r4,r1                  # shift right multiplier into r4
+        mov     r1,r0
+mul16s_loop0:
+        c.add   r1,r2                  # add copy of multiplicand into accumulator if carry
+        ASL     (r2)                   # shift left multiplicand
+        lsr     r4, r4                 # shift right multiplier
+        nz.dec  pc,PC-mul16s_loop0     # no need for loop counter - just stop when r1 is empty
+        c.add   r1,r2                  # add last copy of multiplicand into accumulator if carry
+        pop     r2,r14
+        RTS     ()
+        
 # --------------------------------------------------------------
 #
 # __div
@@ -127,7 +108,7 @@ __mulstep16:
 # - r13 holds return address
 # - r14 is global stack pointer
 # Exit
-# - r3  upwards preserved
+# - r5  upwards preserved
 # - r1 = quotient
 # - r2 = remainder
 # --------------------------------------------------------------
@@ -135,25 +116,20 @@ __mulstep16:
 __divu:
 
 divmod:
-        push    r3, r14
         push    r5, r14
-        
-        mov     r3, r2              # Get divisor into r3
+        mov     r4, r2              # Get divisor into r3
         mov     r2, r0              # Get dividend/quotient into double word r1,2
         mov     r5, r0, -16         # Setup a loop counter
 udiv16_loop:
         ASL     (r1)                # shift left the quotient/dividend
         ROL     (r2)                #
-        cmp     r2, r3              # check if quotient is larger than divisor
-        c.sub   r2, r3              # if yes then do the subtraction for real
+        cmp     r2, r4              # check if quotient is larger than divisor
+        c.sub   r2, r4              # if yes then do the subtraction for real
         c.adc   r1, r0              # ... set LSB of quotient using (new) carry
         inc     r5, 1               # increment loop counter zeroing carry
         nz.inc  pc,udiv16_loop-PC   # loop again if not finished 
-
         pop     r5, r14
-        pop     r3, r14
         mov     pc,r13              # and return with quotient/remainder in r1/r2
-
 
 # --------------------------------------------------------------
 # Signed wrappers
