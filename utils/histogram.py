@@ -7,10 +7,13 @@ def show_usage_and_exit():
 
 def generate_histograms(filename, type, verbose=False):
     if type == "Dynamic":
-        instr_re = re.compile("[0-9a-f]{4}\s*:\s*[0-9a-f]{4}(?:\s*[0-9a-f]{4})?\s+: ((?P<pred>(mi|pl|z|c|nz|nc))\.)?(?P<instr>\w*)\s+(?P<rd>r\d*|psr),.*")
+        instr_re = re.compile("[0-9a-f]{4}\s*:\s*(?P<opcode>[0-9a-f]{4})\s*?(?P<operand>[0-9a-f]{4})?\s*: ((?P<pred>(mi|pl|z|c|nz|nc))\.)?(?P<instr>\w*)\s+(?P<rd>r\d*|psr),.*")
     else:
-        instr_re = re.compile("[0-9a-f]{4}\s+[0-9a-z]{4}(?:\s+[0-9a-f]{4})?\s+(?P<label>\w+?\:\s+)?((?P<pred>(mi|pl|z|c|nz|nc))\.)?(?P<instr>[a-z]+)\s+(?P<rd>\w+)")
+        instr_re = re.compile("[0-9a-f]{4}\s+(?P<opcode>[0-9a-f]{4})\s*?(?P<operand>[0-9a-f]{4})?\s+(?P<label>\w+?\:\s+)?((?P<pred>(mi|pl|z|c|nz|nc))\.)?(?P<instr>[a-z]+)\s+(?P<rd>\w+)")
 
+
+    one_word_instr_count = 0
+    two_word_instr_count = 0    
     instr_dict = dict();
     pinstr_dict = dict();
     preds_dict  = dict();
@@ -19,6 +22,10 @@ def generate_histograms(filename, type, verbose=False):
         for line in f: 
             pobj = instr_re.match(re.sub('#.*','',(line.strip())))
             if pobj and pobj.groupdict()['instr'] != None:
+                if ( pobj.groupdict()["operand"] ) == None:
+                    one_word_instr_count += 1
+                else:
+                    two_word_instr_count += 1                    
                 predicate = pobj.groupdict()["pred"]
                 instr     = pobj.groupdict()["instr"]
                 rd        = pobj.groupdict()["rd"]    
@@ -73,6 +80,8 @@ def generate_histograms(filename, type, verbose=False):
 
     print("\nInstruction Summary by Type\n")
     print("All instructions          : %10d" %total_instr)
+    print("- Single word             : %10d (%3.1f%%)" % (one_word_instr_count, float(one_word_instr_count)/float(total_instr)*100))
+    print("- Two word                : %10d (%3.1f%%)" % (two_word_instr_count, float(two_word_instr_count)/float(total_instr)*100))        
     print("Predicated instructions   : %10d (%3.1f%%)" % (total_pinstr,(float(total_pinstr)/float(total_instr)*100)))
     print("Jumps                     : %10d" % total_jumps)
     print("Short Branches            : %10d" % total_short_branches)
