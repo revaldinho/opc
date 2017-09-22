@@ -10,9 +10,9 @@
 GET "libhdr"
 
 MANIFEST {
-         DIGITS         = 9                     // Digits to compute
+         DIGITS         = 16                    // Digits to compute
          BASE           = 10                    // Base to use
-         DIGIT_GROUPS   = 9                     // should be DIGITS/log10(BASE)
+         DIGIT_GROUPS   = 16                    // should be DIGITS/log10(BASE)
          COLS           = 1 + DIGITS *10/3      // Columns requires for digit count
          BUFSIZE        = 4                     // Buffer size to allow for predigit correction
 }         
