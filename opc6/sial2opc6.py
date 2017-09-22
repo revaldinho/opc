@@ -228,7 +228,11 @@ def process_sial( sialhdr, sialtext, noheader=False):
             elif opcode in (sialop['f_lf'],sialop['f_lw']):# lf or lw   Ln        a := byte or word address of Ln [using word address for both]
                 code("mov r1,r0,%s" % fields[1],  line)
             elif opcode == sialop['f_l'] :        # l         Kn         a := n
-                code("mov r1,r0,%d" % getnum(fields[1]), line)            
+                n =  getnum(fields[1])
+                if ( n == 0 ):
+                    code("mov r1,r0", line)                                
+                else:
+                    code("mov r1,r0,%d" % n, line)            
             elif opcode == sialop['f_lm'] :       # lm        Kn         a := - n 
                 code("mov r1,r0,%d" % -getnum(fields[1]), line)
             elif opcode == sialop['f_sp'] :       # sp        Pn         P!n := a
@@ -255,27 +259,49 @@ def process_sial( sialhdr, sialtext, noheader=False):
                     code("dec r1,%d" % n, line)                       
                 else :
                     code("sub r1,r0,%d" % n, line)   
-            elif opcode == sialop['f_lkp'] :      # lkp       Kk Pn      a := P!n!k
-                code("ld r4,r11,%d" % getnum(fields[2]), line)
-                code("ld r1,r4,%d" % getnum(fields[1]))
-            elif opcode == sialop['f_lkg'] :      # lkg       Kk Gn      a := G!n!k
-                code("ld r4,r12,%d" % getnum(fields[2]), line)
-                code("ld r1,r4,%d" % getnum(fields[1]))
+            elif opcode in (sialop['f_lkp'], sialop['f_lkg']):
+                # lkp       Kk Pn      a := P!n!k
+                # lkg       Kk Gn      a := G!n!k
+                (k,n) =  (getnum(fields[1]),getnum(fields[2]))
+                pointer_reg = 'r11' if opcode==sialop['f_lkp'] else 'r12'
+                if ( n==0 ):
+                    code("ld r4,%s" % pointer_reg, line)
+                else:
+                    code("ld r4,%s,%d" % (pointer_reg, n), line)                    
+                if ( k == 0 ):
+                    code("ld r1,r4")
+                else:
+                    code("ld r1,r4,%d" % k)
             elif opcode == sialop['f_st'] :       # !a := b
                 code("sto r2,r1", line)
             elif opcode == sialop['f_stp'] :      # stp       Pn           P!n!a := b
-                code("ld r4,r11,%d" % getnum(fields[1]), line)
+                n = getnum(fields[1])
+                if ( n==0):
+                    code("ld r4,r11", line)
+                else:
+                    code("ld r4,r11,%d" % getnum(fields[1]), line)
                 code("add r4,r1")
                 code("sto r2,r4")
             elif opcode == sialop['f_stk'] :      # stk       Kn           a!n := b
-                code("ld r4,r1,%d" % getnum(fields[1]), line)
+                n = getnum(fields[1])
+                if ( n==0):
+                    code("ld r4,r1", line)
+                else:
+                    code("ld r4,r1,%d" % n, line)                
                 code("sto r2,r4")
-            elif opcode == sialop['f_stkp'] :     # stkp      Kk Pn        P!n!k := a
-                code("ld r4,r11,%d" % getnum(fields[2]), line)
-                code("sto r1,r4,%d" % getnum(fields[1]))
-            elif opcode == sialop['f_skg'] :      # skg       Kk Gn        G!n!k := a
-                code("ld r4,r12,%d" % getnum(fields[2]), line)
-                code("sto r1,r4,%d" % getnum(fields[1]))
+            elif opcode in ( sialop['f_stkp'], sialop['f_skg'] )  :
+                # stkp      Kk Pn        P!n!k := a
+                # skg       Kk Gn        G!n!k := a                             
+                (k,n) =  (getnum(fields[1]),getnum(fields[2]))
+                pointer_reg = 'r11' if opcode==sialop['f_stkp'] else 'r12'
+                if ( n==0 ):
+                    code("ld r4,%s" % pointer_reg, line)
+                else:
+                    code("ld r4,%s,%d" % (pointer_reg, n), line)                    
+                if ( k == 0 ):
+                    code("sto r1,r4")
+                else:
+                    code("sto r1,r4,%d" % k)
             elif opcode == sialop['f_xst'] :      # xst                  !b := a
                 code("sto r1,r2", line)
             elif opcode == sialop['f_rv'] :       # rv                   a := !a
@@ -329,8 +355,12 @@ def process_sial( sialhdr, sialtext, noheader=False):
                 code("_L%04d:" % (localcounter+1))
                 localcounter += 2
             elif opcode == sialop['f_atbl'] :     # atbl      Kk         b := a; a := k
-                code("mov r2,r1", line)            
-                code("mov r1,r0,%d" % getnum(fields[1]))
+                n = getnum(fields[1])
+                code("mov r2,r1", line)
+                if ( n == 0 ) :
+                    code("mov r1,r0")
+                else:
+                    code("mov r1,r0,%d" % n)
             elif opcode == sialop['f_atblp'] :    # atblp     Pn         b := a; a := P!n            
                 code("mov r2,r1", line)
                 code("ld r1,r11,%d" % getnum(fields[1]))                        
