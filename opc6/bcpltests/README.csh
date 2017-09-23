@@ -3,7 +3,7 @@
 #
 
 # Clean up first
-rm *tmp* *lst *dump *output *trace *hex 
+rm *tmp* *lst *dump *output *trace *hex  *trace.gz *sasm
 
 pypy3 --version > /dev/null
 if ( $status) then
@@ -17,6 +17,9 @@ set testnames = ( hello  fact  monbfns invert ack pi-spigot-bcpl anseq  enig  en
 echo "Updating Library"
 # Update the library
 cintsys -c bcpl2sial bcpllib.b to bcpllib.sial
+# Optional - reprocess the SIAL into SASM to be more human readable, but SIAL is the format used for
+# conversion to OPC6 later
+cintsys -c sial-sasm  bcpllib.sial to bcpllib.sasm
 
 foreach testname ( $testnames )
     echo "**************************"
@@ -42,5 +45,8 @@ foreach testname ( $testnames )
         endif
         ${pyexec} ../opc6asm.py ${testname}.s ${testname}.hex  > ${testname}.lst
         ${pyexec} ../opc6emu.py ${testname}.hex ${testname}.dump ${stdin} | tee ${testname}.trace | grep OUT | ../../utils/show_stdout.py | tee ${testname}.output
+        gzip -f ${testname}.trace &
     endif     
 end
+wait
+

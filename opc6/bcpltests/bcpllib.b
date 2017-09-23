@@ -922,42 +922,42 @@ AND compstring(s1, s2) = VALOF
   IF lens1 = lens2 RESULTIS 0
   RESULTIS smaller = s1 -> -1, 1
 }
-// 
-// AND str2numb(s) = VALOF // Deprecated
-// { LET a = 0
-//   FOR i = 1 TO s%0 DO { LET dig = s%i - '0'
-//                         IF 0<=dig<=9 DO a := 10*a + dig
-//                       }
-//   RESULTIS s%1='-' -> -a, a
-// }
-// 
-// AND getkey(keys, i, keyword) = VALOF
-// { LET len = keys%0 // Length of keys string
-//   LET p = 1        // Position in keys string
-//   LET n = 0        // For length of key word
-// 
-//   // Set p to start of the keyword for argument i
-//   UNTIL p>len DO
-//   { UNLESS i BREAK
-//     IF keys%p=',' DO i := i-1
-//     p := p+1
-//   }
-// 
-//   // Copy the key word (ignoring newlines) into keyword
-//   WHILE p <= len DO
-//   { LET ch = keys%p
-//     IF ch='/' | ch='=' | ch=',' BREAK
-//     UNLESS ch='*n' DO
-//     { n := n + 1
-//       keyword%n := keys%p
-//     }
-//     p := p + 1
-//   }
-// 
-//   keyword%0 := n
-//   RESULTIS keyword
-// }
-// 
+
+AND str2numb(s) = VALOF // Deprecated
+{ LET a = 0
+  FOR i = 1 TO s%0 DO { LET dig = s%i - '0'
+                        IF 0<=dig<=9 DO a := 10*a + dig
+                      }
+  RESULTIS s%1='-' -> -a, a
+}
+
+AND getkey(keys, i, keyword) = VALOF
+{ LET len = keys%0 // Length of keys string
+  LET p = 1        // Position in keys string
+  LET n = 0        // For length of key word
+
+  // Set p to start of the keyword for argument i
+  UNTIL p>len DO
+  { UNLESS i BREAK
+    IF keys%p=',' DO i := i-1
+    p := p+1
+  }
+
+  // Copy the key word (ignoring newlines) into keyword
+  WHILE p <= len DO
+  { LET ch = keys%p
+    IF ch='/' | ch='=' | ch=',' BREAK
+    UNLESS ch='*n' DO
+    { n := n + 1
+      keyword%n := keys%p
+    }
+    p := p + 1
+  }
+
+  keyword%0 := n
+  RESULTIS keyword
+}
+ 
 // /*
 // rdargs provides the programmer with the facility to read
 // arguments from the currently selected input and store them in the
