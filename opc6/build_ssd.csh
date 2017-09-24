@@ -12,7 +12,7 @@ set ASM = opc6byteasm.py
 set MMB = ../utils/mmb_utils/beeb
 set SSD = OPC6DEMO.ssd
 set testlist = ( pi-spigot-rev pi-spigot-bruce e-spigot-rev bigsieve sieve nqueens )
-set bcpltestlist = ( hello fact monbfns invert ack pi-spigot-bcpl anseq  enig  enigma-m3 apfel queens )
+set bcpltestlist = ( hello fact monbfns invert lambda fft16 modarith ack pi-spigot-bcpl anseq  enig  enigma-m3 apfel queens )
 
 rm -f ${SSD}
 
