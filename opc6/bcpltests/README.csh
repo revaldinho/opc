@@ -12,7 +12,7 @@ else
     set pyexec = pypy3
 endif
 
-set testnames = ( hello  fact  monbfns invert ack pi-spigot-bcpl anseq  enig  enigma-m3 apfel queens )
+set testnames = ( hello  fact  monbfns lambda fft16 invert ack pi-spigot-bcpl anseq  enig  enigma-m3 apfel queens )
 
 echo "Updating Library"
 # Update the library
