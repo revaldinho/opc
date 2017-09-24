@@ -7,7 +7,7 @@ GET "libhdr"
 
 GLOBAL $( sum:200; term:201; tab:202; digcount:203 $)
  
-MANIFEST $( digits=100; upb=(digits+5)/4 ; BASE=100 $)
+MANIFEST $( digits=200; upb=(digits+5)/4 ; BASE=100 $)
 
 LET start() = VALOF
 $( LET n  = 1
