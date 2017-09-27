@@ -48,8 +48,8 @@ AND try(name, sortroutine, v, upb) BE
 $( writef("*n*cSetting %n words of data for %s sort*n*c", upb, name)
    FOR i = 1 TO upb DO {
        v!i := randno(1000)
-       writed(v!i,0)
-       newline()
+       //writed(v!i,0)
+       //newline()
        }
    writef("Entering %s sort routine*n*c", name)
    sortroutine(v, upb)
