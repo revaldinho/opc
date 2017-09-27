@@ -57,6 +57,8 @@ SECTION "BLIB"
  
 GET "libhdr"
 
+GLOBAL { lfsr  } 
+
 LET dummy() = VALOF {
     RESULTIS TRUE
 }
@@ -883,16 +885,43 @@ $)
 //   result2 := res2
 // }
 // 
-// LET randno(upb) = VALOF  // return a random number in the range 1 to upb
-// { randseed := randseed*2147001325 + 715136305
-//   RESULTIS (ABS(randseed/3)) MOD upb + 1
-// }
-// 
-// AND setseed(newseed) = VALOF // Added by MR 20/01/2000
-// { LET oldseed = randseed
-//   randseed := newseed
-//   RESULTIS oldseed
-// }
+
+AND randno(num) = VALOF {
+    // 170927 REv.
+    //
+    // Return random number in the range 1 to num using an LFSR register
+    // implementing the primitive polynomial 
+    // 
+    //          x^16+x^15+x^13+x^4+1 
+    // 
+    // to guarantee maximal sequence before repetition.
+    //
+    LET r1 = lfsr
+    LET feedback = 0
+
+    r1 := r1 >> 3
+    feedback := r1 & 1
+    r1 := r1 >> 9
+    feedback := feedback XOR (r1 & 1)
+    r1 := r1 >> 2
+    feedback := feedback XOR (r1 & 1)
+    r1 := r1 >> 1
+    feedback := feedback XOR (r1 & 1)
+
+    lfsr := ((lfsr<<1) XOR feedback) & #xFFFF
+
+    RESULTIS ABS( lfsr MOD (num)) + 1
+}
+
+AND setseed(num) = VALOF { 
+    LET oldseed = lfsr
+    TEST num ~= 0 THEN 
+       lfsr := ABS (num)
+    ELSE
+       writes("Warning: cannot set random seed to zero *n*c")
+    RESULTIS oldseed
+}
+
 // 
 // // muldiv is now implemented in SYSLIB using the MDIV instruction
 // // NO -- MDIV sometimes causes a floating point exception

@@ -1,5 +1,6 @@
 # The root directory of the project
 ROOT       = ../../..
+SERIAL     = /dev/cu.usbmodem1A124231
 
 # The target .bit file to be generated including the monitor program
 TARGET     = system
@@ -28,3 +29,4 @@ SRCS       = ../system.v  ../ram_4k_16.v $(ROOT)/$(CPU_PATH) ../../src/uart.v
 
 # Common include files
 include $(ROOT)/common/Makefile_ice40.inc
+

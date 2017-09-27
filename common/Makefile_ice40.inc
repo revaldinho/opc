@@ -22,6 +22,15 @@ $(TARGET).txt2: $(TARGET).txt1 $(PROG).mem
 $(TARGET).bin: $(TARGET).txt2
 	icepack ${TARGET}.txt2 ${TARGET}.bin
 
+.PHONY: upload-mac
+upload-mac:
+	cat $(SERIAL) > /dev/null 2>&1 &
+	stty -f $(SERIAL) raw ;\
+	cat ${TARGET}.bin > $(SERIAL) ;\
+	ps x | grep "cat $(SERIAL)" | head -1 | \
+	       sed -e 's/\([[:digit:]]*\) .*$$/now run "kill \1"/'
+
+
 clean:
 	rm -f $(PROG).s $(PROG).hex $(PROG).mem $(PROG).c
 

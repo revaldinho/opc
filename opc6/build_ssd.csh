@@ -12,10 +12,10 @@ set ASM = opc6byteasm.py
 set MMB = ../utils/mmb_utils/beeb
 set SSD = OPC6DEMO.ssd
 set testlist = ( pi-spigot-rev pi-spigot-bruce e-spigot-rev bigsieve sieve nqueens )
-set bcpltestlist = ( hello fact Leval monbfns lambda modarith fft16 evale invert ack pi-spigot-bcpl anseq  enig  enigma-m3 apfel queens )
-rm -f ${SSD}
-
-${MMB} blank_ssd ${SSD}
+set bcpltestlist = ( hello fact Leval monbfns lambda modarith fft16 evale \
+    invert ack pi-spigot-bcpl anseq  enig  enigma-m3 shell23 acoding kperms \
+    apfel queens )
+    
 
 pushd disk
 foreach test ( $testlist )
@@ -40,6 +40,9 @@ foreach test ( $bcpltestlist )
 end
 popd
 
+# Build the SSD image
+rm -f ${SSD}
+${MMB} blank_ssd ${SSD}
 ${MMB} putfile ${SSD} disk/*
 ${MMB} info ${SSD}
 
