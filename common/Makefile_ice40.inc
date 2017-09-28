@@ -13,7 +13,7 @@ $(TARGET).blif: $(SRCS) $(PROG).mem
 
 $(TARGET).txt1: $(TARGET).blif
 	arachne-pnr -d 8k -P tq144:4k -p ../blackice.pcf ${TARGET}.blif -o ${TARGET}.txt1
-	icetime -d hx8k -P tq144:4k ${TARGET}.txt1
+	icetime -d hx8k -P tq144:4k -t ${TARGET}.txt1
 
 $(TARGET).txt2: $(TARGET).txt1 $(PROG).mem
 	icebram $(PROG)_syn.mem $(PROG).mem < $(TARGET).txt1 > $(TARGET).txt2.tmp
