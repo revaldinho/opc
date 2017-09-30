@@ -217,6 +217,7 @@ __xmod: ## Find signed modulus of a MOD b
         # Provide a sys() call at global_vector 3 for BCPL to handle
         # the following functions (numbering to match libhdr.h)
         #
+        # Sys_EXT       =  68
         # Sys_getvec    =  21
         # Sys_freevec   =  22
         # Sys_(sa)wrch  =  11
@@ -240,6 +241,7 @@ __xmod: ## Find signed modulus of a MOD b
         #     Other registers dependent on system call
         # ------------------------------------------------------------
 
+        EQU     K_Sys_EXT,       68        
         EQU     K_Sys_getvec,    21
         EQU     K_Sys_freevec,   22
         EQU     K_Sys_sawrch,    11
@@ -255,9 +257,11 @@ __sys:
         sto     r13,r11,1               # Save return address
         sto     r4,r11,2                # Save entry address
         sto     r1,r11,3                # Save first parameter = system call
-        ld      r4,r11,4                # Get second parameter in r4
-
+        ld      r4,r11,4                # Get second parameter in r4        
         mov     r13,r0,__sys_return     # provide return address for all syscalls
+
+        cmp     r1,r0,K_Sys_EXT         # look for Sys_EXT first - like time critical code
+        z.mov   pc,r0,__Sys_EXT        
         cmp     r1,r0,K_Sys_getvec
         z.mov   pc,r0,__Sys_getvec
         cmp     r1,r0,K_Sys_freevec
@@ -273,7 +277,33 @@ __sys_return:
         ld r4,r11,1                      # move return address to r4
         ld r11,r11                       # restore old stack pointer
         mov pc,r4                        # return to calling routine
-                
+
+
+        # ------------------------------------------------------------
+        # Sys_EXT()
+        #
+        # Call a user function written in assembler
+        #
+        # sys( Sys_ext, <addr>, <parameter1>, <parameter2> ... )
+        #        
+        # Entry:
+        #       r4 - holds address of subroutine to call
+        #       r13- hold return address (to clean up stack in main sys fn)
+        #       Mem[r11+5] points to parameter2 ...        
+        #
+        # Exit:
+        #       r1  - holds data returned from function
+        # ------------------------------------------------------------
+__Sys_EXT:
+        PUSH    (r13)
+        PUSH    (r2)
+        ld      r1, r11,5         # get parameter1 in r1
+        mov     r2, r11,6         # use r2 to point to vector of other parameters
+        jsr     pc, r4            # call user routine
+        POP     (r2)
+        POP     (r13)
+        RTS     ()                # return via sys function
+        
         # ------------------------------------------------------------
         # Sys_getvec()
         #
