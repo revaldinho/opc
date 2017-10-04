@@ -42,7 +42,7 @@ LET start() = VALOF
                                                   r-> LOWER, EMPTY
                 ELSE line!(x+59) := r
     }
-    FOR i = 0 TO 78 DO wrch(line!i)
+    FOR i = 0 TO 78 DO TEST (line!i)>31 THEN wrch(line!i) ELSE wrch(' ')
     newline()
     even := ~even
   }
