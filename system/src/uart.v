@@ -10,13 +10,13 @@ module uart ( input[15:0] din, output[15:0] dout, input a0, input rnw, input clk
    parameter DIVISOR = CLKSPEED / BAUD;
 
    // Registers
-   reg [15:0] rx_bit_cnt;
+   reg [15:0] rx_bit_cnt = 0;
    reg [15:0] tx_bit_cnt;
    reg [10:0] tx_shift_reg;
    reg [9:0]  rx_shift_reg;
    reg        rxd1;
    reg        rxd2;
-   reg        rx_full;
+   reg        rx_full = 1'b0;
    reg [7:0]  rx_data;
    wire       rx_busy;
    wire       tx_busy;

@@ -40,9 +40,12 @@ module system (
    wire [15:0] uart_dout;
    wire [15:0] address;
    wire        rnw;
+   wire        vpa;
+   wire        vda;
+   wire        vio;
    
    reg         sw4_sync;
-   reg         reset_b;
+   wire        reset_b;
    wire        uart_cs_b = !({address[15:1],  1'b0} == 16'hfe08);
 
    // Map the RAM at both the top and bottom of memory (uart_cs_b takes priority)
@@ -62,7 +65,11 @@ module system (
    wire [15:0]  data_pins_in;
    wire [15:0]  data_pins_out = cpu_dout;   
    wire         data_pins_out_en = !(rnw | wegate); // Added wegate to avoid bus conflicts
-   
+
+`ifdef simulate
+   assign data_pins_in = DAT;
+   assign DAT = data_pins_out_en ? data_pins_out : 16'hZZZZ; 
+`else   
    SB_IO #(
            .PIN_TYPE(6'b 1010_01),
            ) sram_data_pins [15:0] (
@@ -71,7 +78,8 @@ module system (
            .D_OUT_0(data_pins_out),
            .D_IN_0(data_pins_in),
    );
-
+`endif
+   
    // Data Multiplexor
    assign cpu_din = uart_cs_b ? (ram_cs_b ? data_pins_in : ram_dout) : uart_dout;
 
@@ -131,19 +139,15 @@ module system (
    );
 `else // !`ifdef use_pll
    wire LOCK = 1'b1;
-//   reg [2:0]    clkpre;  // prescaler
-   reg [1:0]    clkdiv;  // divider
+   reg [1:0] clkdiv = 2'b00;  // divider
    always @(posedge clk100)
      begin
-//        clkpre <= clkpre + 1;
-//        if (clkpre == 'b0) begin        
-           case (clkdiv)
-             2'b11: clkdiv <= 2'b10;  // rising edge of clk
-             2'b10: clkdiv <= 2'b00;  // wegate low
-             2'b00: clkdiv <= 2'b01;  // wegate low
-             2'b01: clkdiv <= 2'b11;
-           endcase
-//        end
+        case (clkdiv)
+          2'b11: clkdiv <= 2'b10;  // rising edge of clk
+          2'b10: clkdiv <= 2'b00;  // wegate low
+          2'b00: clkdiv <= 2'b01;  // wegate low
+          2'b01: clkdiv <= 2'b11;
+        endcase
      end
    assign clk = clkdiv[1];
    assign wegate = clkdiv[0];
@@ -180,9 +184,9 @@ module system (
       .reset_b(reset_b),
       .int_b(2'b11),
       .clken(1'b1),
-      .vpa(),
-      .vda(),
-      .vio(),
+      .vpa(vpa),
+      .vda(vda),
+      .vio(vio),
       .dout(cpu_dout),
       .address(address),
       .rnw(rnw)
