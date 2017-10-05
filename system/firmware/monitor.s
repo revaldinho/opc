@@ -938,9 +938,9 @@ opcodes:    # Each opcode must be 3 words, zero terminated
     WORD    0x0000
     BSTRING "in"     #  10111
     WORD    0x0000, 0x0000
-    BSTRING "----"   #  11000
+    BSTRING "push"   #  11000
     WORD    0x0000
-    BSTRING "----"   #  11001
+    BSTRING "pop"    #  11001
     WORD    0x0000
     BSTRING "cmp"    #  11010
     WORD    0x0000
