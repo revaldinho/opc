@@ -53,7 +53,7 @@ foreach testname ( $testnames )
         # Clean up
         if -e {$testname} rm -f ${testname}
         if -e {$testname}.sial rm -f ${testname}.sial
-        if -e {$testname}.hex rm -f ${testname}.hex
+        #if -e {$testname}.hex rm -f ${testname}.hex
         if -e {$testname}.dump rm -f ${testname}.dump                       
         
     endif     
