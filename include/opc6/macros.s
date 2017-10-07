@@ -87,3 +87,19 @@ ENDMACRO
 MACRO   OUT(_reg_, _address_)
     out     _reg_, r0, _address_
 ENDMACRO
+
+MACRO   INC(_reg_, _val_)
+    inc     _reg_, _val_
+ENDMACRO
+
+MACRO   DEC(_reg_, _val_)
+    dec     _reg_, _val_
+ENDMACRO
+
+MACRO   LSR(_reg1_, _reg2_)
+    lsr     _reg1_, _reg2_        
+ENDMACRO
+
+        
+
+        

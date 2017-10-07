@@ -52,12 +52,12 @@ srec_line_loop:
 
     cmp     r2, r0, ord('S')
     nz.mov  pc, r0, srec_exit_ok
-    add     r1, r0, 1
+    INC     (r1, 1)
 
     ld      r2, r1                  # test for 1
     cmp     r2, r0, ord('1')
     nz.mov  pc, r0, srec_exit_bad_format
-    add     r1, r0, 1
+    INC     (r1, 1)
 
     JSR     (read_hex_2)            # r2 = LL
     c.mov   pc, r0, srec_exit_bad_format
@@ -74,7 +74,7 @@ srec_line_loop:
     bswp    r2, r2
     add     r5, r2
 
-    sub     r3, r0, 3
+    DEC     (r3, 3)
     CLC     ()
     ror     r3, r3                  # convert to words
     c.mov   pc, r0, srec_exit_bad_format    # length expected to be even because we are a word based machine
@@ -90,9 +90,10 @@ srec_word_loop:
     add     r5, r2
 
     sto     r2, r4                  # store the word
-    add     r4, r0, 1               # increment the address pointer
 
-    sub     r3, r0, 1
+        
+    INC     (r4,1)                  # increment the address pointer
+    DEC     (r3,1)
     nz.mov  pc, r0, srec_word_loop
 
     JSR     (read_hex_2)            # r2 = 00CC

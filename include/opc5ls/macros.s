@@ -90,3 +90,18 @@ ENDMACRO
 MACRO   OUT(_reg_, _address_)
     sto     _reg_, r0, _address_
 ENDMACRO
+
+MACRO   INC(_reg_, _val_)
+    add     _reg_, r0, _val_
+ENDMACRO
+
+MACRO   DEC( _reg_, _val_)
+    sub     _reg_, r0, _val_
+ENDMACRO
+        
+MACRO   LSR(_reg1_, _reg2_)
+    c.add r0,r0
+    ror    _reg1_, _reg2_        
+ENDMACRO
+
+

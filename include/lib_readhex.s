@@ -14,9 +14,9 @@
 # - all other registers preserved
 
 skip_spaces:
-    sub     r1, r0, 1
+    DEC     (r1, 1)
 skip_spaces_loop:
-    add     r1, r0, 1
+    INC     (r1, 1)
     ld      r2, r1
     cmp     r2, r0, 0x20
     z.mov   pc, r0, skip_spaces_loop
@@ -133,7 +133,7 @@ read_hex_1_valid:
     and     r3, r0, 0x0F
     add     r2, r3
 
-    add     r1, r0, 1
+    INC     (r1,1)
     CLC     ()
     mov     pc, r0, read_hex_1_exit
 

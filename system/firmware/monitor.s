@@ -192,7 +192,7 @@ srec_checksum_error_msg:
 
 comma:
     sto     r5, r4
-    add     r4, r0, 1
+    INC     (r4,1)    
     mov     pc, r0, mon2
 
 # ---------------------------------------------------------
@@ -281,7 +281,7 @@ dis_loop:
     JSR     (disassemble)
     mov     r5, r1
 
-    sub     r3, r0, 1
+    DEC     (r3, 1)
     nz.mov  pc, r0, dis_loop
 
     mov     pc, r0, mon6
@@ -317,7 +317,7 @@ step_loop:
     ld      r4, r0, reg_state_pc   # load the program counter
     mov     r9, r4                 # save the program counter of the current instruction
     ld      r1, r4                 # fetch the instruction
-    add     r4, r0, 1              # increment the PC
+    INC     (r4,1)                 # increment the PC
 
     mov     r5, r1                 # extract the src register num (r5)
     ror     r5, r5
@@ -338,7 +338,7 @@ step_loop:
 
     ld      r2, r4                 # fetch the operand
     sto     r2, r0, operand        # store back the operand, and leave it in r2
-    add     r4, r0, 1              # increment the PC
+    INC     (r4,1)                 # increment the PC
 
 no_operand:
     sto     r4, r0, reg_state_pc   # save the updated program counter which
@@ -412,7 +412,7 @@ operand:
     nz.sto  r8, r6, reg_state      # no, then save the new dst register value
 
 next_instruction:
-    sub     r10, r0, 1             # decrement the iteration count
+    DEC     (r10, 1)               # decrement the iteration count
     nz.mov  pc, r0, step_loop      # and loop back for more instructions
 
     ld      r1, r0, reg_state_pc
@@ -512,8 +512,8 @@ dr_loop:
     ld      r1, r2, reg_state
     JSR     (print_spc)
     JSR     (print_hex_4)         # "1234"
-    add     r2, r0, 1
-    sub     r3, r0, 1
+    INC     (r2,1)
+    DEC     (r3,1)
     nz.mov  pc, r0, dr_loop
     POP     (r13)
     RTS     ()
@@ -623,7 +623,7 @@ osWORD0:
     PUSH    (r13)
     PUSH    (r3)
     ld      r3, r2, 1   # r3 = maximum line length
-    sub     r3, r0, 1   # allow space for terminator
+    DEC     (r3,1)      # allow space for terminator
     ld      r2, r2      # r2 = input buffer
 
 osWORD0_loop:
@@ -631,8 +631,8 @@ osWORD0_loop:
     cmp     r1, r0, 0x0d
     z.mov   pc, r0, osWORD0_exit
     sto     r1, r2
-    add     r2, r0, 1
-    sub     r3, r0, 1
+    INC     (r2, 1)
+    DEC     (r3, 1)
     nz.mov  pc, r0, osWORD0_loop
 
 osWORD0_exit:
@@ -744,7 +744,7 @@ dis3:
     add     r2, r0                      # is r2 zero?
     z.mov   pc, r0, dis4
     sub     r2, r0, 0x2000
-    add     r1, r0, 0x0002              # move on to next predicate
+    INC     (r1,0x0002)                 # move on to next predicate
     mov     pc, r0, dis3
 
 dis4:
@@ -767,7 +767,7 @@ dis5:
     add     r2, r0                      # is r2 zero?
     z.mov   pc, r0, dis6
     sub     r2, r0, 0x0100
-    add     r1, r0, 0x0003              # move on to next opcode
+    INC     (r1, 0x0003)                # move on to next opcode
     mov     pc, r0, dis5
 
 dis6:
@@ -840,7 +840,7 @@ print_reg_num:
     JSR     (OSWRCH)
     POP     (r1)
 
-    sub     r1, r0, 0x0A
+    DEC     (r1,0x0A)
 
 print_reg_num_1:
     add     r1, r0, 0x30
