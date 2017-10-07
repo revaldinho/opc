@@ -36,12 +36,13 @@ for iteration in range (0,2): # Two pass assembly
             exec ("%s= int(%s)" % ((label,str(nextmem)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
         if (inst in("WORD","BYTE") or inst in op) and iteration < 1:
             nextmem += (len(opfields) if inst=="WORD" else ((len(opfields)+1)//2) if inst=="BYTE" else len(opfields)-1) # If two operands are provide instuction will be one word
-        elif inst in op or inst in ("BYTE","WORD","STRING","BSTRING"):
-            if  inst=="STRING" or inst=="BSTRING":
+        elif inst in op or inst in ("BYTE","WORD","STRING","BSTRING","PBSTRING"):
+            if  inst in("STRING","BSTRING","PBSTRING"):
                 strings = re.match('.*STRING\s*\"(.*?)\"(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?.*?', line.rstrip())
-                string_data = ''.join([ x for x in strings.groups() if x != None])
-                (step, wordstr) =  ( 2 if inst=="BSTRING" else 1, codecs.decode(string_data, 'unicode_escape') + chr(0))                
-                (words) = ([(ord(wordstr[i]) | ((ord(wordstr[i+1])<<8) if inst=="BSTRING" else 0)) for  i in range(0,len(wordstr)-1,step) ])
+                string_data = codecs.decode(''.join([ x for x in strings.groups() if x != None]),  'unicode_escape')
+                string_len = chr(len( string_data ) & 0xFF) if inst=="PBSTRING" else ''    # limit string length to 255 for PBSTRINGS
+                (step, wordstr) =  ( 2 if inst in("BSTRING","PBSTRING") else 1, string_len + string_data + chr(0))                
+                (words) = ([(ord(wordstr[i]) | ((ord(wordstr[i+1])<<8) if inst in ("BSTRING","PBSTRING") else 0)) for  i in range(0,len(wordstr)-1,step) ])
             else:
                 if ((len(opfields)==2 and not reg_re.match(opfields[1])) and inst not in ("inc","dec","WORD","BYTE")):
                     warnings.append("Warning: suspected register field missing in ...\n         %s" % (line.strip()))

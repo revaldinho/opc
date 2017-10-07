@@ -146,21 +146,27 @@ def assemble(filename, listingon=True):
                     nextbyte += len(opfields) + (1 if len(opfields)%2==1 else 0) # odd numbers of BYTEs are padded out to words
                 else: # an instruction
                     nextbyte += 2*(len(opfields)-1)
-            elif inst in op or inst in ("BYTE","WORD","UBYTE","UWORD","STRING","BSTRING","UBSTRING"):
+            elif inst in op or inst in ("BYTE","WORD","UBYTE","UWORD","STRING","BSTRING","UBSTRING", "PBSTRING"):
                 if  inst=="STRING":
                     check_alignment(inst)
                     strings = re.match('.*STRING\s*\"(.*?)\"(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?.*?', line.rstrip())
                     string_data = ''.join([ x for x in strings.groups() if x != None])                    
                     for c in codecs.decode(string_data, 'unicode_escape'):                    
                         bytes.extend([ord(c),0])
-                elif inst in ("BSTRING", "UBSTRING"):
-                    if inst=="BSTRING":
+                elif inst in ("BSTRING", "PBSTRING", "UBSTRING"):
+                    if inst!="UBSTRING":
                         check_alignment(inst)
                     strings = re.match('.*STRING\s*\"(.*?)\"(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?.*?', line.rstrip())
-                    string_data = ''.join([ x for x in strings.groups() if x != None])                        
-                    bytes = [ord(c) for c in codecs.decode(string_data, 'unicode_escape')]                                        
-                    if inst=="BSTRING" and len(bytes)%2==1:   # pad out odd lengths of BSTRING for backward compatibility
-                        bytes.append(0)
+                    string_data = codecs.decode(''.join([ x for x in strings.groups() if x != None]),  'unicode_escape')
+                    string_len = len( string_data ) & 0xFF    # limit string length to 255 for PBSTRINGS
+                    if inst == "PBSTRING":
+                        bytes = [string_len] + [ord(c) for c in string_data ]
+                        if len(bytes)%2==1:   # pad out odd lengths of BSTRING for backward compatibility 
+                            bytes.append(0)                        
+                    else:
+                        bytes = [ord(c) for c in string_data ]                                        
+                        if inst=="BSTRING" and len(bytes)%2==1:   # pad out odd lengths of BSTRING for backward compatibility
+                            bytes.append(0)
                 else:
                     if ((len(opfields)==2 and not reg_re.match(opfields[1])) and inst not in ("inc","dec","WORD","BYTE","UBYTE","UWORD")):
                         warnings.append("Warning: suspected register field missing in ...\n         %s" % (line.strip()))

@@ -541,28 +541,18 @@ def process_sial( sialhdr, sialtext, noheader=False):
             elif opcode == sialop['f_static'] :   # static    Ln Kk W1 ... Wk      Static variable or table
                 code("%s: WORD %s" % (fields[1], ','.join( [("%s"%getnum(i)) for i in fields[3:]])), line)
             elif opcode == sialop['f_string'] :   # string    Ml Kn C1 ... Cn      String constant
-                # Encode string constants as word strings initially and make the various byte address
-                # operations match (below)
                 s = getstring(fields[2:])
                 code("%s:" % fields[1],line)
-    #            code("WORD %d " % getnum(fields[2]))
-                code("WORD %d " % len(codecs.decode(s, 'unicode_escape'))) # deal with "\010" etc chars as 1 char
-                code("STRING \"%s\"" % s)
-                code("WORD 0x00") # Temporary
-    
-            elif opcode in (sialop['f_gbyt'],sialop['f_xgbyt'],sialop['f_pbyt'],sialop['f_xpbyt']):
-                # These two function pairs identical if all strings are _words_ rather than bytes
-                #   gbyt                   a := b % a
-                #   xgbyt                  a := a % b
-                #   pbyt                   b % a := c
-                #   xpbyt                  a % b := c
-                code("mov r4,r1", line)
-                code("add r4,r2")            
-                if opcode in (sialop['f_pbyt'],sialop['f_xpbyt']):
-                    code("sto r3,r4")
-                else:
-                    code("ld  r1,r4")
-    
+                code("PBSTRING \"%s\"" % s)
+            elif opcode == sialop['f_gbyt']:      #   gbyt                   a := b % a
+                code( "jsr r13,r0,__gbyt", line )
+            elif opcode == sialop['f_xgbyt']:     #   xgbyt                  a := a % b
+                code( "jsr r13,r0,__xgbyt", line )
+            elif opcode == sialop['f_pbyt']:      #   pbyt                   b % a := c
+                code( "jsr r13,r0,__pbyt", line )
+            elif opcode == sialop['f_xpbyt']:     #   xpbyt                  a % b := c
+                code( "jsr r13,r0,__xpbyt", line )
+
             elif opcode == sialop['f_swb'] :      # swb       Kn Ld K1 L1 ... Kn Ln   Binary chop switch, Ld default
                 # Jump table on value of A, specific values per label ?
                 num_options = getnum(fields[1])            

@@ -45,9 +45,17 @@ foreach testname ( $testnames )
         else
             set stdin = ""
         endif
-        ${pyexec} ../opc6asm.py ${testname}.s ${testname}.hex  > ${testname}.lst
+        ${pyexec} ../opc6byteasm.py ${testname}.s ${testname}.hex  > ${testname}.lst
         ${pyexec} ../opc6emu.py ${testname}.hex ${testname}.dump ${stdin} | tee ${testname}.trace | grep OUT | ../../utils/show_stdout.py | tee ${testname}.output
-        gzip -f ${testname}.trace &
+#        ${pyexec} ../opc6emu.py ${testname}.hex ${testname}.dump ${stdin} | grep OUT | ../../utils/show_stdout.py | tee ${testname}.output        
+        if (-e ${testname}.trace ) gzip -f ${testname}.trace &
+
+        # Clean up
+        if -e {$testname} rm -f ${testname}
+        if -e {$testname}.sial rm -f ${testname}.sial
+        if -e {$testname}.hex rm -f ${testname}.hex
+        if -e {$testname}.dump rm -f ${testname}.dump                       
+        
     endif     
 end
 wait

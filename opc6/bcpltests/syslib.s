@@ -5,31 +5,31 @@
 # -----------------------------------------------------------------------------
 
 MACRO   CLC()
-    c.add r0,r0
+        c.add r0,r0
 ENDMACRO
 
 MACRO   GETPSR(_reg_)
-    getpsr  _reg_, psr
+        getpsr  _reg_, psr
 ENDMACRO
 
 MACRO   PUTPSR(_reg_)
-    putpsr  psr, _reg_
+        putpsr  psr, _reg_
 ENDMACRO
 
 MACRO JSR( _address_)
-    jsr     r13, r0, _address_
+        jsr     r13, r0, _address_
 ENDMACRO
 
 MACRO RTS()
-    mov     pc, r13
+        mov     pc, r13
 ENDMACRO
 
 MACRO   PUSH( _data_)
-    push    _data_, r14
+        push    _data_, r14
 ENDMACRO
 
 MACRO   POP( _data_ )
-    pop     _data_, r14
+        pop     _data_, r14
 ENDMACRO
 
 MACRO   PUSH2( _d0_,_d1_)
@@ -65,6 +65,71 @@ MACRO   NEG2( _regmsw_, _reglsw_)
         adc _regmsw_, r0
 ENDMACRO
 
+        # --------------------------------------------------------------
+        #
+        # __pbyt,__xpbyt,__gbyt, __xgbyt
+        #
+        # Routines for getting and putting bytes to support string operations.
+        # Uses r5,r6 temporary variables as workspace but preserves all other
+        # registers, setting r1 to new data with get byte instructions. Maybe
+        # no need strictly to preserve SIAL accumulator C (r3) but this is
+        # preserved now anyway.
+        #
+        # Entry:
+        #       r1    SIAL reg A
+        #       r2    SIAL reg B 
+        #       r3    SIAL reg C - for put operations only
+        #       r13   holds return address
+        #       r14   is global stack pointer
+        # Exit
+        #       r5,6  used as workspace registers and trashed
+        #       r1    SIAL reg A holds 16 bit result for reads
+        #       r2    SIAL reg B preserved
+        #       r3    SIAL reg C trashed
+        #       all other registers preserved (inc. r2)
+        # --------------------------------------------------------------
+        
+__pbyt:                            # pbyt   b % a := c
+        asr     r6,r1              # get word offset into r6
+        add     r6,r2              # add word offset to base pointer
+        ld      r5,r6              # read word
+        asr     r0,r1              # shift odd/even bit into carry
+        inc     pc, __merge_bytes-PC # (jump to merge_bytes but preserve carry)
+__xpbyt:                           # xpbyt  a % b := c
+        asr     r6,r2              # get word offset into r6
+        add     r6,r1              # add word offset to base pointer
+        ld      r5,r6              # read word
+        asr     r0,r2              # shift odd/even byte into carry
+__merge_bytes:                
+        nc.inc   pc,__merge_bytes_1-PC #bswp not predicatable
+        bswp    r3,r3              # move byte in reg C into upper half if carry set
+        and     r3,r0,0xFF00       # clear lower bytes in new data if setting upper byte
+        and     r5,r0,0x00FF       # clear upper bytes in old data if setting upper byte
+__merge_bytes_1:        
+        nc.and  r3,r0,0x00FF       # clear upper bytes in new data if setting lower byte
+        nc.and  r5,r0,0xFF00       # clear lower bytes in old data if setting lower byte
+        or      r5,r3              # merge old and new data
+        sto     r5,r6              # write back to memory
+        RTS     ()                 
+                                   
+__xgbyt:                           # xgbyt  a:= a % b
+        asr     r6,r2              # get word offset into r6
+        add     r6,r1              # add word offset to base pointer
+        ld      r5,r6              # read word
+        asr     r0,r2              # shift odd/even byte into carry
+        inc     pc, __get_byte-PC  # jump to get_byte but preserve carry
+__gbyt:                            # gbyt  a:= b % a
+        asr     r6,r1              # get word offset into r6
+        add     r6,r2              # add word offset to base pointer
+        ld      r5,r6              # read word
+        asr     r0,r1              # shift odd/even byte into carry
+__get_byte:
+        nc.inc   pc,__get_byte_1-PC # Skip bswp instruction if even
+        bswp    r5,r5              # swap words if odd byte
+__get_byte_1:   
+        and     r5,r0,0x00FF       # clear upper bits
+        mov     r1,r5              # put in r1 for return
+        RTS     ()
 
         # --------------------------------------------------------------
         #

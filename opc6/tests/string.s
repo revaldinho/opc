@@ -65,7 +65,10 @@ L3:
         BYTE 0x66, 0x77, 0x88, 0x99
 L4:
         BYTE int(3.14 * 10),0x00, L0&0xff,(L0>>8)&0xFF
-        
+        PBSTRING "Pascal string prepended"
+        PBSTRING "with length"
+        PBSTRING "byte"
+        PBSTRING "1","2","3"
 
 
 results:
