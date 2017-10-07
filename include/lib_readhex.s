@@ -135,13 +135,11 @@ read_hex_1_valid:
 
     INC     (r1,1)
     CLC     ()
-    mov     pc, r0, read_hex_1_exit
-
-read_hex_1_invalid:
-    SEC     ()
-
-read_hex_1_exit:
     POP     (r3)
     RTS     ()
-
+        
+read_hex_1_invalid:
+    SEC     ()
+    POP     (r3)
+    RTS     ()
 ##endif
