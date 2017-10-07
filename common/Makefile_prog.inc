@@ -12,7 +12,7 @@ $(PROG).hex: $(ROOT)/$(PROG_SRC)
 	filepp $(INC_FLAGS) -D_BASE_=0x$(ROMSTART) -kc '##' $(ROOT)/$(PROG_SRC) > $(PROG).s.tmp
 	mv $(PROG).s.tmp $(PROG).s
 	# run the assember
-	python $(ROOT)/$(ASM_PATH) $(PROG).s $(PROG).hex
+	python $(ROOT)/$(ASM_PATH) $(PROG).s $(PROG).hex | tee ${PROG}.lst
 	# clean up
 	rm -f $(PROG).s
 
