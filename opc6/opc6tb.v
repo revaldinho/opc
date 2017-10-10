@@ -26,7 +26,7 @@ module opc6tb();
 `endif
      interrupt_b = 1;
      #3005 reset_b = 1;
-     #5000000000 ;
+     #50000000000000 ;  // no timeout
      $finish;
    end
   always @ (posedge clk or negedge reset_b)

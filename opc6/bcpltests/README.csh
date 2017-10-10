@@ -1,10 +1,5 @@
 #!/bin/tcsh -f
 #
-#
-
-# Clean up first
-rm *tmp* *lst *dump *output *trace *hex  *trace.gz *sasm
-
 pypy3 --version > /dev/null
 if ( $status) then
     set pyexec = python3
@@ -12,9 +7,15 @@ else
     set pyexec = pypy3
 endif
 
-set testnames = ( kext hello fact Leval monbfns lambda modarith fft16 \
+set testnames = ( empty kext hello fact Leval monbfns lambda modarith fft16 \
     evale invert ack pi-spigot-bcpl anseq  enig  enigma-m3 \
     shell23 acoding kperms  apfel queens )
+
+# NB cannot simulate tests needing stdin currently
+set simlist = ( ack anseq apfel evale fact fft16 hello kperms lambda modarith monbfns pi-spigot-bcpl queens )
+
+# Clean up first
+rm *tmp* *lst *dump *output *trace *hex  *trace.gz *sasm
 
 echo "Updating Library"
 # Update the library
@@ -53,10 +54,29 @@ foreach testname ( $testnames )
         # Clean up
         if -e {$testname} rm -f ${testname}
         if -e {$testname}.sial rm -f ${testname}.sial
-        #if -e {$testname}.hex rm -f ${testname}.hex
-        if -e {$testname}.dump rm -f ${testname}.dump                       
-        
     endif     
 end
 wait
 
+simulation:
+
+# Run some selected simulations
+rm -rf *~ *sim *trace *vcd *vdump 
+foreach test ( $simlist )
+    echo "Simulating Test $test"
+    # Test bench expects the hex file to be called 'test.hex'
+    cp ${test}.hex test.hex
+    # Run icarus verilog to compile the testbench only if there is no stdin file
+    iverilog -D_simulation=1 -DNEGEDGE_MEMORY=1 ../opc6tb.v ../opc6cpu.v
+    # -D_dumpvcd=1        
+    # Execute the test bench
+    ./a.out | tee ${test}.sim
+    # Save the results
+    if ( -e dump.vcd) then
+        mv dump.vcd ${test}.vcd
+    endif            
+    mv test.vdump ${test}.vdump
+end
+
+
+wait
