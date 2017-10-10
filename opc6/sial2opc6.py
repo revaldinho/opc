@@ -251,12 +251,16 @@ def process_sial( sialhdr, sialtext, noheader=False):
                 n = getnum(fields[1])
                 if 0<= n <= 15:
                     code("inc r1,%d" % n, line)                       
+                elif -15<= n < 0:
+                    code("dec r1,%d" % (-n), line)                       
                 else :
                     code("add r1,r0,%d" % n, line)   
             elif opcode == sialop['f_s'] :        # s         Kn         a := a - n
                 n = getnum(fields[1])
                 if 0<= n <= 15:
-                    code("dec r1,%d" % n, line)                       
+                    code("dec r1,%d" % n, line)
+                elif -15 <= n < 0:
+                    code("inc r1,%d" % (-n), line)                    
                 else :
                     code("sub r1,r0,%d" % n, line)   
             elif opcode in (sialop['f_lkp'], sialop['f_lkg']):
@@ -445,6 +449,8 @@ def process_sial( sialhdr, sialtext, noheader=False):
                 code("ld  r1,%s,%d" % (ptr,getnum(fields[2])), line)
                 if ( 0 <= n <= 15 ):
                     code("inc r1,%d" % n )
+                elif (-15 <= n < 0):
+                    code("dec r1,%d" % (-n) )                    
                 else:
                     code("add r1,r0,%d" % n )
                 code("sto r1,%s,%d" % (ptr,getnum(fields[2])))
