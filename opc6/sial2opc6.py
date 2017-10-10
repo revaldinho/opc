@@ -437,14 +437,17 @@ def process_sial( sialhdr, sialtext, noheader=False):
                 code("ld r4,r0,%d" % getnum(fields[1]) ,line)
                 code("add r1,r4")
                 code("sto r1,r0,%d" % getnum(fields[1]))
-            elif opcode == sialop['f_ikp'] :      #  ikp       Kk Pn      a := P!n + k; P!n := a
-                code("ld  r1,r11,%d" % getnum(fields[2]), line)
-                code("add r1,r0,%d" % getnum(fields[1]))
-                code("sto r1,r11,%d" % getnum(fields[2]))
-            elif opcode == sialop['f_ikg'] :      #  ikg       Kk Gn      a := G!n + k; G!n := a
-                code("ld  r1,r12,%d" % getnum(fields[2]), line)
-                code("add r1,r0,%d" % getnum(fields[1]))
-                code("sto r1,r12,%d" % getnum(fields[2]))
+            elif opcode in (sialop['f_ikp'],sialop['f_ikg']) :
+                #  ikp       Kk Pn      a := P!n + k; P!n := a
+                #  ikg       Kk Gn      a := G!n + k; G!n := a
+                ptr = "r11" if opcode==sialop['f_ikp'] else "r12"
+                n =  getnum(fields[1])
+                code("ld  r1,%s,%d" % (ptr,getnum(fields[2])), line)
+                if ( 0 <= n <= 15 ):
+                    code("inc r1,%d" % n )
+                else:
+                    code("add r1,r0,%d" % n )
+                code("sto r1,%s,%d" % (ptr,getnum(fields[2])))
             elif opcode == sialop['f_k'] :        #  k         Pn         Call  a(b,...) incrementing P by n and leaving b in A             
                 code("mov r3,r11,%d" % getnum( fields[1]), line)
                 ## Need to ensure that B is transferred to A on entry to the routine
