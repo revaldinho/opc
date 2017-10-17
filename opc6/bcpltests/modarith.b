@@ -2,17 +2,8 @@ GET "libhdr"
 
 
 LET start() = VALOF
-{ LET argv = VEC 50
-  LET m, n = 2, 31
-
-//  UNLESS rdargs("m,e,n", argv, 50) DO
-//  { writef("Bad arguments for tst*n")
-//    RESULTIS 20
-//  }
-
-  IF argv!0 DO m := str2numb(argv!0)
-  IF argv!1 DO n := str2numb(argv!1)
-
+{ LET m, n = 2, 31
+  
   writef("m = %n n = %n*n*c", m, n)
 
   FOR i = 0 TO n-1 DO
