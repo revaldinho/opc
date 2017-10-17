@@ -734,6 +734,7 @@ $( LET t = @ a
                       CASE 'T': f := writet  ; GOTO m
                       CASE 'C': f := wrch    ; GOTO l
                       CASE 'O': f := writeoct; GOTO m
+                      CASE 'B': f := writebin; GOTO m                      
                       CASE 'X': f := writehex; GOTO m
                       CASE 'I': f := writed  ; GOTO m
                       CASE 'N': f := writen  ; GOTO l
