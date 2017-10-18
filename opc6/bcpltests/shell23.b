@@ -46,6 +46,8 @@ $)
 
 AND try(name, sortroutine, v, upb) BE
 $( writef("*n*cSetting %n words of data for %s sort*n*c", upb, name)
+
+   setseed(#x1234)        // initialise random number system 
    FOR i = 1 TO upb DO {
        v!i := randno(1000)
        //writed(v!i,0)
