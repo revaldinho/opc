@@ -1,5 +1,15 @@
 #!/bin/tcsh -f
 #
+# README [OPT]
+
+
+if ($1 == "OPT") then
+    echo "Running with optimized SIAL"
+    set opt_flag = "-o"
+else
+    set opt_flag = ""
+endif
+
 pypy3 --version > /dev/null
 if ( $status) then
     set pyexec = python3
@@ -7,12 +17,10 @@ else
     set pyexec = pypy3
 endif
 
-set testnames = ( empty kext hello fact Leval monbfns lambda modarith fft16 \
-    evale invert ack pi-spigot-bcpl anseq  enig  enigma-m3 \
-    shell23 acoding kperms  apfel queens )
+set testnames = ( empty Leval ack acoding anseq apfel enig enigma-m3 evale fact fft16 hello invert kext kperms lambda modarith monbfns pi-spigot-bcpl queens shell23 )
 
-# NB cannot simulate tests needing stdin currently
-set simlist = ( ack anseq apfel evale fact fft16 hello kperms lambda modarith monbfns pi-spigot-bcpl queens )
+# NB cannot simulate tests needing stdin currently = enigma-m3
+set simlist = ( Leval ack acoding anseq apfel enig evale fact fft16 hello invert kext kperms lambda modarith monbfns pi-spigot-bcpl queens shell23 )
 
 # Clean up first
 rm *tmp* *lst *dump *output *trace *hex  *trace.gz *sasm
@@ -32,7 +40,7 @@ foreach testname ( $testnames )
     cintsys -c bcpl $testname.b to $testname
     cintsys -c bcpl2sial $testname.b to $testname.sial
 
-    python3 ../sial2opc6.py -f $testname.sial -f bcpllib.sial -s syslib.s > tmp.s
+    python3 ../sial2opc6.py -f $testname.sial -f bcpllib.sial -s syslib.s -g ext_sial.h $opt_flag > tmp.s
 
     # A some simple 'ROM' for simulation (not needed for use on the hardware)
     cat tmp.s rom.s > ${testname}.s
@@ -53,7 +61,7 @@ foreach testname ( $testnames )
 
         # Clean up
         if -e {$testname} rm -f ${testname}
-        if -e {$testname}.sial rm -f ${testname}.sial
+        #if -e {$testname}.sial rm -f ${testname}.sial
     endif     
 end
 wait
