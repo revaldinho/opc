@@ -17,10 +17,10 @@ else
     set pyexec = pypy3
 endif
 
-set testnames = ( empty Leval ack acoding anseq apfel enig enigma-m3 evale fact fft16 hello invert kext kperms lambda modarith monbfns pi-spigot-bcpl queens shell23 )
+set testnames = ( empty Leval ack acoding anseq apfel enig enigma-m3 evale fact fft16 growth hello invert kext kperms lambda modarith monbfns pi-spigot-bcpl queens shell23 )
 
 # NB cannot simulate tests needing stdin currently = enigma-m3
-set simlist = ( Leval ack acoding anseq apfel enig evale fact fft16 hello invert kext kperms lambda modarith monbfns pi-spigot-bcpl queens shell23 )
+set simlist = ( Leval ack acoding anseq apfel enig evale fact fft16 growth hello invert kext kperms lambda modarith monbfns pi-spigot-bcpl queens shell23 )
 
 # Clean up first
 rm *tmp* *lst *dump *output *trace *hex  *trace.gz *sasm
@@ -35,7 +35,7 @@ cintsys -c sial-sasm  bcpllib.sial to bcpllib.sasm
 foreach testname ( $testnames )
     echo "**************************"
     echo "Processing $testname"
-    echo "**************************"    
+    echo "**************************"
     # Make BCPL and SIAL versions of test
     cintsys -c bcpl $testname.b to $testname
     cintsys -c bcpl2sial $testname.b to $testname.sial
@@ -44,7 +44,7 @@ foreach testname ( $testnames )
 
     # A some simple 'ROM' for simulation (not needed for use on the hardware)
     cat tmp.s rom.s > ${testname}.s
-    
+
     if ( `grep -c "Opcode Not Handled" ${testname}.s` != 0 ) then
         echo "ERROR  - some Opcodes not handled in SIAL to OPC translation"
         grep "Opcode Not Handled" ${testname}.s
@@ -55,34 +55,34 @@ foreach testname ( $testnames )
             set stdin = ""
         endif
         ${pyexec} ../opc6byteasm.py ${testname}.s ${testname}.hex  > ${testname}.lst
-        ${pyexec} ../opc6emu.py ${testname}.hex ${testname}.dump ${stdin} | tee ${testname}.trace | grep OUT | ../../utils/show_stdout.py | tee ${testname}.output
-#        ${pyexec} ../opc6emu.py ${testname}.hex ${testname}.dump ${stdin} | grep OUT | ../../utils/show_stdout.py | tee ${testname}.output        
+#        ${pyexec} ../opc6emu.py ${testname}.hex ${testname}.dump ${stdin} | tee ${testname}.trace | grep OUT | ../../utils/show_stdout.py | tee ${testname}.output
+        ${pyexec} ../opc6emu.py ${testname}.hex ${testname}.dump ${stdin} | grep OUT | ../../utils/show_stdout.py | tee ${testname}.output
         if (-e ${testname}.trace ) gzip -f ${testname}.trace &
 
         # Clean up
         if -e {$testname} rm -f ${testname}
         #if -e {$testname}.sial rm -f ${testname}.sial
-    endif     
+    endif
 end
 wait
 
 simulation:
 
 # Run some selected simulations
-rm -rf *~ *sim *trace *vcd *vdump 
+rm -rf *~ *sim *trace *vcd *vdump
 foreach test ( $simlist )
     echo "Simulating Test $test"
     # Test bench expects the hex file to be called 'test.hex'
     cp ${test}.hex test.hex
     # Run icarus verilog to compile the testbench only if there is no stdin file
     iverilog -D_simulation=1 -DNEGEDGE_MEMORY=1 ../opc6tb.v ../opc6cpu.v
-    # -D_dumpvcd=1        
+    # -D_dumpvcd=1
     # Execute the test bench
     ./a.out | tee ${test}.sim
     # Save the results
     if ( -e dump.vcd) then
         mv dump.vcd ${test}.vcd
-    endif            
+    endif
     mv test.vdump ${test}.vdump
 end
 

@@ -46,6 +46,10 @@ OPTIONAL SWITCHES ::
   -n  --noheader            Suppress the standard start up sequence at the head of assembler
                             output
 
+  -o  --optimize            Specify the sial2opc process to make optimizations of the SIAL
+                            source code to better match the OPC target machine. Use of this
+                            option requires the provided header file ext_sial.h which defines
+                            additional opcodes for the SIAL machine.
 
 All output is sent to stdout.
 
@@ -75,6 +79,8 @@ import getopt
 import os
 import re
 import codecs
+
+sialop = dict() 
 
 def showUsageAndExit() :
     print (__doc__)
@@ -187,16 +193,209 @@ def process_syslib(syslib):
         print( ''.join(f.readlines()))
 
 
-def process_sial( sialhdr, sialtext, noheader=False):
-    ## Get the tokens from the sial.h file directly passed as an argument (in case they change again)
-    sialop = {}
-    
+def read_sial_header( sialhdr): 
+    global sialop
     with open(sialhdr,"r") as f:
         for l in f.readlines() :
             line = re.sub("//.*", "", l)
             if not re.match(".*({|}|MANIFEST).*", line):
                 exec( line.strip(), globals(), sialop )
+    return sialop
 
+
+def preprocess_sial( filename):
+    ## Concatenate all SIAL files in order provided into a single text, merging
+    ## split lines
+    text = []
+    for f in filename:
+        with open(f,'r') as fh:
+            prev = ""
+            newline = ""
+            for l in fh.readlines():
+                if not l.startswith("F"):
+                    prev = prev.rstrip() + l                    
+                else:
+                    newline = l
+                    if prev != "":
+                        text.append(prev)
+                    prev = newline
+            # Flush last line
+            text.append(prev)
+    return text
+
+def optimize_sial( sialtext):
+    # Keyhole optimizations of the SIAL code - assume all lines are legal, no blanks and
+    # continuations have been joined together by previous stage.
+    global sialop
+    i = 1
+    prev_line = sialtext[0]
+    prev_fields = None
+    prev_opcode = 0
+
+    # OPT-1: Look for loading/operation to create A, transfer A to B, load new value in A
+    #        Replace with loading/operation to create B, load new value in A
+    for i in range (1,len(sialtext)-1):        
+        line = sialtext[i]
+        fields = line.split()
+        if len(fields)>0 and fields[0].startswith("F"):
+            opcode = int(fields[0][1:])            
+            if opcode in (sialop['f_atbl'],sialop['f_atblp'],sialop['f_atblg']):
+                ## Prev opcode must be non-store, non-jump supporting B dest and/or src/dest reg swap
+                if (sialop['f_lp'] <= prev_opcode <=  sialop['f_lm']) or \
+                   (prev_opcode in (sialop['f_lkp'], sialop['f_lkg'],sialop['f_lstr'])) or \
+                   (sialop['f_and'] <= prev_opcode <= sialop['f_eqv']) or \
+                   (sialop['f_add'] <= prev_opcode <= sialop['f_sub']) or \
+                   (sialop['f_neg'] <= prev_opcode <= sialop['f_abs']) :
+                    print ("# OPT-1a: Found load A followed by B :=A, load A")
+                    print ("#  %s ; %s " % (prev_fields[0], fields[0]))
+                    newopcode = prev_opcode+sialop['b_offset']
+                    ## Fix previous load to target B (r2)
+                    sialtext[i-1] = ' '.join(["F%d" % newopcode] + prev_fields[1:])
+                    ## Fix current load to not affect B (r2)
+                    if opcode == sialop['f_atbl']:
+                        opcode = sialop['f_l']
+                    elif opcode == sialop['f_atblp']:
+                        opcode = sialop['f_lp']
+                    elif opcode == sialop['f_atblg']:
+                        opcode = sialop['f_lg']
+                    sialtext[i] = ' '.join(["F%d" % opcode] + fields[1:])
+            elif opcode == sialop["f_atb"]:
+                ## Next Opcode muxt be load of A, Prev opcode must be non-store, non-jump supporting B dest and/or src/dest reg swap
+                next_fields = sialtext[i+1].split()            
+                next_opcode = int(next_fields[0][1:])
+                if ( sialop['f_lp'] <= next_opcode <= sialop['f_lm'] ) or \
+                   (next_opcode==sialop['f_lkp']) or \
+                   (next_opcode==sialop['f_lkg']):
+                    if ( sialop['f_lp'] <= prev_opcode <=  sialop['f_lm']) or \
+                       (prev_opcode in (sialop['f_lkp'], sialop['f_lkg'],sialop['f_lstr'])) or \
+                       (sialop['f_and'] <= prev_opcode <= sialop['f_eqv']) or \
+                       (sialop['f_add'] <= prev_opcode <= sialop['f_sub']) or \
+                       (sialop['f_neg'] <= prev_opcode <= sialop['f_abs']) :
+                        print ("# OPT-1b: Found A := fn() ; B :=A ; Load A")
+                        print ("#  %s ; %s ; %s" % (prev_fields[0], fields[0], next_fields[0]))
+                        newopcode = prev_opcode+sialop['b_offset']
+                        ## Fix previous load to target B (r2)
+                        sialtext[i-1] = ' '.join(["F%d" % newopcode] + prev_fields[1:])
+                        ## Mark current opcode for deletion
+                        sialtext[i] = ""            
+            prev_line = line
+            prev_fields = fields
+            prev_opcode = opcode
+  
+    # OPT-2: Look for loading A with constant to be used in shift of B by 'A' places
+    prev_line = sialtext[0]
+    prev_fields = None
+    prev_opcode = 0
+    for i in range (1,len(sialtext)):        
+        line = sialtext[i]
+        fields = line.split()
+        if len(fields)>0 and fields[0].startswith("F"):
+            opcode = int(fields[0][1:])            
+            if opcode in (sialop['f_lsh'],sialop['f_rsh']):
+                if prev_opcode == sialop['f_atbl'] and prev_fields[1] == "K1" :                    
+                    print ("# OPT-2a: Found ATB; load constant A + shift by A. Constant = %d" % getnum(prev_fields[1]))
+                    print ("#  %s ; %s " % (prev_fields[0], fields[0]))                    
+                    sialtext[i-1] = ""  
+                    sialtext[i] = "F%d" % (sialop['f_ext_asr_a'] if opcode==sialop["f_rsh"] else sialop['f_ext_asl_a'])
+                elif prev_opcode == sialop['f_l'] and prev_fields[1].startswith("K") and (0<getnum(prev_fields[1])<8):
+                    shift_dist =  getnum(prev_fields[1])
+                    print ("# OPT-2b: Found load constant A + shift B by A. Constant = %d" % shift_dist )
+                    print ("#  %s ; %s " % (prev_fields[0], fields[0]))                    
+                    # First shift is A := B shift by 1
+                    sialtext[i-1] = "F%d" % (sialop['f_ext_asr'] if opcode==sialop["f_rsh"] else sialop['f_ext_asl'])
+                    sialtext[i] = ""
+                    if shift_dist > 1:  # subsequent shifts are A := A shift by 1                         
+                        sialtext[i:i] = ["F%d" % (sialop['f_ext_asr_a'] if opcode==sialop["f_rsh"] else sialop['f_ext_asl_a'])] * (shift_dist-1)
+            prev_line = line
+            prev_fields = fields
+            prev_opcode = opcode
+    
+    # OPT-3: JZ/JNZ/JGE0/JLE0 instructions which follow a load/arithmetic/logical op do not need an additional compare so swap to f_ext_jne0/eq0
+    prev_line = "000"
+    for i in range (2,len(sialtext)-2):
+        line = sialtext[i]
+        fields = line.split()
+        if len(fields)>0 and fields[0].startswith("F"):
+            prev_opcode = int( (prev_line.split())[0][1:] )
+            opcode = int(fields[0][1:])
+            
+            if opcode in (sialop['f_jne0'],sialop['f_jeq0'], sialop['f_jge0'], sialop['f_jls0']):
+                # OK to skip over a STO which will preserve flags
+                if ( sialop['f_sp'] <= prev_opcode <= sialop['f_sl']) :
+                    prev_opcode = int((sialtext[i-2].split())[0][1:])
+                if ( sialop["f_lp"] <= prev_opcode <= sialop["f_lm"]) or \
+                   ( sialop['f_add'] <= prev_opcode <= sialop['f_sub']) or \
+                   ( sialop['f_and'] <= prev_opcode <= sialop['f_eqv']) or \
+                   ( sialop['f_ap'] <= prev_opcode <= sialop['f_s']) :
+                     print ("# OPT-3: Found LOAD A; JNE/JEQ/JLS/JGE ")
+                     print ("#  %s ; %s " % (prev_fields[0], fields[0]))
+                     if opcode == sialop['f_jeq0'] :
+                         newopcode = sialop['f_ext_jeq0'] 
+                     elif opcode == sialop['f_jne0'] :
+                         newopcode = sialop['f_ext_jne0'] 
+                     elif opcode == sialop['f_jls0'] :
+                         newopcode = sialop['f_ext_jls0'] 
+                     elif opcode == sialop['f_jge0'] :
+                         newopcode = sialop['f_ext_jge0'] 
+                     sialtext[i] = ' '.join(["F%d" % newopcode] + fields[1:])
+            prev_line = line
+  
+    # OPT-4 - Swap jump for short jump if target is within N SIAL opcodes
+    for i in range (0,len(sialtext)-1):
+        line = sialtext[i]
+        fields = line.split()
+        intervening_opcodes = set()
+        if len(fields)>0 and fields[0].startswith("F"):
+            opcode = int(fields[0][1:])
+            if ( sialop['f_ext_jeq0'] <= opcode <= sialop['f_ext_jls0']) or \
+               ( sialop['f_jeq'] <= opcode <= sialop['f_jge0']) or opcode==sialop['f_j'] :               
+                target = fields[1]
+                for dist in range (max(-5, -i),10):
+                    if i+dist >= len(sialtext):
+                        dist = 10                    
+                    else:
+                        f = sialtext[i+dist].split()
+                        if dist == 0:
+                            intervening_opcode= set()
+                        if len(f)>1 :
+                            intervening_opcode= int(f[0][1:])
+                            intervening_opcodes.add( intervening_opcode )                            
+                            if intervening_opcode == sialop['f_lab'] and f[1]==target:
+                                break;
+                        
+                for o in intervening_opcodes:
+                    # Known opcodes which generate many words - dont straddle these
+                    if ( o in [ sialop[x] for x in 'f_swl f_swb f_string'.split()] ):
+                        dist = -100
+    
+                short = ( -4 <= dist <= 5)
+                if short :
+                    print ("# OPT-4: Changing jump to short jump, distance %d SIAL opcodes" % dist)
+                    if opcode == sialop['f_ext_jeq0'] :
+                        newopcode = sialop['f_ext_sjeq0'] 
+                    elif opcode == sialop['f_ext_jne0'] :
+                        newopcode = sialop['f_ext_sjne0'] 
+                    elif opcode == sialop['f_ext_jls0'] :
+                        newopcode = sialop['f_ext_sjls0'] 
+                    elif opcode == sialop['f_ext_jge0'] :
+                        newopcode = sialop['f_ext_sjge0']
+                    elif sialop['f_jeq'] <= opcode <= sialop['f_jge0']:
+                        newopcode = opcode + sialop['sj_offset']
+                    elif sialop['f_j'] == opcode:
+                        newopcode = opcode + sialop['sj_offset']                                
+                    sialtext[i] = ' '.join(["F%d" % newopcode] + fields[1:])
+                else:
+                    print ("# OPT-4: Failed to Change jump to short jump, distance %d SIAL opcodes out of range" % dist)                        
+                    
+          
+    newtext = []
+    for i in sialtext:
+        if i != "":
+            newtext.append(i)
+    return newtext
+
+def process_sial(sialtext):
+    global sialop
     sectionname = ""
     functionname = "" 
     firstlabel = False
@@ -210,37 +409,50 @@ def process_sial( sialhdr, sialtext, noheader=False):
         fields = line.split()
         if len(fields)>0 and i.startswith("F"):
             opcode = int(fields[0][1:])
+
+            if opcode >= sialop['b_offset']:
+                dest_r = "r2"                
+                src_r = "r1"
+                unarysrc_r = "r1"
+                opcode  = opcode - sialop['b_offset']
+            else:
+                dest_r = "r1"
+                unarysrc_r = "r1"                
+                src_r = "r2"
+                            
             if opcode == sialop['f_section'] :    # section   Kn C1 ... Cn         Name of section
                 sectionname = getstring(fields[1:])
                 code("","Section - %s" % sectionname)            
             elif opcode == sialop['f_lp'] :       # lp        Pn         a := P!n 
-                code("ld r1,r11,%d" % getnum(fields[1]), line)
+                code("ld %s,r11,%d" % (dest_r, getnum(fields[1])), line)
             elif opcode == sialop['f_lg'] :       # lg        Gn         a := G!n 
-                code("ld r1,r12,%d" % getnum(fields[1]), line)
+                code("ld %s,r12,%d" % (dest_r, getnum(fields[1])), line)
             elif opcode == sialop['f_ll'] :       # ll        Ln         a := !Ln
-                code("ld r1,r0,%s" % fields[1], line)            
+                code("ld %s,r0,%s" % (dest_r, fields[1]), line)            
             elif opcode == sialop['f_llp'] :      # llp       Pn         a := @ P!n
-                code("mov r1, r11, %d" % getnum(fields[1]), line)
+                code("mov %s, r11, %d" % (dest_r, getnum(fields[1])), line)
             elif opcode == sialop['f_llg'] :      # llg       Gn         a := @ G!n
-                code("mov r1, r12, %d" % getnum(fields[1]), line)
+                code("mov %s, r12, %d" % (dest_r, getnum(fields[1])), line)
             elif opcode == sialop['f_lll'] :      # lll       Ln         a := @ !Ln [ie address of label Ln]
-                code("mov r1, r0, %s" % fields[1], line)
+                code("mov %s, r0, %s" % (dest_r, fields[1]), line)
             elif opcode in (sialop['f_lf'],sialop['f_lw']):# lf or lw   Ln        a := byte or word address of Ln [using word address for both]
-                code("mov r1,r0,%s" % fields[1],  line)
+                code("mov %s,r0,%s" % (dest_r, fields[1]),  line)
             elif opcode == sialop['f_l'] :        # l         Kn         a := n
                 n =  getnum(fields[1])
                 if ( n == 0 ):
-                    code("mov r1,r0", line)                                
+                    code("mov %s,r0" % (dest_r), line)                                
                 else:
-                    code("mov r1,r0,%d" % n, line)            
+                    code("mov %s,r0,%d" % (dest_r, n), line)            
+
             elif opcode == sialop['f_lm'] :       # lm        Kn         a := - n 
-                code("mov r1,r0,%d" % -getnum(fields[1]), line)
+                code("mov %s,r0,%d" % (dest_r, -getnum(fields[1])), line)
             elif opcode == sialop['f_sp'] :       # sp        Pn         P!n := a
-                code("sto r1,r11,%d" % getnum(fields[1]), line)
+                code("sto %s,r11,%d" % (dest_r, getnum(fields[1])), line)
             elif opcode == sialop['f_sg'] :       # sg        Gn         G!n := a
-                code("sto r1,r12,%d" % getnum(fields[1]), line)
+                code("sto %s,r12,%d" % (dest_r, getnum(fields[1])), line)
             elif opcode == sialop['f_sl'] :       # sl        Ln         !Ln := a
-                code("sto r1,r0,%s" % fields[1], line)
+                code("sto %s,r0,%s" % (dest_r, fields[1]), line)
+
             elif opcode == sialop['f_ap'] :       # ap        Pn         a := a + P!n
                 code("ld r4,r11,%d" % getnum(fields[1]), line)   
                 code("add r1,r4")
@@ -273,9 +485,9 @@ def process_sial( sialhdr, sialtext, noheader=False):
                 else:
                     code("ld r4,%s,%d" % (pointer_reg, n), line)                    
                 if ( k == 0 ):
-                    code("ld r1,r4")
+                    code("ld %s,r4" % dest_r)
                 else:
-                    code("ld r1,r4,%d" % k)
+                    code("ld %s,r4,%d" % (dest_r, k))
             elif opcode == sialop['f_st'] :       # !a := b
                 code("sto r2,r1", line)
             elif opcode == sialop['f_stp'] :      # stp       Pn           P!n!a := b
@@ -329,21 +541,25 @@ def process_sial( sialhdr, sialtext, noheader=False):
                 code("mov r1, r2")
                 code("mov r2, r4")
             elif opcode == sialop['f_and']:      # and                  a := b & a
-                code("and r1,r2", line)            
+                code("and %s,%s" % (dest_r, src_r), line)            
             elif opcode == sialop['f_or'] :       # or                   a := b | a
-                code("or r1,r2", line)            
+                code("or %s,%s" % (dest_r, src_r), line)            
             elif opcode == sialop['f_xor'] :      # xor                  a := b ^ a
-                code("xor r1,r2", line)            
+                code("xor %s,%s" % (dest_r, src_r), line)            
             elif opcode == sialop['f_eqv'] :      # eqv                  a := !(b ^ a)
-                code("xor r1,r2", line)            
-                code("not r1,r1")
-            elif opcode == sialop['f_neg'] :      # neg                  a := -a
-                code("not r1,r1,-1", line)            
-            elif opcode == sialop['f_not'] :      # not                  a := ~ a
-                code("not r1,r1", line)            
-            elif opcode == sialop['f_abs'] :      # abs                  a := ABS a
-                code("not r4,r1,-1", line)   # 2's complement A
-                code("pl.mov r1,r4")         # if positive then get the positive version
+                code("xor %s,%s" % (dest_r, src_r), line)            
+                code("not %s,%s" % (dest_r, dest_r))
+            elif opcode == sialop['f_neg'] :      # neg                  a := -a [b := -a]
+                code("not %s,%s,-1" % (dest_r, unarysrc_r), line)            
+            elif opcode == sialop['f_not'] :      # not                  a := ~ a [b := ~a]
+                code("not %s,%s" % (dest_r, unarysrc_r), line)            
+            elif opcode == sialop['f_abs'] :      # abs                  a := ABS a                
+                if ( dest_r == unarysrc_r):
+                    code("not r4,%s,-1" % unarysrc_r, line)   # 2's complement A                                        
+                    code("pl.mov %s,r4" % dest_r)             # if positive then get the positive version
+                else:   ## b := ABS a  or c := ABS a
+                    code("not %s,%s,-1" % dest_r, unarysrc_r, line)   # 2's complement A into dest                                                       
+                    code("mi.mov %s,%s" % dest_r, unarysrc_r)         # if negative then get the original instead
             elif opcode in (sialop['f_lsh'],sialop['f_rsh']):
                 # lsh                  a := b << a            
                 # rsh                  a := b >> a
@@ -358,6 +574,15 @@ def process_sial( sialhdr, sialtext, noheader=False):
                 code("nz.inc pc,_L%04d - PC" % localcounter) # PC op preserves Z flag from dec r4
                 code("_L%04d:" % (localcounter+1))
                 localcounter += 2
+            elif opcode == sialop['f_ext_asl']: # f_ext_asl=      175    //  a := b << 1
+                code("mov r1,r2", line)
+                code("add r1,r1")
+            elif opcode == sialop['f_ext_asr']: # f_ext_asl=      175    //  a := b >> 1
+                code("asr r1,r2")
+            elif opcode == sialop['f_ext_asl_a']: # f_ext_asl_a=      177    //  a := a << 1
+                code("add r1,r1", line)
+            elif opcode == sialop['f_ext_asr_a']: # f_ext_asr_a=      178    //  a := a >> 1
+                code("asr r1,r1", line)
             elif opcode == sialop['f_atbl'] :     # atbl      Kk         b := a; a := k
                 n = getnum(fields[1])
                 code("mov r2,r1", line)
@@ -372,7 +597,7 @@ def process_sial( sialhdr, sialtext, noheader=False):
                 code("mov r2,r1")
                 code("ld r1,r12,%d" % getnum(fields[1]), line)                        
             elif opcode == sialop['f_lab'] :      # lab       Lm         Program label
-                code("%s:" % fields[1])
+                code("%s:" % fields[1], line)
                 if firstlabel:
                     ## Got here with an OPC jsr 
                     code("sto r11,r3")   # C!0 := P
@@ -382,7 +607,7 @@ def process_sial( sialhdr, sialtext, noheader=False):
                     code("sto r1,r11,3") # P!3 = first argument                
                     firstlabel=False
             elif opcode == sialop['f_lstr'] :     # lstr      Mn                   a := Mn   (pointer to string)
-                code("mov r1,r0,%s" % fields[1], line)
+                code("mov %s,r0,%s" % (dest_r, fields[1]), line)
             elif opcode == sialop['f_entry'] :    # entry     Kn C1 ... Cn         Start of a function
                 functionname = getstring(fields[1:])
                 code("","Module Entry - %s" % functionname)
@@ -392,43 +617,97 @@ def process_sial( sialhdr, sialtext, noheader=False):
                     print("__start:")                   
                 firstlabel = True
             elif opcode == sialop['f_j'] :       # j        Ln         Jump to Ln 
-                code("mov pc,r0,%s" % fields[1])
+                code("mov pc,r0,%s" % fields[1], line)
+            elif opcode == sialop['f_sj'] :       # j        Ln         Jump to Ln 
+                code("inc pc,%s-PC" % fields[1], line)
             elif opcode == sialop['f_jeq'] :     # jeq      Ln         Jump to Ln if a == b
                 code("cmp r1,r2",line)
                 code("z.mov pc,r0,%s" % fields[1])
+            elif opcode == sialop['f_sjeq'] :     # jeq      Ln         Jump to Ln if a == b
+                code("cmp r1,r2",line)
+                code("z.inc pc,%s-PC" % fields[1])
             elif opcode == sialop['f_jne'] :     # jne      Ln         Jump to Ln if a != b
                 code("cmp r1,r2",line)
                 code("nz.mov pc,r0,%s" % fields[1])
+            elif opcode == sialop['f_sjne'] :     # jne      Ln         Jump to Ln if a != b
+                code("cmp r1,r2",line)
+                code("nz.inc pc,%s-PC" % fields[1])
             elif opcode == sialop['f_jge'] :     # jge      Ln         Jump to Ln if b >= a 
                 code("cmp r2,r1",line)
                 code("pl.mov pc,r0,%s" % fields[1])
+            elif opcode == sialop['f_sjge'] :     # jge      Ln         Jump to Ln if b >= a 
+                code("cmp r2,r1",line)
+                code("pl.inc pc,%s-PC" % fields[1])
             elif opcode == sialop['f_jgr'] :     # jgr      Ln         Jump to Ln if b > a [ ie a < b ] 
                 code("cmp r1,r2",line)
                 code("mi.mov pc,r0,%s" % fields[1])
+            elif opcode == sialop['f_sjgr'] :     # jgr      Ln         Jump to Ln if b > a [ ie a < b ] 
+                code("cmp r1,r2",line)
+                code("mi.inc pc,%s-PC" % fields[1])
             elif opcode == sialop['f_jgr0'] :     # jgr0      Ln       Jump to Ln if a > 0  [ie if 0 < a]
                 code("cmp r0,r1",line)
                 code("mi.mov pc,r0,%s" % fields[1])
+            elif opcode == sialop['f_sjgr0'] :     # jgr0      Ln       Jump to Ln if a > 0  [ie if 0 < a]
+                code("cmp r0,r1",line)
+                code("mi.inc pc,%s-PC" % fields[1])
             elif opcode == sialop['f_jle'] :     # jle      Ln         Jump to Ln if b <= a [ie a >= b]
                 code("cmp r1,r2",line)
                 code("pl.mov pc,r0,%s" % fields[1])
+            elif opcode == sialop['f_sjle'] :     # jle      Ln         Jump to Ln if b <= a [ie a >= b]
+                code("cmp r1,r2",line)
+                code("pl.inc pc,%s-PC" % fields[1])
             elif opcode == sialop['f_jls'] :     # jls      Ln         Jump to Ln if b < a 
                 code("cmp r2,r1",line)
                 code("mi.mov pc,r0,%s" % fields[1])
+            elif opcode == sialop['f_sjls'] :     # jls      Ln         Jump to Ln if b < a 
+                code("cmp r2,r1",line)
+                code("mi.inc pc,%s-PC" % fields[1])
             elif opcode == sialop['f_jeq0'] :     # jeq0      Ln         Jump to Ln if a == 0
                 code("cmp r1,r0",line)
                 code("z.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_jge0'] :     # jge0      Ln         Jump to Ln if a >= 0
+            elif opcode == sialop['f_sjeq0'] :     # jeq0      Ln         Jump to Ln if a == 0
                 code("cmp r1,r0",line)
-                code("pl.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_jls0'] :     # jls0      Ln         Jump to Ln if a < 0
-                code("cmp r1,r0",line)
-                code("mi.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_jle0'] :     # jle0      Ln         Jump to Ln if a <= 0 [or 0>=a]
-                code("cmp r0,r1",line)
-                code("pl.mov pc,r0,%s" % fields[1])
+                code("z.inc pc,%s-PC" % fields[1])
+            elif opcode == sialop['f_ext_jeq0'] :     # jeq0      Ln         Jump to Ln if a == 0
+                code("z.mov pc,r0,%s" % fields[1], line)
+            elif opcode == sialop['f_ext_sjeq0'] :     # jeq0      Ln         Jump to Ln if a == 0
+                code("z.inc pc,%s-PC" % fields[1], line)
             elif opcode == sialop['f_jne0'] :     # jne0      Ln         Jump to Ln if a != 0
                 code("cmp r1,r0",line)
                 code("nz.mov pc,r0,%s" % fields[1])
+            elif opcode == sialop['f_sjne0'] :     # jne0      Ln         Jump to Ln if a != 0
+                code("cmp r1,r0",line)
+                code("nz.inc pc,%s-PC" % fields[1])
+            elif opcode == sialop['f_ext_jne0'] :     # jne0      Ln         Jump to Ln if a != 0
+                code("nz.mov pc,r0,%s" % fields[1], line)
+            elif opcode == sialop['f_ext_sjne0'] :     # jne0      Ln         Jump to Ln if a != 0
+                code("nz.inc pc,%s-PC" % fields[1], line)
+            elif opcode == sialop['f_jge0'] :     # jge0      Ln         Jump to Ln if a >= 0
+                code("cmp r1,r0",line)
+                code("pl.mov pc,r0,%s" % fields[1])
+            elif opcode == sialop['f_sjge0'] :     # jge0      Ln         Jump to Ln if a >= 0
+                code("cmp r1,r0",line)
+                code("pl.inc pc,%s-PC" % fields[1])
+            elif opcode == sialop['f_ext_jge0'] :     # jge0      Ln         Jump to Ln if a >= 0
+                code("pl.mov pc,r0,%s" % fields[1])
+            elif opcode == sialop['f_ext_sjge0'] :     # jge0      Ln         Jump to Ln if a >= 0
+                code("pl.inc pc,%s-PC" % fields[1])
+            elif opcode == sialop['f_jls0'] :     # jls0      Ln         Jump to Ln if a < 0
+                code("cmp r1,r0",line)
+                code("mi.mov pc,r0,%s" % fields[1])
+            elif opcode == sialop['f_sjls0'] :     # jls0      Ln         Jump to Ln if a < 0
+                code("cmp r1,r0",line)
+                code("mi.inc pc,%s-PC" % fields[1])
+            elif opcode == sialop['f_ext_jls0'] :     # jls0      Ln         Jump to Ln if a < 0
+                code("mi.mov pc,r0,%s" % fields[1])
+            elif opcode == sialop['f_ext_sjls0'] :     # jls0      Ln         Jump to Ln if a < 0
+                code("mi.inc pc,%s-PC" % fields[1])
+            elif opcode == sialop['f_jle0'] :     # jle0      Ln         Jump to Ln if a <= 0 [or 0>=a]
+                code("cmp r0,r1",line)
+                code("pl.mov pc,r0,%s" % fields[1])
+            elif opcode == sialop['f_sjle0'] :     # jle0      Ln         Jump to Ln if a <= 0 [or 0>=a]
+                code("cmp r0,r1",line)
+                code("pl.inc pc,%s-PC" % fields[1])
             elif opcode == sialop['f_ip'] :      # ip        Pn           a := P!n + a; P!n := a
                 code("ld r4,r11,%d" % getnum(fields[1]) ,line)
                 code("add r1,r4")
@@ -469,11 +748,14 @@ def process_sial( sialhdr, sialtext, noheader=False):
             elif opcode == sialop['f_mul'] :     # xmul                 a := a * b
                 code("jsr r13,r0,__mul", line)     # need to have signed multiplication routine here for a * b
             elif opcode == sialop['f_add'] :     # add                  a := a + b
-                code("add r1,r2", line)     
-            elif opcode == sialop['f_sub'] :     # sub                  a := b - a
-                code("sub r1,r2", line)
-                code("not r1,r1,-1")
-            elif opcode == sialop['f_xsub'] :    # xsub                 a := a - b  c := ??
+                code("add %s,%s" % (dest_r, src_r), line)     
+            elif opcode == sialop['f_sub'] :     # sub                  a := b - a  [b := b - a]
+                if dest_r == "r1":
+                     code("sub r1,r2", line)
+                     code("not r1,r1,-1")
+                else:
+                     code("sub r2,r1", line)
+            elif opcode == sialop['f_xsub'] :    # xsub                 a := a - b  c := ?? 
                 code("sub r1,r2", line)
             elif opcode == sialop['f_xdiv'] :     # xdiv                 a := a / b
                 code("jsr r13,r0,__div", line)     # need to have signed division routine here for a/b
@@ -490,62 +772,49 @@ def process_sial( sialhdr, sialtext, noheader=False):
             elif opcode in ( sialop['f_eq'], sialop['f_ne'], sialop['f_eq0'], sialop['f_ne0']) :
                 # f_eq     a := b = a
                 # f_ne     a := b != a
-                # f_eq0    a := b = 0
-                # f_ne0    a := b != 0
+                # f_eq0    a := a = 0
+                # f_ne0    a := a != 0
                 reference_reg = 'r0' if opcode in ( sialop['f_eq0'], sialop['f_ne0']) else 'r2'
-                # Do not-equal case first
-                code("not r4,r0", line)                   # r4 <- all 1s
                 code("sub r1,%s" % reference_reg)         # subtract reference from r1
-                code("nz.mov r1,r4")                      # If not zero then answer is all 1's (else r1 already zero)
+                code("nz.mov r1,r0,0xFFFF")               # If not zero then answer is all 1's (else r1 already zero)
                 if opcode in (sialop['f_eq'], sialop['f_eq0']) :
                     code("not r1,r1")                     # invert answer for equal case
 
-            elif opcode == sialop['f_ls'] :           # ls                     a := b < a  [ie !(b >= a)]
-                code ("not r4,r0", line)   # assume answer will be TRUE
-                code ("cmp r2,r1")         # compare b with a
-                code ("pl.xor r4,r0,0xFFFF") # invert answer if b >= a
-                code ("mov r1, r4")        # transfer answer to A                    
+            elif opcode == sialop['f_ls'] :  # ls                     a := b < a  [ie !(b >= a)]
+                code ("cmp r2,r1")            # compare b with a
+                code ("c.mov r1,r0")          # Carry set if b>= a so return zero
+                code ("nc.mov r1,r0,0xFFFF")  # Carry not set if b < a so return true
             elif opcode == sialop['f_gr'] :           # ls                     a := b > a  [ie !(a >= b)]
-                code ("not r4,r0", line)   # assume answer will be TRUE
-                code ("cmp r1,r2")         # compare a with b
-                code ("pl.xor r4,r0,0xFFFF") # invert answer if a >= b
-                code ("mov r1, r4")        # transfer answer to A                   
+                code ("cmp r1,r2")         
+                code ("c.mov r1,r0")          # C set if a >= b, answer = FALSE
+                code ("nc.mov r1,r0,0xFFFF")  # C not set if b < a, answer = TRUE
             elif opcode == sialop['f_le'] :           # ls                     a := b <= a  [ie !(a<b)]
-                code ("not r4,r0", line)   # assume answer will be TRUE
                 code ("cmp r1,r2")         # compare a with b
-                code ("mi.xor r4,r0,0xFFFF") # invert answer if a < b
-                code ("mov r1, r4")        # transfer answer to A                   
+                code ("c.mov r1,r0")       # C set if a < b zero answer if a < b
+                code ("nc r1, r0,0xFFFF")   
             elif opcode == sialop['f_ge'] :           # ge                     a := b >= a  
-                code ("not r4,r0", line)   # assume answer will be TRUE
-                code ("cmp r2,r1")         # compare b with a
-                code ("mi.xor r4,r0,0xFFFF") # invert answer if b < a
-                code ("mov r1, r4")        # transfer answer to A                               
-            elif opcode in ( sialop['f_ge0'], sialop['f_ls0']) :
-                # f_ge0     a := a >= 0
-                # f_ls0     a := a < 0
-                # Do  >=  case first
-                code("mov r4,r0", line)                   # answer = r4 <- all 0s
-                code("cmp r1,r0")                         # subtract reference from r1
-                code("pl.mov r4,r0,0xFFFF")               # If positive then invert answer is all 1's 
-                if opcode == sialop['f_ge0']:
-                    code("mov r1,r4")                     # return answer for a >= 0
-                else:
-                    code("not r1,r4")                     # invert answer for a < 0
-            elif opcode in ( sialop['f_le0'], sialop['f_gr0']) :
-                # f_gr0     a := a > 0
-                # f_le0     a := a <= 0 [ie 0 >= a]
-                # Do  <=  case first
-                code("mov r4,r0", line)                   # answer = r4 <- all 0s
-                code("cmp r0,r1")                         # subtract r1 from reference 
-                code("pl.mov r4,r0,0xFFFF")               # If positive then answer is all 1's 
-                if opcode == sialop['f_ge0']:
-                    code("mov r1,r4")                     # return answer for 0 >= a
-                else:
-                    code("not r1,r4")                     # invert answer fors a > 0 
-                    
-            elif opcode == sialop['f_rtn'] :      # procedure return
-                code("ld r4,r11,1", line) # get return address
-                code("ld r11,r11")        # restore P pointer
+                code ("cmp r2,r1")          # compare b with a
+                code ("c.mov r1,r0,0xFFFF") # C set if b >= a so return true
+                code ("nc.mov r1, r0")      # C not set if b < a so return false
+            elif opcode == sialop['f_ge0'] :           # ge0                     a := a >= 0  [ ie !(0 >a) ]
+                code ("cmp r1,r0")          
+                code ("c.mov r1,r0,0xFFFF") # C set if a >= 0 so return true
+                code ("nc.mov r1, r0")      # C not set if 0 < a so return false
+            elif opcode == sialop['f_ls0'] :           # ls0                     a := a < 0  [ ie !(0 <= a) ]
+                code ("cmp r1,r0")           
+                code ("nc.mov r1,r0,0xFFFF") # Carry not set if a < 0, so return all 1's = TRUE       
+                code ("c.mov r1,r0")         # Else carry set if a >= 0 so return all 0's = FALSE
+            elif opcode == sialop['f_le0'] :           # le0                     a := a <= 0  
+                code ("cmp r0,r1")         
+                code ("c.mov r1,r0,0xFFFF")      
+                code ("nc.mov r1,r0")
+            elif opcode == sialop['f_gr0'] :           # gr0                     a := a > 0  [ ie !(0 >= a) ]
+                code ("cmp r0,r1")         # compare 0 with a
+                code ("c.mov r1,r0")       # C set if 0 >= a, return false
+                code ("nc.mov r1,r0,0xFFFF") # C not set if 0<a. return true
+            elif opcode == sialop['f_rtn'] : # procedure return
+                code("ld r4,r11,1", line)  # get return address
+                code("ld r11,r11" )        # restore P pointer
                 code("mov pc,r4")          # return
             elif opcode == sialop['f_static'] :   # static    Ln Kk W1 ... Wk      Static variable or table
                 code("%s: WORD %s" % (fields[1], ','.join( [("%s"%getnum(i)) for i in fields[3:]])), line)
@@ -609,7 +878,6 @@ def process_sial( sialhdr, sialtext, noheader=False):
 
 
 if __name__ == "__main__" :     
-
     sialtext = []
     filename = []
     sialhdr = "" 
@@ -617,10 +885,11 @@ if __name__ == "__main__" :
         sialhdr = os.path.join(os.environ['BCPLHDRS'],'sial.h')
 
     syslib = ""
+    optimize = False
     noheader = False
 
     try:
-        opts, args = getopt.getopt( sys.argv[1:], "f:g:s:nh", ["filename=","sialhdr=","syslib=","noheader", "help"])
+        opts, args = getopt.getopt( sys.argv[1:], "f:g:s:noh", ["filename=","sialhdr=","syslib=","noheader", "opt","help"])
     except getopt.GetoptError:
         showUsageAndExit()
     for opt, arg in opts:
@@ -632,39 +901,29 @@ if __name__ == "__main__" :
             syslib = arg
         elif ( opt in ("-n", "--noheader")):
             noheader = True
+        elif ( opt in ("-o", "--opt")):
+            optimize = True            
         elif ( opt in ("-h", "--help")):
             showUsageAndExit()
 
     if len(filename) == 0 or sialhdr=="":
-        showUsageAndExit()
+        showUsageAndExit()        
     for f in filename + [sialhdr] + [syslib] :
-        if ( not os.path.exists(f) ):
+        if ( f and not os.path.exists(f) ):
             print("Error - cannot open file %s" %f )
             sys.exit(1)
 
-    ## Concatenate all SIAL files in order provided into a single text, merging
-    ## split lines
-    text = []
-    for f in filename:
-        with open(f,'r') as fh:
-            prev = ""
-            newline = ""
-            for l in fh.readlines():
-                if not l.startswith("F"):
-                    prev = prev.rstrip() + l                    
-                else:
-                    newline = l
-                    if prev != "":
-                        sialtext.append(prev)
-                    prev = newline
-            # Flush last line
-            sialtext.append(prev)
+    read_sial_header( sialhdr )            
 
-    if not noheader:
-        print_header()
+    sialtext = preprocess_sial( filename )
+
+    if optimize:
+        sialtext = optimize_sial( sialtext)
         
+    if not noheader:
+        print_header()           
     ## Process the SIAL text and create the global vector data
-    (global_vector, gv_hightide) = process_sial(sialhdr, sialtext, noheader)
+    (global_vector, gv_hightide) = process_sial(sialtext)
     ## Include the syslib assember verbatim in the output
     if syslib != "":
         process_syslib(syslib)
