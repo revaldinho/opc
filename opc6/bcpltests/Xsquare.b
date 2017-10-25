@@ -19,7 +19,7 @@ LET start() BE
    
   FOR i = 0 TO Xtabupb DO Xtab!i := 0
 
-  FOR i = 1 TO 1000 DO
+  FOR i = 1 TO 200 DO  // was 10000
   { LET sum, Xsqx10 = 0, ?
     FOR i = 0 TO 9 DO tab!i := 0
     FOR i = 1 TO digits DO { LET dig = randno(10) - 1
