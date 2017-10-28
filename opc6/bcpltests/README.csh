@@ -17,11 +17,9 @@ else
     set pyexec = pypy3
 endif
 
-set testnames = ( empty Leval ack acoding anseq apfel enig enigma-m3 evale fact fft16 growth hello invert kext kperms lambda modarith monbfns pi-spigot-bcpl queens shell23 )
-
+set testnames = ( empty Leval ack acoding anseq apfel enig enigma-m3 evale fact fft16 growth hello invert kext kperms lambda modarith monbfns pi-spigot-bcpl queens shell23 splay tag Xsquare )
 # NB cannot simulate tests needing stdin currently = enigma-m3
-set simlist = ( Leval ack acoding anseq apfel enig evale fact fft16 growth hello invert kext kperms lambda modarith monbfns pi-spigot-bcpl queens shell23 )
-
+set simlist = ( Leval ack acoding anseq apfel enig evale fact fft16 growth hello invert kext kperms lambda modarith monbfns pi-spigot-bcpl queens shell23 splay tag Xsquare )
 # Clean up first
 rm *tmp* *lst *dump *output *trace *hex  *trace.gz *sasm
 
