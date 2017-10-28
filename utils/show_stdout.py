@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 '''
- show_stdout.py -f <filename> [-m] [ -adr num ]  
+ show_stdout.py -f <filename> [-m] [ -adr num ]  [-opc7]
 
 OR
 
- cat <filename> | show_stdout.py [-m] [-adr num] 
+ cat <filename> | show_stdout.py [-m] [-adr num] [-opc7]
 
 Process an OPC trace file from emulation to create a stdout type file from
 data sent to the specified output port or memory address.
@@ -26,11 +26,16 @@ def showUsageAndExit() :
     print (__doc__)
     sys.exit(2)
 
-def process_file(filename, adr=-1, mem_not_io=False):
-
-    adrstr = '0x.*?' if adr==-1 else '0x%04x' % adr
+def process_file(filename, adr=-1, mem_not_io=False, opc7=False):
     iostr = 'STORE' if mem_not_io else 'OUT'
-    stdout_re = re.compile("\s*?%s:\s*Address : %s .*?Data : 0x.*? \(\s*?(\d*)\).*?" % (iostr,adrstr))
+    if opc7:
+        adrstr = '0x.*?' if adr==-1 else '0x%04x' % adr
+        stdout_re = re.compile("\s*?%s :\s*Address : %s .*?Data : 0x.*? \(\s*?(\d*)\).*?" % (iostr,adrstr))        
+    else:
+        adrstr = '0x.*?' if adr==-1 else '0x%05x' % adr
+        stdout_re = re.compile("\s*?%s:\s*Address : %s .*?Data : 0x.*? \(\s*?(\d*)\).*?" % (iostr,adrstr))
+
+
     try:
         if filename =="":
             f = sys.stdin
@@ -52,8 +57,9 @@ if __name__ == '__main__':
     filename = ""
     adr = -1
     mem_not_io = False
+    opc7 = False
     try:
-        opts, args = getopt.getopt( sys.argv[1:], "f:a:mh", ["filename=","adr=","memory", "help"])
+        opts, args = getopt.getopt( sys.argv[1:], "f:a:mh7", ["filename=","adr=","memory", "opc7", "help"])
     except getopt.GetoptError:
         showUsageAndExit()
     for opt, arg in opts:
@@ -61,6 +67,8 @@ if __name__ == '__main__':
             filename = arg
         elif opt in ( "-a", "--adr" ) :
             adr = int(arg,0)
+        elif opt in ( "-7", "--opc7" ) :
+            opc7= True
         elif opt in ( "-m", "--memory" ) :
             mem_not_io = True
         elif opt in ( "-h","--help" ) :            
@@ -72,5 +80,5 @@ if __name__ == '__main__':
         print("Error: cannot find file %s" % filename)
         sys.exit(2)
 
-    process_file(filename, adr, mem_not_io)
+    process_file(filename, adr, mem_not_io, opc7)
 
