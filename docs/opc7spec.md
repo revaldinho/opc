@@ -66,7 +66,7 @@ handling.
 Instruction Set
 ---------------
 
-![alt text](https://revaldinho.github.io/opc/opc7_instruction_set.png "OPC7 Instruction Set")
+![OPC7 Instruction Set](./opc7_instruction_set.png)
 
 Notes:
 
