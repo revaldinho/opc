@@ -1,20 +1,18 @@
-module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input clken,
-               output vpa,output vda,output vio,output[31:0] dout,output[19:0] address,output rnw);    
+module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input clken,output vpa,output vda,output vio,output[31:0] dout,output[19:0] address,output rnw);    
   parameter MOV=5'h0,MOVT=5'h1,XOR=5'h2,AND=5'h3,OR=5'h4,NOT=5'h5,CMP=5'h6,SUB=5'h7,ADD=5'h8,BROT=5'h9,ROR=5'hA,LSR=5'hB,JSR=5'hC,ASR=5'hD,ROL=5'hE;
   parameter HLT=5'h10,RTI=5'h11,PPSR=5'h12,GPSR=5'h13,OUT=5'h18,IN=5'h19,STO=5'h1A,LD=5'h1B,LJSR=5'h1C,LMOV=5'h1D,LSTO=5'h1E,LLD=5'h1F;
   parameter FET=3'h0,EAD=3'h1,RDM=3'h2,EXEC=3'h3,WRM=3'h4,INT=3'h5;
   parameter EI=3,S=2,C=1,Z=0,P0=31,P1=30,P2=29,INT_VECTOR0=20'h2,INT_VECTOR1=20'h4;
-  reg [19:0]  PC_q,PCI_q;  
-  reg [31:0]  OR_q,result; (* RAM_STYLE="DISTRIBUTED" *)
-  reg [31:0]  RF_q[14:0], RF_pipe_q;
-  reg [2:0]   FSM_q;
-  reg [3:0]   swiid,PSRI_q,dst_q,src_q;
+  reg [19:0]  PC_q,PCI_q;(* RAM_STYLE="DISTRIBUTED" *)
+  reg [31:0]  RF_q[14:0], RF_pipe_q, OR_q,result;
   reg [7:0]   PSR_q;
-  reg [4:0]   IR_q; 	   
+  reg [4:0]   IR_q;
+  reg [3:0]   swiid,PSRI_q,dst_q,src_q;  
+  reg [2:0]   FSM_q;
   reg         zero,carry,sign,enable_int,reset_s0_b,reset_s1_b,subnotadd_q;
   wire        pred_d        = (din[P2] ^ (din[P1]?(din[P0] ? sign : zero): (din[P0] ? carry : 1)));  // New data,new flags (in exec/fetch)    
   wire        pred_din      = (din[P2] ^ (din[P1]?(din[P0]?PSR_q[S]:PSR_q[Z]):(din[P0]?PSR_q[C]:1)));// New data,old flags (in fetch)
-  wire [31:0] RF_sout       = (src_q==4'hF)? {12'b0,PC_q} : RF_q[src_q] & {32{(|src_q)}};    
+  wire [31:0] RF_sout       =  {32{(|src_q)&&IR_q[4:2]!=3'b111}} & ((src_q==4'hF)? {12'b0,PC_q} : RF_q[src_q]);
   assign {rnw,dout,address} = {!(FSM_q==WRM), RF_pipe_q,(FSM_q==WRM||FSM_q==RDM)? OR_q[19:0] : PC_q};
   assign {vpa,vda,vio}      = {((FSM_q==FET)||(FSM_q==EXEC)),({2{(FSM_q==RDM)||(FSM_q==WRM)}}&{!((IR_q==IN)||(IR_q==OUT)),(IR_q==IN)||(IR_q==OUT)})};    
   always @( * ) begin
@@ -44,10 +42,8 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
           WRM    : FSM_q <= (!(&int_b) & PSR_q[EI])?INT:FET;                  
           default: FSM_q <= (FSM_q==RDM)? EXEC : FET;  
         endcase            
-        if ((FSM_q==FET)||(FSM_q==EXEC)) begin
-          {IR_q, dst_q} <= din[28:20] ;
-          src_q <= (din[28:26]==3'b111)?4'b0:din[19:16]; // Zero raddr address for imm20
-        end
+        if ((FSM_q==FET)||(FSM_q==EXEC))
+          {IR_q, dst_q, src_q} <= din[28:16] ;
         else if (FSM_q==EAD & IR_q==CMP )
           dst_q <= 4'b0; // Zero dest address after reading it in EAD for CMP operations                 
         OR_q  <= (FSM_q==RDM)?din: (FSM_q==EAD) ? (RF_sout+OR_q) ^ {32{(IR_q==SUB)||(IR_q==CMP)}}:{(din[28:26]==3'b111)?{12'b0,din[19:16]}:{16{din[15]}}, din[15:0]};
