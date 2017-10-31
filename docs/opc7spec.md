@@ -1,7 +1,7 @@
 OPC7 Definition
 -----------------
 
-OPC-32 a pure 16 bit [One Page Computer](.) with a 16 entry register file based very largely on the earlier
+OPC-7 is a pure 32 bit [One Page Computer](.) with a 16 entry register file based very largely on the earlier
 OPC-5LS machine.
 
 All memory accesses are 32 bits wide and instructions are encoded a single word in one of two formats ::
@@ -26,7 +26,7 @@ Long instructions
 
 On reset the processor will start executing instructions from location 0.
 
-OPC-6 has a 16 entry register file. Each instruction can specify one register as a source and another as both source
+OPC-7 has a 16 entry register file. Each instruction can specify one register as a source and another as both source
 and destination using the two 4 bit fields in the encoding. Two of the registers have special purposes:
 
   * R0 holds 'all-zeros'. It is legal to write R0 but this has no effect on the register contents.
@@ -48,7 +48,7 @@ operands with the LD and STO instructions the following addressing modes are sup
   | Indirect       | \<reg\>    | 0         | mem[\<reg\>]             | 16b operand             |
   | Indexed        | \<reg\>    | \<index\> | mem[\<reg\> + \<index\>] | 16b operand             |
   | Immediate      | R0         | \<immed\> | \<immed\>                | 16b operand             |
-  | Long Immediate | R0         | \<immed\> | \<immed\>                | 20b operand             |
+  | Long Immediate | -          | \<immed\> | \<immed\>                | 20b operand             |
 
 Processor Status Register
 -------------------------
@@ -66,7 +66,7 @@ handling.
 Instruction Set
 ---------------
 
-![alt text](https://revaldinho.github.io/opc/opc7_instruction_set.png "OPC7 Instruction Set")
+![OPC7 Instruction Set](./opc7_instruction_set.png)
 
 Notes:
 
@@ -95,7 +95,7 @@ a prefix on the instruction mnemonic in the assembler.
 Interrupts
 ----------
   
-OPC6 has two interrupt inputs for hardware interrupts: int\_b[1:0].
+OPC7 has two interrupt inputs for hardware interrupts: int\_b[1:0].
   
 If either of these inputs is taken low, then the processor with finish executing the current instruction and jump to a restart vector at either 0x0002 (for int\_b[0]) or 0x0004 (for int\_b[1]). If both interrupt pins are low at the same time then the processor will just to 0x0004 to service int\_b[1] first.
   
