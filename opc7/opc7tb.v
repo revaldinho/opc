@@ -62,7 +62,7 @@ module opc7tb();
   always @ (negedge clk) begin
     if ( dut0_u.FSM_q == dut0_u.EAD ) begin
         $write("0x%05x : %02x%x%x %08x", addr, dut0_u.IR_q,dut0_u.dst_q,dut0_u.src_q, dut0_u.OR_q);
-        $write(" : %04b : %03b : %08x = %08x op %08x ", dut0_u.PSR_q, dut0_u.pred, dut0_u.result, dut0_u.RF_pipe_q, dut0_u.OR_q);
+        $write(" : %04b : %03b : %08x = %08x op %08x ", dut0_u.PSR_q, dut0_u.pred_d, dut0_u.result, dut0_u.RF_pipe_q, dut0_u.OR_q);
         $write(" : src=%x (0x%8x) dst=%x (0x%8x)", dut0_u.src_q, dut0_u.RF_sout, dut0_u.dst_q, dut0_u.RF_pipe_q);
         
         $write(" : %08x %08x %08x %08x", dut0_u.RF_q[0],dut0_u.RF_q[1],dut0_u.RF_q[2],dut0_u.RF_q[3]);

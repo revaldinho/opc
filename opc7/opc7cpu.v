@@ -37,7 +37,7 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
       else begin
         case (FSM_q)
           FET    : FSM_q <= (!pred_din) ? FET : EAD ; 
-          EAD    : FSM_q <= IR_q==LD||IR_q==LLD||IR_q==IN) ? RDM : (IR_q==STO||IR_q==LSTO||IR_q==OUT) ? WRM : EXEC;     
+          EAD    : FSM_q <= (IR_q==LD||IR_q==LLD||IR_q==IN) ? RDM : (IR_q==STO||IR_q==LSTO||IR_q==OUT) ? WRM : EXEC;     
           EXEC   : FSM_q <= ((!(&int_b) & PSR_q[EI])||(IR_q==PPSR&&(|swiid)))?INT:(dst_q==4'hF||(!pred_d)||IR_q==JSR||IR_q==LJSR)?FET:EAD;                              
           WRM    : FSM_q <= (!(&int_b) & PSR_q[EI])?INT:FET;                  
           default: FSM_q <= (FSM_q==RDM)? EXEC : FET;  
