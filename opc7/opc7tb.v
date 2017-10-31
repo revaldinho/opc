@@ -3,7 +3,7 @@
 `define EXEC 3'b011
 module opc7tb();
    reg [31:0] mem [ 1048575:0 ], iomem[65535:0];
-   reg        clk, reset_b, interrupt_b, int_clk, m1, clken;
+   reg        clk, reset_b, interrupt_b, int_clk, clken;
    wire [19:0] addr;
    wire [31:0] data1;
    wire        rnw, vda, vpa, vio;
@@ -28,13 +28,6 @@ module opc7tb();
      #50000000000000 ;  // no timeout
      $finish;
    end
-  always @ (posedge clk or negedge reset_b)
-    if ( !reset_b)
-      m1 = 1'b0;
-    else if (mreq_b == 1)
-      m1 <= 0;
-    else
-      m1 <= !m1;
 
   always @ (negedge clk) begin
     if (!rnw && !ceb && oeb && reset_b)
@@ -46,7 +39,7 @@ module opc7tb();
         iomem[addr]<= data1;
         $display("   OUT :  Address : 0x%04x ( %6d )       :        Data : 0x%08x ( %10d) %c ",addr,addr,data1,data1,data1);           
       end
-    data0 = (!mreq_b) ? mem[addr]: iomem[addr];    
+    data0 = (!mreq_b) ? mem[addr]: iomem[addr&16'hFFFF];    
     if ( dut0_u.FSM_q == dut0_u.RDM )
       $display("  LOAD :  Address : 0x%05x ( %d )  : Data : 0x%08x ( %d)",addr,addr,data0,data0);       
 
@@ -69,7 +62,7 @@ module opc7tb();
   always @ (negedge clk) begin
     if ( dut0_u.FSM_q == dut0_u.EAD ) begin
         $write("0x%05x : %02x%x%x %08x", addr, dut0_u.IR_q,dut0_u.dst_q,dut0_u.src_q, dut0_u.OR_q);
-        $write(" : %04b : %04b : %08x = %08x op %08x ", dut0_u.PSR_q, dut0_u.pred_d, dut0_u.result, dut0_u.RF_pipe_q, dut0_u.OR_q);
+        $write(" : %04b : %03b : %08x = %08x op %08x ", dut0_u.PSR_q, dut0_u.pred, dut0_u.result, dut0_u.RF_pipe_q, dut0_u.OR_q);
         $write(" : src=%x (0x%8x) dst=%x (0x%8x)", dut0_u.src_q, dut0_u.RF_sout, dut0_u.dst_q, dut0_u.RF_pipe_q);
         
         $write(" : %08x %08x %08x %08x", dut0_u.RF_q[0],dut0_u.RF_q[1],dut0_u.RF_q[2],dut0_u.RF_q[3]);
