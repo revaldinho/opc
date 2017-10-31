@@ -12,9 +12,33 @@ set ASM = opc6byteasm.py
 set MMB = ../utils/mmb_utils/beeb
 set SSD = OPC6DEMO.ssd
 set testlist = ( pi-spigot-rev pi-spigot-bruce e-spigot-rev bigsieve sieve nqueens )
-set bcpltestlist = ( kext beebgfx hello fact Leval monbfns lambda modarith fft16 evale \
-    invert ack pi-spigot-bcpl anseq  enig  enigma-m3 shell23 acoding kperms \
-    apfel queens )
+set bcpltestlist = (  \
+	Leval  \
+	Xsquare  \
+	ack  \
+	acoding  \
+	anseq  \
+	apfel  \
+	beebgfx  \
+	empty  \
+	enig  \
+	enigma-m3  \
+	evale  \
+	fact  \
+	fft16  \
+	growth  \
+	hello  \
+	invert  \
+	kext  \
+	kperms  \
+	lambda  \
+	modarith  \
+	monbfns  \
+	pi-spigot-bcpl  \
+	queens  \
+	shell23  \
+	splay  \
+	tag  )
     
 
 pushd disk
