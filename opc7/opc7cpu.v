@@ -13,7 +13,7 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   wire        pred_d        = (din[P2] ^ (din[P1] ? (din[P0] ? sign : zero): (din[P0] ? carry : 1))); // New data,new flags (in exec/fetch)
   wire [31:0] RF_dout       = (dst_q==4'hF)? {12'b0,PC_q} : RF_q[dst_q] & {32{(|dst_q)}}; 
   wire [31:0] RF_sout       =  {32{(|src_q)&&IR_q[4:2]!=3'b111}} & ((src_q==4'hF)? {12'b0,PC_q} : RF_q[src_q]);
-  wire [32:0] ms_d          = (RF_dout<<1) - RF_sout ; // only interested in b32 (carry out) in DIVS    
+  wire [32:0] ms_d          = {RF_dout,1'b0} - RF_sout ; // only interested in b32 (carry out) in DIVS    
   assign {rnw,dout,address} = {!(FSM_q==WRM), RF_pipe_q,(FSM_q==WRM||FSM_q==RDM)? OR_q[19:0] : PC_q};  
   assign {vpa,vda,vio}      = {(FSM_q==FET||FSM_q==EXEC),({2{FSM_q==RDM||FSM_q==WRM}}&{!(IR_q==IN||IR_q==OUT),IR_q==IN||IR_q==OUT})};    
   always @( * ) begin
