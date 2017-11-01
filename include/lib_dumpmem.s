@@ -17,13 +17,13 @@ dump_mem_0:
 
     mov     r1, r4
     add     r1, r3
-    JSR     (print_hex_4_spc)
+    JSR     (print_hex_word_spc)
 
 dump_mem_1:
     mov     r1, r4
     add     r1, r3
     ld      r1, r1
-    JSR     (print_hex_4_spc)
+    JSR     (print_hex_word_spc)
 
     add     r3, r0, 1
 

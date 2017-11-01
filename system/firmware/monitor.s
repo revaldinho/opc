@@ -513,7 +513,7 @@ print_regs:
 dr_loop:
     ld      r1, r2, reg_state
     JSR     (print_spc)
-    JSR     (print_hex_4)         # "1234"
+    JSR     (print_hex_word)      # "1234"
     INC     (r2,1)
     DEC     (r3,1)
     nz.mov  pc, r0, dr_loop
@@ -711,14 +711,14 @@ disassemble:
 
     mov     r5, r1                      # r5 holds the instruction addess
 
-    JSR     (print_hex_4_spc)           # print address
+    JSR     (print_hex_word_spc)        # print address
     JSR     (print_delim)               # print ": " delimiter
 
     ld      r6, r5                      # r6 holds the opcode
     add     r5, r0, 1                   # increment the address pointer
 
     mov     r1, r6
-    JSR     (print_hex_4_spc)           # print opcode
+    JSR     (print_hex_word_spc)        # print opcode
 
     mov     r1, r6
     and     r1, r0, 0x1000              # test the length bit
@@ -728,7 +728,7 @@ disassemble:
     add     r5, r0, 1                   # increment the address pointer
 
     mov     r1, r7
-    JSR     (print_hex_4)               # print operand - two words instructions
+    JSR     (print_hex_word)            # print operand - two words instructions
     mov     pc, r0, dis2
 
 dis1:
@@ -818,7 +818,7 @@ dis6:
     JSR     (OSWRCH)
 
     mov     r1, r7
-    JSR     (print_hex_4)               # print the operand
+    JSR     (print_hex_word)            # print the operand
 
 dis7:
 

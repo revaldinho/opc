@@ -4,9 +4,9 @@
 
 # --------------------------------------------------------------
 #
-# print_hex_4
+# print_hex_word
 #
-# Prints a 4-digit hex value
+# Prints a word-sized hex value
 #
 # Entry:
 # - r1 is the value to be printed
@@ -14,7 +14,7 @@
 # Exit:
 # - all registers preserved
 
-print_hex_4:
+print_hex_word:
 
     PUSH    (r13)
     PUSH    (r1)            # preserve working registers
@@ -23,9 +23,9 @@ print_hex_4:
 
     mov     r2, r1          # r2 is now the value to be printed
 
-    mov     r3, r0, 0x04    # r3 is a loop counter for 4 digits
+    mov     r3, r0, (WORD_SIZE >> 2) # r3 is a loop counter for digits
 
-print_hex_4_loop:
+print_hex_word_loop:
     add     r2, r2          # shift the upper nibble of r2
     ROL     (r1, r1)        # into the lower nibble of r1
     add     r2, r2          # one bit at a time
@@ -38,7 +38,7 @@ print_hex_4_loop:
     JSR     (print_hex_1)
 
     sub     r3, r0, 1       # decrement the loop counter and loop back for next digits
-    nz.mov  pc, r0, print_hex_4_loop
+    nz.mov  pc, r0, print_hex_word_loop
 
     POP     (r3)            # restore working registers
     POP     (r2)
@@ -68,7 +68,7 @@ print_hex_1:
 
 # --------------------------------------------------------------
 #
-# print_hex_4_spc
+# print_hex_word_spc
 #
 # Prints a 4-digit hex value followed by a space
 #
@@ -78,9 +78,9 @@ print_hex_1:
 # Exit:
 # - all registers preserved
 
-print_hex_4_spc:
+print_hex_word_spc:
     PUSH    (r13)
-    JSR     (print_hex_4)
+    JSR     (print_hex_word)
     JSR     (print_spc)
     POP     (r13)
     RTS     ()
