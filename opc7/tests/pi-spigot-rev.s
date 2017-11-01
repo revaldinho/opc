@@ -174,15 +174,14 @@ L3:     mov     r11,r0                  # r11 = Q
         mov     r2,r12,1                # r2 = i+1
         mov     r10,r0,(cols-1)*2 + 1   # initial denominator at furthest colum
 L4:
-        ljsr    r13,mul16s              # r11=Q * i+1 -> result in r11
+        ljsr    r13,mul16s2              # r11=Q * i+1 -> result in r11
         ld      r2,r7                   # r2 <- *remptr
         ASL     (r2)                    # Compute 16b result for r2 * 10
-        mov     r1,r2
+        add     r11,r2
         ASL     (r2)
         ASL     (r2)
-        add     r1,r2
-        add     r11,r1                  # add it to Q as second term
-        ljsr    r13,udiv16              # r11/r10; r11 <- quo, r2 <- rem, r10 preserved
+        add     r11,r2
+        ljsr    r13,udiv16ds            # r11/r10; r11 <- quo, r2 <- rem, r10 preserved
         sto     r2, r7                  # rem[i] <- r2
         sub     r7,r0,1                 # dec rem ptr
                                         # denom <- denom-2, but denom[0]=10
@@ -239,6 +238,33 @@ udiv16_loop:
         movt    r11,r0                  # zero top word of R2
         RTS     ()                      # and return with quotient/remainder in r11/r2
 
+udiv16ds:
+        brot    r2, r10                 # save r10 and move into top half of r2
+        brot    r2,r2
+        divstep r11,r2,0xFFFF
+        divstep r11,r2,0xFFFF
+        divstep r11,r2,0xFFFF
+        divstep r11,r2,0xFFFF
+        divstep r11,r2,0xFFFF
+        divstep r11,r2,0xFFFF
+        divstep r11,r2,0xFFFF
+        divstep r11,r2,0xFFFF
+        divstep r11,r2,0xFFFF
+        divstep r11,r2,0xFFFF
+        divstep r11,r2,0xFFFF
+        divstep r11,r2,0xFFFF
+        divstep r11,r2,0xFFFF
+        divstep r11,r2,0xFFFF
+        divstep r11,r2,0xFFFF
+        divstep r11,r2,0xFFFF
+
+        brot    r2,r11                  # Get remainder into r2 lower half and zero upper half
+        brot    r2,r2
+        movt    r2,r0
+        movt    r11,r0                  # zero upper half of r11 leaving quotient
+
+        RTS     ()                      # and return with quotient/remainder in r11/r2
+        
         # --------------------------------------------------------------
         #
         # mul16s
@@ -264,6 +290,29 @@ mul16s_loop0:
         lsr     r3, r3                  # shift right multiplier
         nz.sub  pc,r0,PC-mul16s_loop0      # no need for loop counter - just stop when r1 is empty
         c.add   r11,r2                  # add last copy of multiplicand into accumulator if carry
+        RTS     ()
+
+mul16s2:
+        brot    r2,r2                  # get multiplicand in top half of r2
+        brot    r2,r2
+        mulstep r11,r2
+        mulstep r11,r2
+        mulstep r11,r2
+        mulstep r11,r2
+        mulstep r11,r2
+        mulstep r11,r2
+        mulstep r11,r2
+        mulstep r11,r2        
+        mulstep r11,r2
+        mulstep r11,r2
+        mulstep r11,r2
+        mulstep r11,r2
+        mulstep r11,r2
+        mulstep r11,r2
+        mulstep r11,r2
+        mulstep r11,r2
+        lsr     r11,r11                 # 1 shift to finish off
+        
         RTS     ()
 
 mypi:    WORD 0                          # Space for pi digit storage

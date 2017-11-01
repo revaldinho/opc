@@ -20,7 +20,7 @@ set assembler = ../opc7asm.py
 
 set testlist = ( string testpsr )
 set testlist = ( bigsieve  davefib davefib_int e-spigot-rev  fib hello math32  nqueens pi-spigot-rev  robfib sieve )
-set testlist = (sieve )
+set testlist = ( pi-spigot-rev )
 
 set numtests = 0
 set fails = 0
@@ -36,7 +36,7 @@ foreach test ( $testlist )
     cp ${test}.hex test.hex
     # Run icarus verilog to compile the testbench only if there is no stdin file
     echo "Simulating Test $test"    
-    iverilog -D_simulation=1  ../opc7tb.v ../opc7cpu.v
+    iverilog -D_simulation=1   -D_dumpvcd=1 ../opc7tb.v ../opc7cpu.v
     # -D_dumpvcd=1        
     ./a.out > ${test}.sim
     # Save the results

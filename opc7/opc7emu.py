@@ -91,12 +91,19 @@ while True:
                 wordmem[ea_ed&0xFFFFF] = regfile[dest]
                 print_memory_access("STORE",ea_ed,regfile[dest])
             elif opcode == op["mulstep"]:
-                (regfile[dest],c1) = ((regfile[dest]<<1)&0xFFFFFFFF, (regfile[dest]>>31)&1)
+                (regfile[dest],c1) = ((regfile[dest]>>1)&0x7FFFFFFF, (regfile[dest]&1))
                 if c1:
-                    res = (regfile[dest]s + ea_ed & 0x1FFFFFFFF)
+                    res = (regfile[dest] + ea_ed) & 0x1FFFFFFFF
                     (c, regfile[dest])  = ( (res>>32) & 1, res & 0xFFFFFFFF)
+                else:
+                    c = 0;
             elif opcode == op["divstep"]:
-                pass
+                regfile[dest] = (regfile[dest]<<1)&0xFFFFFFFE
+                if regfile[dest]>= ea_ed:
+                    res = (regfile[dest] + ((~ea_ed)&0xFFFFFFFF) + 1) & 0x1FFFFFFFF
+                    (c, regfile[dest])  = ( (res>>32) & 1, res & 0xFFFFFFFF)
+                else:
+                    c = 1;                
             elif opcode == op["out"]:
                 iomem[ea_ed&0xFFFF] = regfile[dest]
                 print_memory_access("OUT",ea_ed,regfile[dest])           
