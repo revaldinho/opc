@@ -19,8 +19,8 @@ set assembler = ../opc7asm.py
 #set assembler = ../opc7byteasm.py
 
 set testlist = ( string testpsr )
-
-set testlist = ( bigsieve  davefib davefib_int e-spigot-rev  fib hello math32  nqueens pi-spigot-rev  robfib sieve ) 
+set testlist = ( bigsieve  davefib davefib_int e-spigot-rev  fib hello math32  nqueens pi-spigot-rev  robfib sieve )
+set testlist = (sieve )
 
 set numtests = 0
 set fails = 0

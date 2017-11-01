@@ -1,6 +1,6 @@
 
 import sys, re
-mnemonics="mov movt xor and or not cmp sub add brot ror lsr jsr asr rol s0F halt rti putpsr getpsr s13 s15 s16 s17 out in sto ld ljsr lmov lsto lld".split() 
+mnemonics="mov movt xor and or not cmp sub add brot ror lsr jsr asr rol s0F halt rti putpsr getpsr s13 s15 divstep mulstep out in sto ld ljsr lmov lsto lld".split() 
 op = dict([(opcode,mnemonics.index(opcode)) for opcode in mnemonics])
 dis = dict([(mnemonics.index(opcode),opcode) for opcode in mnemonics])
 pred_dict = {0:"",1:"0.",2:"z.",3:"nz.",4:"c.",5:"nc.",6:"mi.",7:"pl."}
@@ -90,6 +90,10 @@ while True:
             elif opcode in (op["sto"],op["lsto"]):
                 wordmem[ea_ed&0xFFFFF] = regfile[dest]
                 print_memory_access("STORE",ea_ed,regfile[dest])
+            elif opcode == op["mulstep"]:
+                pass
+            elif opcode == op["divstep"]:
+                pass
             elif opcode == op["out"]:
                 iomem[ea_ed&0xFFFF] = regfile[dest]
                 print_memory_access("OUT",ea_ed,regfile[dest])           
