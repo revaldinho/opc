@@ -100,6 +100,10 @@ MACRO   LSR(_reg1_, _reg2_)
     lsr     _reg1_, _reg2_        
 ENDMACRO
 
-        
+MACRO   ROL(_reg1_, _reg2_)
+    adc     _reg1_, _reg2_
+ENDMACRO
 
-        
+MACRO  BROT(_reg1_, _reg2_)
+    bswp    _reg1_, _reg2_
+ENDMACRO

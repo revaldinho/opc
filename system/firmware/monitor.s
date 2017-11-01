@@ -12,6 +12,8 @@ EQU        BASE, _BASE_
 EQU        CODE, 0xF800
 
 EQU   UART_ADDR, 0xFE08
+EQU UART_STATUS, UART_ADDR
+EQU   UART_DATA, UART_ADDR + 1
 
 EQU     MEM_BOT, 0x0100
 EQU     MEM_TOP, CODE - 1
@@ -562,9 +564,10 @@ osNEWL:
 osWRCH:
     PUSH    (r13)
 oswrch_loop:
-    ld      r13, r0, uart_status
-    mi.mov  pc, r0, oswrch_loop
-    sto     r1, r0, uart_data
+    ld      r13, r0, UART_STATUS
+    and     r13, r0, 0x8000
+    nz.mov  pc, r0, oswrch_loop
+    sto     r1, r0, UART_DATA
     ld      r13, r0, HPOS     # increment the horizontal position
     mov     r13, r13, 1
     sto     r13, r0, HPOS
@@ -586,10 +589,10 @@ oswrch_loop:
 # - r1 is the character read
 
 osRDCH:
-    ld      r1, r0, uart_status
+    ld      r1, r0, UART_STATUS
     and     r1, r0, 0x4000
     z.mov   pc, r0, osRDCH
-    ld      r1, r0, uart_data
+    ld      r1, r0, UART_DATA
     RTS     ()
 
 
@@ -643,10 +646,13 @@ osWORD0_exit:
     CLC     ()
     RTS     ()
 
+
 # -----------------------------------------------------------------------------
 # Serial port
 # -----------------------------------------------------------------------------
 
+##ifndef CPU_OPC7
+   
 # Limit check to precent code running into next block...
 
 Limit1:
@@ -654,13 +660,11 @@ Limit1:
 
 ORG UART_ADDR
 
-uart_status:
+    WORD 0x0000
     WORD 0x0000
 
-uart_data:
-    WORD 0x0000
-
-
+##endif
+   
 # --------------------------------------------------------------
 #
 # print_delim
@@ -853,11 +857,16 @@ print_reg_num_1:
 # -----------------------------------------------------------------------------
 
 welcome:
+##ifdef CPU_OPC7
+    BSTRING "\n\rOPC7 Monitor\n\r"
+##else
     WORD    0x0D0A
-    CPU_BSTRING()
+    CPU_BSTRING() 
     BSTRING " Monitor"
-    WORD    0x0D0A, 0x0000
-
+    WORD    0x0D0A
+##endif
+    WORD    0x0000
+   
 predicates:       # Each predicate must be 2 words, zero terminated
     WORD 0x0000
     WORD 0x0000
@@ -1025,18 +1034,20 @@ reg_state_psr:
     WORD 0x0000
 
 
+# -----------------------------------------------------------------------------
+# MOS interface
+# (this is only fixed in the 16 bit machines)   
+# -----------------------------------------------------------------------------
+
 # Limit check to precent code running into next block...
 
+##ifndef CPU_OPC7
 Limit2:
     EQU dummy, 0 if (Limit2 < 0xFFC8) else limit2_error
 
-
-# -----------------------------------------------------------------------------
-# MOS interface
-# -----------------------------------------------------------------------------
-
 ORG 0xFFC8
-
+##endif
+   
 NVRDCH:                      # &FFC8
     mov     pc, r0, osRDCH
     WORD    0x0000
@@ -1275,11 +1286,11 @@ div:                            # uses y as loop counter
         mov r3, r0, 16          # ldy #16
         mov r1, r0, 0           # lda #0
         add r11, r11            # asl q
-d1:     adc r1, r1              # rol
+d1:     ROL (r1, r1)            # rol
         cmp r1, r10             # cmp r
         nc.mov pc, r0, d2       # bcc d2
-        sbc r1, r10             # sbc r
-d2:     adc r11, r11            # rol q
+        sub r1, r10             # sbc r
+d2:     ROL(r11, r11)           # rol q
         mov r3, r3, -1          # dey
         nz.mov pc, r0, d1       # bne d1
         RTS()

@@ -71,7 +71,7 @@ srec_line_loop:
     z.mov   r4, r2                  # AAAA now held in r4
 
     add     r5, r2                  # accumulate AAAA in checksum
-    bswp    r2, r2
+    BROT    (r2, r2)
     add     r5, r2
 
     DEC     (r3, 3)
@@ -86,7 +86,7 @@ srec_word_loop:
     c.mov   pc, r0, srec_exit_bad_format
 
     add     r5, r2                  # accumulate BBBB in checksum
-    bswp    r2, r2
+    BROT    (r2, r2)
     add     r5, r2
 
     sto     r2, r4                  # store the word

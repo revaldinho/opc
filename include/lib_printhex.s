@@ -27,13 +27,13 @@ print_hex_4:
 
 print_hex_4_loop:
     add     r2, r2          # shift the upper nibble of r2
-    adc     r1, r1          # into the lower nibble of r1
+    ROL     (r1, r1)        # into the lower nibble of r1
     add     r2, r2          # one bit at a time
-    adc     r1, r1
+    ROL     (r1, r1)
     add     r2, r2          # add   rd, rd is the same as ASL
-    adc     r1, r1          # adc   rd, rd is the same as ROL
+    ROL     (r1, r1)        # adc   rd, rd is the same as ROL
     add     r2, r2
-    adc     r1, r1
+    ROL     (r1, r1)
 
     JSR     (print_hex_1)
 
