@@ -224,11 +224,8 @@ L4:
         # - r11 = quotient
         # --------------------------------------------------------------
 udiv16:
-        mov     r2, r10                 # save r10 and move into r2
-        movt    r2,r0                   # get divisor in top half of r2
-        brot    r2,r2
+        brot    r2, r10                 # save r10 and move into top half of r2
         brot    r2,r2        
-        movt    r11,r0                  # zero top of R11 which will be the remainder
         mov     r1,r0,-16               # Setup a loop counter
 udiv16_loop:
         ASL     (r11)                   # shift left the quotient/dividend
@@ -236,11 +233,10 @@ udiv16_loop:
         c.sub   r11,r2,-1               # if yes then do the subtraction for real and add one to quotient
         add     r1,r0,1                 # increment loop counter zeroing carry
         nz.sub  pc,r0,PC-udiv16_loop    # loop again if not finished (r5=udiv16_loop)
-        mov     r2,r11
-        brot    r2,r2
+        brot    r2,r11                  # get top word of R11 into R2 for return
         brot    r2,r2
         movt    r2,r0
-        movt    r11,r0
+        movt    r11,r0                  # zero top word of R2
         RTS     ()                      # and return with quotient/remainder in r11/r2
 
         # --------------------------------------------------------------

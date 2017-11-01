@@ -145,24 +145,20 @@ L6:     mov     r1, r11, 48             # Convert quotient into ASCII digit
         # - r11 = quotient
         # --------------------------------------------------------------
 udiv16:
-        movt    r10,r0                  # get divisor in top half of r10
-        brot    r10,r10
-        brot    r10,r10
-        
-        movt    r11,r0                  # zero top of R11 which will be the remainder
+        brot    r2, r10                 # save r10 and move into top half of r2
+        brot    r2,r2        
         mov     r1,r0,-16               # Setup a loop counter
 udiv16_loop:
         ASL     (r11)                   # shift left the quotient/dividend
-        cmp     r11,r10                  # check if R is larger than divisor
-        c.sub   r11,r10,-1              # if yes then do the subtraction for real and add one to quotient
+        cmp     r11,r2                  # check if R is larger than divisor
+        c.sub   r11,r2,-1               # if yes then do the subtraction for real and add one to quotient
         add     r1,r0,1                 # increment loop counter zeroing carry
         nz.sub  pc,r0,PC-udiv16_loop    # loop again if not finished (r5=udiv16_loop)
-        mov     r2,r11
-        brot    r2,r2
+        brot    r2,r11                  # get top word of R11 into R2 for return
         brot    r2,r2
         movt    r2,r0
-        movt    r11,r0
-        RTS     ()                      # and return with quotient/remainder in r1/r2
+        movt    r11,r0                  # zero top word of R2
+        RTS     ()                      # and return with quotient/remainder in r11/r2
 
 banner:  STRING "OK 2."                 # Banner and first digit and dp
          WORD 0
