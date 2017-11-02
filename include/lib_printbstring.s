@@ -13,6 +13,8 @@
 #
 # Exit:
 # - all other registers preserved
+#
+# TODO: This needs re-writing to be more space efficient with OPC7
 
 print_bstring:
     PUSH    (r13)
@@ -26,10 +28,25 @@ print_bstring_loop:
     z.mov   pc, r0, print_bstring_exit
     JSR     (OSWRCH)
     ld      r1, r2
-    bswp    r1, r1
+    BROT    (r1, r1)
     and     r1, r0, 0xff
     z.mov   pc, r0, print_bstring_exit
     JSR     (OSWRCH)
+##ifdef CPU_OPC7
+    ld      r1, r2
+    BROT    (r1, r1)
+    BROT    (r1, r1)
+    and     r1, r0, 0xff
+    z.mov   pc, r0, print_bstring_exit
+    JSR     (OSWRCH)
+    ld      r1, r2
+    BROT    (r1, r1)
+    BROT    (r1, r1)
+    BROT    (r1, r1)
+    and     r1, r0, 0xff
+    z.mov   pc, r0, print_bstring_exit
+    JSR     (OSWRCH)
+##endif 
     mov     r2, r2, 0x0001
     mov     pc, r0, print_bstring_loop
 

@@ -6,8 +6,8 @@ build: $(TARGET).bin
 
 include $(COMMON)/Makefile_prog.inc
 
-$(TARGET).blif: $(SRCS) $(PROG).mem
-	icebram -g 16 4096 > $(PROG)_syn.mem.tmp
+$(TARGET).blif: $(SRCS)
+	icebram -g $$((8*$(ROMWIDTH))) $$((16#$(ROMLEN))) > $(PROG)_syn.mem.tmp
 	mv $(PROG)_syn.mem.tmp $(PROG)_syn.mem
 	yosys -q -f "verilog -Dcpu_$(CPU_ARCH)" -p "synth_ice40 -top ${TARGET} -abc2 -blif ${TARGET}.blif" ${SRCS}
 

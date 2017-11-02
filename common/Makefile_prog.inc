@@ -1,6 +1,7 @@
 # Default region to extract from the assembler output into the ROM
 ROMSTART    ?= C000
 ROMLEN      ?= 4000
+ROMWIDTH    ?= 2
 
 INC_FLAGS   ?= -I $(ROOT)/include/$(CPU_NAME) -I $(ROOT)/include
 
@@ -18,13 +19,13 @@ $(PROG).hex: $(ROOT)/$(PROG_SRC)
 
 # This is for use in the FPGA
 $(PROG).mem: $(PROG).hex
-	xxd -r -p < $(PROG).hex | dd ibs=2 skip=$$((16#$(ROMSTART))) count=$$((16#$(ROMLEN))) | xxd -p -c2 > $(PROG).mem.tmp
+	xxd -r -p < $(PROG).hex | dd ibs=$(ROMWIDTH) skip=$$((16#$(ROMSTART))) count=$$((16#$(ROMLEN))) | xxd -p -c$(ROMWIDTH) > $(PROG).mem.tmp
 	mv $(PROG).mem.tmp $(PROG).mem
 
 # This is for use in PiTubeDirect (this is specific to copro)
 $(PROG).c: $(PROG).hex
 	echo '#include "$(PROG).h"' > $(PROG).c.tmp
 	echo 'uint16_t $(PROG)_$(CPU_NAME)[0x800] = {' >> $(PROG).c.tmp
-	xxd -r -p < $(PROG).hex | dd ibs=2 skip=$$((16#F800)) count=$$((16#0800)) | xxd -p -c2 | awk '{print "0x" $$1 ","}' >> $(PROG).c.tmp
+	xxd -r -p < $(PROG).hex | dd ibs=$(ROMWIDTH) skip=$$((16#F800)) count=$$((16#0800)) | xxd -p -c$(ROMWIDTH) | awk '{print "0x" $$1 ","}' >> $(PROG).c.tmp
 	echo '};' >> $(PROG).c.tmp
 	mv $(PROG).c.tmp $(PROG).c

@@ -7,11 +7,13 @@
 
 ##include "macros.s"
 
-# Inject _BASE_from the build script (C000 on Xilinx, F000 on ICE40)        
+# Inject _BASE_from the build script (C000 on Xilinx, F000 on ICE40)
 EQU        BASE, _BASE_
 EQU        CODE, 0xF800
 
 EQU   UART_ADDR, 0xFE08
+EQU UART_STATUS, UART_ADDR
+EQU   UART_DATA, UART_ADDR + 1
 
 EQU     MEM_BOT, 0x0100
 EQU     MEM_TOP, CODE - 1
@@ -35,6 +37,7 @@ ORG CODE
 ##include "lib_printbstring.s"
 ##include "lib_dumpmem.s"
 ##include "lib_srec.s"
+##include "lib_disassemble.s"
 
 # ---------------------------------------------------------
 
@@ -192,7 +195,7 @@ srec_checksum_error_msg:
 
 comma:
     sto     r5, r4
-    INC     (r4,1)    
+    INC     (r4,1)
     mov     pc, r0, mon2
 
 # ---------------------------------------------------------
@@ -228,7 +231,17 @@ toggle_echo:
 # ---------------------------------------------------------
 
 go:
+##ifdef CPU_OPC7
+    mov     r1, r0, 0xffff
+    movt    r1, r0, 0x000f
+    and     r5, r1
+    mov     r1, r0         # opcode for mov pc, r0 is 0x00f00000
+    movt    r1, r0, 0x00f0
+    or      r5, r1
+    sto     r5, r0, go1
+##else
     sto     r5, r0, go1 + 1
+##endif
     PUSH    (r11)          # save echo state
     JSR     (load_regs)
     JSR     (go1)
@@ -511,7 +524,7 @@ print_regs:
 dr_loop:
     ld      r1, r2, reg_state
     JSR     (print_spc)
-    JSR     (print_hex_4)         # "1234"
+    JSR     (print_hex_word)      # "1234"
     INC     (r2,1)
     DEC     (r3,1)
     nz.mov  pc, r0, dr_loop
@@ -562,9 +575,10 @@ osNEWL:
 osWRCH:
     PUSH    (r13)
 oswrch_loop:
-    ld      r13, r0, uart_status
-    mi.mov  pc, r0, oswrch_loop
-    sto     r1, r0, uart_data
+    ld      r13, r0, UART_STATUS
+    and     r13, r0, 0x8000
+    nz.mov  pc, r0, oswrch_loop
+    sto     r1, r0, UART_DATA
     ld      r13, r0, HPOS     # increment the horizontal position
     mov     r13, r13, 1
     sto     r13, r0, HPOS
@@ -586,10 +600,10 @@ oswrch_loop:
 # - r1 is the character read
 
 osRDCH:
-    ld      r1, r0, uart_status
+    ld      r1, r0, UART_STATUS
     and     r1, r0, 0x4000
     z.mov   pc, r0, osRDCH
-    ld      r1, r0, uart_data
+    ld      r1, r0, UART_DATA
     RTS     ()
 
 
@@ -643,9 +657,12 @@ osWORD0_exit:
     CLC     ()
     RTS     ()
 
+
 # -----------------------------------------------------------------------------
 # Serial port
 # -----------------------------------------------------------------------------
+
+##ifndef CPU_OPC7
 
 # Limit check to precent code running into next block...
 
@@ -654,340 +671,26 @@ Limit1:
 
 ORG UART_ADDR
 
-uart_status:
+    WORD 0x0000
     WORD 0x0000
 
-uart_data:
-    WORD 0x0000
-
-
-# --------------------------------------------------------------
-#
-# print_delim
-#
-# Prints a <space>:<space> delimeter
-#
-# Entry:
-#
-# Exit:
-# - all registers preserved
-
-print_delim:
-     PUSH   (r13)
-     PUSH   (r1)
-     mov    r1, r0, 0x3a
-     JSR    (OSWRCH)
-     mov    r1, r0, 0x20
-     JSR    (OSWRCH)
-     POP    (r1)
-     POP    (r13)
-     RTS    ()
-
-# --------------------------------------------------------------
-#
-# disassemble
-#
-# Disassemble a single instruction
-#
-# Entry:
-# - r1 is the address of the instruction
-#
-# Exit:
-# - r1 is the address of the next instruction
-# - all registers preserved
-
-disassemble:
-
-    PUSH   (r13)
-    PUSH   (r3)
-    PUSH   (r4)
-    PUSH   (r5)
-    PUSH   (r6)
-    PUSH   (r7)
-
-    mov     r5, r1                      # r5 holds the instruction addess
-
-    JSR     (print_hex_4_spc)           # print address
-    JSR     (print_delim)               # print ": " delimiter
-
-    ld      r6, r5                      # r6 holds the opcode
-    add     r5, r0, 1                   # increment the address pointer
-
-    mov     r1, r6
-    JSR     (print_hex_4_spc)           # print opcode
-
-    mov     r1, r6
-    and     r1, r0, 0x1000              # test the length bit
-    z.mov   pc, r0, dis1
-
-    ld      r7, r5                      # r7 holds the operand
-    add     r5, r0, 1                   # increment the address pointer
-
-    mov     r1, r7
-    JSR     (print_hex_4)               # print operand - two words instructions
-    mov     pc, r0, dis2
-
-dis1:
-
-    mov     r1, r0, four_spaces
-    JSR     (print_bstring)             # print 4 spaces - one word instructions
-
-dis2:
-    JSR     (print_spc)                 # print space
-    JSR     (print_delim)               # print ": " delimiter
-
-    mov     r2, r6
-    and     r2, r0, 0xE000              # extract predicate
-    mov     r1, r0, predicates          # find string for predicate
-
-dis3:
-    add     r2, r0                      # is r2 zero?
-    z.mov   pc, r0, dis4
-    sub     r2, r0, 0x2000
-    INC     (r1,0x0002)                 # move on to next predicate
-    mov     pc, r0, dis3
-
-dis4:
-    JSR     (print_bstring)
-
-    mov     r2, r6
-    and     r2, r0, 0x0F00              # extract opcode
-
-##ifdef CPU_OPC6
-    mov     r1, r6
-    and     r1, r0, 0xE000
-    cmp     r1, r0, 0x2000
-    z.add   r2, r0, 0x1000
-    PUSH    (r2)                        # save the opcode so we can later test for inc/dec
 ##endif
 
-    mov     r1, r0, opcodes             # find string for opcode
-
-dis5:
-    add     r2, r0                      # is r2 zero?
-    z.mov   pc, r0, dis6
-    sub     r2, r0, 0x0100
-    INC     (r1, 0x0003)                # move on to next opcode
-    mov     pc, r0, dis5
-
-dis6:
-    JSR     (print_bstring)
-    JSR     (print_spc)                 # print a space
-
-    mov     r1, r0, ord('r')
-    JSR     (OSWRCH)
-    mov     r1, r6                      # extract destination register
-    JSR     (print_reg_num)
-
-    mov     r1, r0, 0x2c
-    JSR     (OSWRCH)
-
-    mov     r1, r0, ord('r')
-
-##ifdef CPU_OPC6
-    POP     (r2)                        # restore the opcode (bits 12..8)
-    and     r2, r0, 0x1D00              # inc = 0x0C00, dec = 0x0E00
-    cmp     r2, r0, 0x0C00              # both now map to 0x0C00
-    nz.jsr  r13, r0, OSWRCH             # if not inc/dec, src is a register
-##else
-    JSR     (OSWRCH)
-##endif
-
-    mov     r1, r6                      # extract source register
-    ror     r1, r1
-    ror     r1, r1
-    ror     r1, r1
-    ror     r1, r1
-    JSR     (print_reg_num)
-
-    mov     r1, r6                      # extract length
-    and     r1, r0, 0x1000
-
-    z.mov   pc, r0, dis7
-
-    mov     r1, r0, 0x2c                # print a ,
-    JSR     (OSWRCH)
-
-    mov     r1, r0, ord('0')            # print 0x
-    JSR     (OSWRCH)
-    mov     r1, r0, ord('x')
-    JSR     (OSWRCH)
-
-    mov     r1, r7
-    JSR     (print_hex_4)               # print the operand
-
-dis7:
-
-    mov     r1, r5                      # return address of next instruction
-
-    POP     (r7)
-    POP     (r6)
-    POP     (r5)
-    POP     (r4)
-    POP     (r3)
-    POP     (r13)
-    RTS     ()
-
-print_reg_num:
-    PUSH    (r13)
-    and     r1, r0, 0x0F
-
-    cmp     r1, r0, 0x0A
-    nc.mov  pc, r0, print_reg_num_1
-
-    PUSH    (r1)
-    mov     r1, r0, 0x31
-    JSR     (OSWRCH)
-    POP     (r1)
-
-    DEC     (r1,0x0A)
-
-print_reg_num_1:
-    add     r1, r0, 0x30
-    JSR     (OSWRCH)
-    POP     (r13)
-    RTS     ()
 
 # -----------------------------------------------------------------------------
 # Data
 # -----------------------------------------------------------------------------
 
 welcome:
+##ifdef CPU_OPC7
+    BSTRING "\n\rOPC7 Monitor\n\r"
+##else
     WORD    0x0D0A
     CPU_BSTRING()
     BSTRING " Monitor"
-    WORD    0x0D0A, 0x0000
-
-predicates:       # Each predicate must be 2 words, zero terminated
-    WORD 0x0000
-    WORD 0x0000
-
-##ifdef CPU_OPC6
-    WORD 0x0000
-##else
-    BSTRING "0."
+    WORD    0x0D0A
 ##endif
-    WORD 0x0000
-
-    BSTRING "z."
-    WORD 0x0000
-
-    BSTRING "nz."
-
-    BSTRING "c."
-    WORD 0x0000
-
-    BSTRING "nc."
-
-    BSTRING "mi."
-
-    BSTRING "pl."
-
-
-four_spaces:
-    BSTRING "    "
     WORD    0x0000
-
-opcodes:    # Each opcode must be 3 words, zero terminated
-##ifdef CPU_OPC6
-     BSTRING "mov"    #  00000
-    WORD    0x0000
-    BSTRING "and"    #  00001
-    WORD    0x0000
-    BSTRING "or"     #  00010
-    WORD    0x0000, 0x0000
-    BSTRING "xor"    #  00011
-    WORD    0x0000
-    BSTRING "add"    #  00100
-    WORD    0x0000
-    BSTRING "adc"    #  00101
-    WORD    0x0000
-    BSTRING "sto"    #  00110
-    WORD    0x0000
-    BSTRING "ld"     #  00111
-    WORD    0x0000, 0x0000
-    BSTRING "ror"    #  01000
-    WORD    0x0000
-    BSTRING "jsr"    #  01001
-    WORD    0x0000
-    BSTRING "sub"    #  01010
-    WORD    0x0000
-    BSTRING "sbc"    #  01011
-    WORD    0x0000
-    BSTRING "inc"    #  01100
-    WORD    0x0000
-    BSTRING "lsr"    #  01101
-    WORD    0x0000
-    BSTRING "dec"    #  01110
-    WORD    0x0000
-    BSTRING "asr"    #  01111
-    WORD    0x0000
-    BSTRING "halt"   #  10000
-    WORD    0x0000
-    BSTRING "bswp"   #  10001
-    WORD    0x0000
-    BSTRING "putp"   #  10010
-    WORD    0x0000
-    BSTRING "getp"   #  10011
-    WORD    0x0000
-    BSTRING "rti"    #  10100
-    WORD    0x0000
-    BSTRING "not"    #  10101
-    WORD    0x0000
-    BSTRING "out"    #  10110
-    WORD    0x0000
-    BSTRING "in"     #  10111
-    WORD    0x0000, 0x0000
-    BSTRING "push"   #  11000
-    WORD    0x0000
-    BSTRING "pop"    #  11001
-    WORD    0x0000
-    BSTRING "cmp"    #  11010
-    WORD    0x0000
-    BSTRING "cmpc"   #  11011
-    WORD    0x0000
-    BSTRING "----"   #  11100
-    WORD    0x0000
-    BSTRING "----"   #  11101
-    WORD    0x0000
-    BSTRING "----"   #  11110
-    WORD    0x0000
-    BSTRING "----"   #  11111
-    WORD    0x0000
-##else
-    BSTRING "mov"    #  0000
-    WORD    0x0000
-    BSTRING "and"    #  0001
-    WORD    0x0000
-    BSTRING "or"     #  0010
-    WORD    0x0000, 0x0000
-    BSTRING "xor"    #  0011
-    WORD    0x0000
-    BSTRING "add"    #  0100
-    WORD    0x0000
-    BSTRING "adc"    #  0101
-    WORD    0x0000
-    BSTRING "sto"    #  0110
-    WORD    0x0000
-    BSTRING "ld"     #  0111
-    WORD    0x0000, 0x0000
-    BSTRING "ror"    #  1000
-    WORD    0x0000
-    BSTRING "not"    #  1001
-    WORD    0x0000
-    BSTRING "sub"    #  1010
-    WORD    0x0000
-    BSTRING "sbc"    #  1011
-    WORD    0x0000
-    BSTRING "cmp"    #  1100
-    WORD    0x0000
-    BSTRING "cmpc"   #  1101
-    WORD    0x0000
-    BSTRING "bswp"   #  1110
-    WORD    0x0000
-    BSTRING "psr"    #  1111
-    WORD    0x0000
-##endif
 
 reg_state:
     WORD 0x0000
@@ -1025,17 +728,19 @@ reg_state_psr:
     WORD 0x0000
 
 
+# -----------------------------------------------------------------------------
+# MOS interface
+# (this is only fixed in the 16 bit machines)
+# -----------------------------------------------------------------------------
+
 # Limit check to precent code running into next block...
 
+##ifndef CPU_OPC7
 Limit2:
     EQU dummy, 0 if (Limit2 < 0xFFC8) else limit2_error
 
-
-# -----------------------------------------------------------------------------
-# MOS interface
-# -----------------------------------------------------------------------------
-
 ORG 0xFFC8
+##endif
 
 NVRDCH:                      # &FFC8
     mov     pc, r0, osRDCH
@@ -1260,7 +965,7 @@ i1:     sto r1, r2, p-1         # was sta p,x
 
 mul:                            # uses y as loop counter
         mov r10, r1             # sta r
-        mov r3, r0, 16          # ldy #16
+        mov r3, r0, WORD_SIZE   # ldy #16
 m1:     add r1, r1              # asl
         add r11, r11            # asl q
         nc.mov pc, r0, m2       # bcc m2
@@ -1272,14 +977,14 @@ m2:     mov r3, r3, -1          # dey
 
 div:                            # uses y as loop counter
         mov r10, r1             # sta r
-        mov r3, r0, 16          # ldy #16
+        mov r3, r0, WORD_SIZE   # ldy #16
         mov r1, r0, 0           # lda #0
         add r11, r11            # asl q
-d1:     adc r1, r1              # rol
+d1:     ROL (r1, r1)            # rol
         cmp r1, r10             # cmp r
         nc.mov pc, r0, d2       # bcc d2
-        sbc r1, r10             # sbc r
-d2:     adc r11, r11            # rol q
+        sub r1, r10             # sbc r
+d2:     ROL(r11, r11)           # rol q
         mov r3, r3, -1          # dey
         nz.mov pc, r0, d1       # bne d1
         RTS()
