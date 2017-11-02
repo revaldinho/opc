@@ -21,7 +21,7 @@ ASM_PATH   = opc7/opc7asm.py
 PROG_SRC   = system/firmware/monitor.s
 
 # Extract a smaller ROM
-ROMSTART   = F000
+ROMSTART   = 0000
 ROMLEN     = 0E00
 ROMWIDTH   = 4
 
