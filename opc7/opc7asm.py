@@ -56,9 +56,9 @@ EXAMPLES ::
 '''
 
 header_text = '''
-# ----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # O P C - 7 * A S S E M B L E R 
-# ----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 #
 # ADDR: CODE               : SOURCE
 #-----:--------------------:---------------------------------------------------
@@ -87,15 +87,11 @@ def expand_macro(line, macro, mnum):  # recursively expand macros, passing on in
             text.extend(expand_macro(newline, macro, nextmnum))
     return(text)
 
-def assemble( filename, listingon=True):
+def preprocess( filename ) :
+    # Pass 0 - read file, expand all macros and return a new text file
     global errors, warnings, nextmnum
-
-    op = "mov movt xor and or not cmp sub add brot ror lsr jsr asr rol s0F halt rti putpsr getpsr s13 s15 push pop out in sto ld ljsr lmov lsto lld".split() 
-    symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
-    pdict = {"1":0x0,"z":0x4,"nz":0x6,"c":0x8,"nc":0xA,"mi":0xC,"pl":0xE,"":0x0}
-    reg_re = re.compile("(r\d*|psr|pc)")
-    (wordmem,macro,macroname,newtext,wcount,mnum)=([0x00000000]*1024*1024,dict(),None,[],0,0)
-    for line in open(filename, "r").readlines():       # Pass 0 - macro expansion
+    (newtext,macro,macroname,mnum)=([],dict(),None,0)    
+    for line in open(filename, "r").readlines():       
         mobj =  re.match("\s*?MACRO\s*(?P<name>\w*)\s*?\((?P<params>.*)\)", line, re.IGNORECASE)
         if mobj:
             (macroname,macro[macroname])=(mobj.groupdict()["name"],([x.strip() for x in (mobj.groupdict()["params"]).split(",")],[]))
@@ -104,7 +100,19 @@ def assemble( filename, listingon=True):
         elif macroname:
             macro[macroname][1].append(line)
         newtext.extend(expand_macro(('' if not macroname else '# ') + line, macro, mnum))
+    return newtext
 
+def assemble( filename, listingon=True):
+    global errors, warnings, nextmnum
+
+    op = "mov movt xor and or not cmp sub add brot ror lsr jsr asr rol s0F halt rti putpsr getpsr s13 s15 push pop out in sto ld ljsr lmov lsto lld".split() 
+    symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
+    pdict = {"1":0x0,"z":0x4,"nz":0x6,"c":0x8,"nc":0xA,"mi":0xC,"pl":0xE,"":0x0}
+    reg_re = re.compile("(r\d*|psr|pc)")
+    (wordmem,wcount)=([0x00000000]*1024*1024,0)
+
+    newtext = preprocess(filename)
+    
     for iteration in range (0,2): # Two pass assembly
         (wcount,nextmem) = (0,0)
         for line in newtext:
@@ -177,7 +185,6 @@ def assemble( filename, listingon=True):
     return wordmem
 
 
-    
 if __name__ == "__main__":
     """
     Command line option parsing.
@@ -225,7 +232,7 @@ if __name__ == "__main__":
     if filename != "":
 
         if size==0:
-            size = 128*1024 - start_adr
+            size = 1024*1024 - start_adr
             
         print(header_text)
         wordmem = assemble(filename, listingon)[start_adr:start_adr+size]
