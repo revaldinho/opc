@@ -38,7 +38,7 @@
 srec_load:
     PUSH    (r13)
 
-    mov     r4, r0, 0xffff          # initialize address to 0xffff meaning not yet set
+    mov     r4, r0, -1              # initialize address to 0xffff meaning not yet set
 
 srec_line_loop:
     mov     r1, r0
@@ -67,7 +67,7 @@ srec_line_loop:
     JSR     (read_hex_4)            # r2 = AAAA
     c.mov   pc, r0, srec_exit_bad_format
 
-    cmp     r4, r0, 0xffff          # test if address not set
+    cmp     r4, r0, -1              # test if address not set
     z.mov   r4, r2                  # AAAA now held in r4
 
     add     r5, r2                  # accumulate AAAA in checksum
