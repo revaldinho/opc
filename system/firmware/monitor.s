@@ -965,7 +965,7 @@ i1:     sto r1, r2, p-1         # was sta p,x
 
 mul:                            # uses y as loop counter
         mov r10, r1             # sta r
-        mov r3, r0, 16          # ldy #16
+        mov r3, r0, WORD_SIZE   # ldy #16
 m1:     add r1, r1              # asl
         add r11, r11            # asl q
         nc.mov pc, r0, m2       # bcc m2
@@ -977,7 +977,7 @@ m2:     mov r3, r3, -1          # dey
 
 div:                            # uses y as loop counter
         mov r10, r1             # sta r
-        mov r3, r0, 16          # ldy #16
+        mov r3, r0, WORD_SIZE   # ldy #16
         mov r1, r0, 0           # lda #0
         add r11, r11            # asl q
 d1:     ROL (r1, r1)            # rol
