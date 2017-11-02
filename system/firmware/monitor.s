@@ -7,7 +7,7 @@
 
 ##include "macros.s"
 
-# Inject _BASE_from the build script (C000 on Xilinx, F000 on ICE40)        
+# Inject _BASE_from the build script (C000 on Xilinx, F000 on ICE40)
 EQU        BASE, _BASE_
 EQU        CODE, 0xF800
 
@@ -195,7 +195,7 @@ srec_checksum_error_msg:
 
 comma:
     sto     r5, r4
-    INC     (r4,1)    
+    INC     (r4,1)
     mov     pc, r0, mon2
 
 # ---------------------------------------------------------
@@ -231,7 +231,17 @@ toggle_echo:
 # ---------------------------------------------------------
 
 go:
+##ifdef CPU_OPC7
+    mov     r1, r0, 0xffff
+    movt    r1, r0, 0x000f
+    and     r5, r1
+    mov     r1, r0         # opcode for mov pc, r0 is 0x00f00000
+    movt    r1, r0, 0x00f0
+    or      r5, r1
+    sto     r5, r0, go1
+##else
     sto     r5, r0, go1 + 1
+##endif
     PUSH    (r11)          # save echo state
     JSR     (load_regs)
     JSR     (go1)
@@ -653,7 +663,7 @@ osWORD0_exit:
 # -----------------------------------------------------------------------------
 
 ##ifndef CPU_OPC7
-   
+
 # Limit check to precent code running into next block...
 
 Limit1:
@@ -665,7 +675,7 @@ ORG UART_ADDR
     WORD 0x0000
 
 ##endif
-   
+
 
 # -----------------------------------------------------------------------------
 # Data
@@ -676,7 +686,7 @@ welcome:
     BSTRING "\n\rOPC7 Monitor\n\r"
 ##else
     WORD    0x0D0A
-    CPU_BSTRING() 
+    CPU_BSTRING()
     BSTRING " Monitor"
     WORD    0x0D0A
 ##endif
@@ -720,7 +730,7 @@ reg_state_psr:
 
 # -----------------------------------------------------------------------------
 # MOS interface
-# (this is only fixed in the 16 bit machines)   
+# (this is only fixed in the 16 bit machines)
 # -----------------------------------------------------------------------------
 
 # Limit check to precent code running into next block...
@@ -731,7 +741,7 @@ Limit2:
 
 ORG 0xFFC8
 ##endif
-   
+
 NVRDCH:                      # &FFC8
     mov     pc, r0, osRDCH
     WORD    0x0000
