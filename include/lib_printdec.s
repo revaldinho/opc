@@ -65,7 +65,7 @@ print_dec_16_1:
     ror     r2, r2
 
 print_dec_16_2:
-    adc     r2, r2
+    ROL     (r2, r2)
     c.mov   pc, r0, print_dec_16_3
     cmp     r2, r4
     nc.mov  pc, r0, print_dec_16_4
@@ -75,7 +75,7 @@ print_dec_16_3:
     SEC     ()
 
 print_dec_16_4:
-    adc     r1, r1
+    ROL     (r1, r1)
     nc.mov  pc, r0, print_dec_16_2
 
     JSR     (OSWRCH)

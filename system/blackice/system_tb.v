@@ -116,7 +116,7 @@ system
 
    always @(posedge DUT.clk)
      if (DUT.vpa) begin
-        $display("%t: Fetch: %04x = %02x", $time, DUT.address, DUT.cpu_din);
+        $display("%t:  Fetch: %04x = %02x", $time, DUT.address, DUT.cpu_din);
      end else if (DUT.vda) begin
         if (DUT.rnw)
           $display("%t: Mem Rd: %04x = %02x", $time, DUT.address, DUT.cpu_din);
@@ -124,13 +124,13 @@ system
           $display("%t: Mem Wr: %04x = %02x", $time, DUT.address, DUT.cpu_dout);
      end else if (DUT.vio) begin
         if (DUT.rnw)
-          $display("%t: IO Rd: %04x = %02x", $time, DUT.address, DUT.cpu_din);
+          $display("%t:  IO Rd: %04x = %02x", $time, DUT.address, DUT.cpu_din);
         else
-          $display("%t: IO Wr: %04x = %02x", $time, DUT.address, DUT.cpu_dout);
+          $display("%t:  IO Wr: %04x = %02x", $time, DUT.address, DUT.cpu_dout);
      end
 
    always @(posedge DUT.clk)
-     if (DUT.vda && !DUT.rnw && DUT.address == 16'hfe09)
+     if (DUT.vda && !DUT.rnw && DUT.address[15:0] == 16'hfe09)
        if (DUT.cpu_dout == 10)
          $display("%t: UART Tx:  <lf>", $time);
        else if (DUT.cpu_dout == 13)

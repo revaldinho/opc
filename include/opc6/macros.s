@@ -12,6 +12,8 @@ EQU   SWI1_MASK, 0x0020
 EQU   SWI2_MASK, 0x0040
 EQU   SWI3_MASK, 0x0080
         
+EQU   WORD_SIZE, 16
+
 MACRO   CPU_STRING()
     STRING "OPC6"
 ENDMACRO
@@ -100,6 +102,10 @@ MACRO   LSR(_reg1_, _reg2_)
     lsr     _reg1_, _reg2_        
 ENDMACRO
 
-        
+MACRO   ROL(_reg1_, _reg2_)
+    adc     _reg1_, _reg2_
+ENDMACRO
 
-        
+MACRO  BROT(_reg1_, _reg2_)
+    bswp    _reg1_, _reg2_
+ENDMACRO

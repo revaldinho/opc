@@ -3,7 +3,7 @@
 # -----------------------------------------------------------------------------
 
 # set the cpu type to support conditional assembly
-##define CPU_OPC5LS
+##define CPU_OPC7
 
 EQU     EI_MASK, 0x0008
 EQU    SWI_MASK, 0x00F0
@@ -11,15 +11,15 @@ EQU   SWI0_MASK, 0x0010
 EQU   SWI1_MASK, 0x0020
 EQU   SWI2_MASK, 0x0040
 EQU   SWI3_MASK, 0x0080
-        
-EQU   WORD_SIZE, 16
 
+EQU   WORD_SIZE, 32
+   
 MACRO   CPU_STRING()
-    STRING "OPC5LS"
+    STRING "OPC7"
 ENDMACRO
 
 MACRO   CPU_BSTRING()
-    BSTRING "OPC5LS"
+    BSTRING "OPC7"
 ENDMACRO
 
 MACRO   CLC()
@@ -31,29 +31,29 @@ MACRO   SEC()
 ENDMACRO
 
 MACRO   GETPSR(_reg_)
-    psr     _reg_, psr
+    getpsr  _reg_, psr
 ENDMACRO
 
 MACRO   PUTPSR(_reg_)
-    psr     psr, _reg_
+    putpsr  psr, _reg_
 ENDMACRO
 
 MACRO   SWI0() {
-    psr     psr, r0, SWI0_MASK
+    putpsr  psr, r0, SWI0_MASK
 ENDMACRO
-        
+
 MACRO   SWI1() {
-    psr     psr, r0, SWI1_MASK
+    putpsr  psr, r0, SWI1_MASK
 ENDMACRO
-        
+
 MACRO   SWI2() {
-    psr     psr, r0, SWI2_MASK
+    putpsr  psr, r0, SWI2_MASK
 ENDMACRO
-        
+
 MACRO   SWI3() {
-    psr     psr, r0, SWI3_MASK
+    putpsr  psr, r0, SWI3_MASK
 ENDMACRO
-        
+
 MACRO   EI()
     GETPSR  (r12)
     or      r12, r12, EI_MASK
@@ -67,8 +67,7 @@ MACRO   DI()
 ENDMACRO
 
 MACRO JSR( _address_)
-    mov     r13, pc, 0x0002
-    mov     pc,  r0, _address_
+    jsr     r13, r0, _address_
 ENDMACRO
 
 MACRO RTS()
@@ -86,11 +85,11 @@ MACRO   POP( _data_ )
 ENDMACRO
 
 MACRO   IN(_reg_, _address_)
-    ld      _reg_, r0, _address_
+    in      _reg_, r0, _address_
 ENDMACRO
-        
+
 MACRO   OUT(_reg_, _address_)
-    sto     _reg_, r0, _address_
+    out     _reg_, r0, _address_
 ENDMACRO
 
 MACRO   INC(_reg_, _val_)
@@ -100,16 +99,15 @@ ENDMACRO
 MACRO   DEC( _reg_, _val_)
     sub     _reg_, r0, _val_
 ENDMACRO
-        
+
 MACRO   LSR(_reg1_, _reg2_)
-    c.add   r0,r0
-    ror     _reg1_, _reg2_        
+    lsr    _reg1_, _reg2_
 ENDMACRO
 
 MACRO   ROL(_reg1_, _reg2_)
-    adc     _reg1_, _reg2_
+    rol    _reg1_, _reg2_
 ENDMACRO
 
 MACRO  BROT(_reg1_, _reg2_)
-    bswp    _reg1_, _reg2_
+    brot   _reg1_, _reg2_
 ENDMACRO

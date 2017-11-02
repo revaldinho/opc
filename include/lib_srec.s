@@ -32,8 +32,8 @@
 # Entry:
 #
 # Exit:
-# - r1 = 0 (success), 1 (escape), 2 (checksum error), 3 (bad format error) 
-# - r2, r3, r4 corrupted
+# - r1 = 0 (success), 1 (escape), 2 (checksum error), 3 (bad format error)
+# - r2, r3, r4, r5, r6 corrupted
 
 srec_load:
     PUSH    (r13)
@@ -71,27 +71,69 @@ srec_line_loop:
     z.mov   r4, r2                  # AAAA now held in r4
 
     add     r5, r2                  # accumulate AAAA in checksum
-    bswp    r2, r2
+    BROT    (r2, r2)
     add     r5, r2
 
     DEC     (r3, 3)
     CLC     ()
     ror     r3, r3                  # convert to words
     c.mov   pc, r0, srec_exit_bad_format    # length expected to be even because we are a word based machine
-
+##ifdef CPU_OPC7
+    ror     r3, r3                  # convert to words (4 bytes)
+    c.mov   pc, r0, srec_exit_bad_format    # length expected to be even because we are a word based machine
+##endif
 
 srec_word_loop:
+##ifdef CPU_OPC7
 
+#   This code is the best I could come up with to byte swap a 32-bit word (00112233->33221100)
+#
+#   JSR     (read_hex_2)            # r2 = BB (LSB)
+#   c.mov   pc, r0, srec_exit_bad_format
+#   add     r5, r2                  # accumulate BB in checksum
+#   mov     r6, r2
+#   JSR     (read_hex_2)            # r2 = BB
+#   c.mov   pc, r0, srec_exit_bad_format
+#   add     r5, r2                  # accumulate BB in checksum
+#   BROT    (r2, r2)
+#   BROT    (r2, r2)
+#   BROT    (r2, r2)
+#   or      r6, r2
+#   JSR     (read_hex_2)            # r2 = BB
+#   c.mov   pc, r0, srec_exit_bad_format
+#   add     r5, r2                  # accumulate BB in checksum
+#   BROT    (r2, r2)
+#   BROT    (r2, r2)
+#   or      r6, r2
+#   JSR     (read_hex_2)            # r2 = BB (MSB)
+#   c.mov   pc, r0, srec_exit_bad_format
+#   add     r5, r2                  # accumulate BB in checksum
+#   BROT    (r2, r2)
+#   or      r2, r6
+
+    # in 32-bit land, r2 does not need to be byte swapped (i.e. the transmission order was MSB through to LSB)
+    JSR     (read_hex)              # r2 = BBBBBBBB
+    add     r5, r2                  # accumulate LSB in checksum
+    BROT    (r2, r2)
+    add     r5, r2                  # accumulate in checksum
+    BROT    (r2, r2)
+    add     r5, r2                  # accumulate in checksum
+    BROT    (r2, r2)
+    add     r5, r2                  # accumulate MSB in checksum
+    BROT    (r2, r2)
+##else
+    # in 16-bit land, r2 is now byte swapped (i.e. the transmission order was LSB then MSB)
     JSR     (read_hex_4)            # r2 = BBBB
     c.mov   pc, r0, srec_exit_bad_format
 
     add     r5, r2                  # accumulate BBBB in checksum
-    bswp    r2, r2
+    BROT    (r2, r2)
     add     r5, r2
+##endif
 
     sto     r2, r4                  # store the word
 
-        
+
     INC     (r4,1)                  # increment the address pointer
     DEC     (r3,1)
     nz.mov  pc, r0, srec_word_loop

@@ -1,0 +1,70 @@
+[*]
+[*] GTKWave Analyzer v3.3.58 (w)1999-2014 BSI
+[*] Thu Sep 28 14:10:59 2017
+[*]
+[dumpfile] "/home/dmb/atom/opc/system/blackice/opc6/dump.vcd"
+[dumpfile_mtime] "Thu Sep 28 14:09:31 2017"
+[dumpfile_size] 2787679
+[savefile] "/home/dmb/atom/opc/system/blackice/opc6/signals.gtkw"
+[timestart] 369547
+[size] 1855 1176
+[pos] -856 -549
+*-7.000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] system_tb.
+[sst_width] 223
+[signals_width] 182
+[sst_expanded] 1
+[sst_vpaned_height] 354
+@22
+system_tb.DUT.ADR[17:0]
+system_tb.DUT.DAT[15:0]
+@28
+system_tb.DUT.LOCK
+system_tb.DUT.RAMCS_b
+system_tb.DUT.RAMOE_b
+system_tb.DUT.RAMWE_b
+@22
+system_tb.DUT.address[15:0]
+@28
+system_tb.DUT.clk
+system_tb.DUT.clk100
+@22
+system_tb.DUT.clk_counter[23:0]
+@28
+system_tb.DUT.clkdiv[1:0]
+@22
+system_tb.DUT.cpu_din[15:0]
+system_tb.DUT.cpu_dout[15:0]
+system_tb.DUT.data_pins_in[15:0]
+system_tb.DUT.data_pins_out[15:0]
+@28
+system_tb.DUT.data_pins_out_en
+system_tb.DUT.led1
+system_tb.DUT.led2
+system_tb.DUT.led3
+system_tb.DUT.led4
+system_tb.DUT.ram_cs_b
+@22
+system_tb.DUT.ram_dout[15:0]
+@28
+system_tb.DUT.reset_b
+system_tb.DUT.rnw
+system_tb.DUT.rxd
+system_tb.DUT.sw1_1
+system_tb.DUT.sw1_2
+system_tb.DUT.sw2_1
+system_tb.DUT.sw2_2
+system_tb.DUT.sw3
+system_tb.DUT.sw4
+system_tb.DUT.sw4_sync
+system_tb.DUT.txd
+system_tb.DUT.uart_cs_b
+@22
+system_tb.DUT.uart_dout[15:0]
+@28
+system_tb.DUT.vda
+system_tb.DUT.vio
+system_tb.DUT.vpa
+system_tb.DUT.wegate
+[pattern_trace] 1
+[pattern_trace] 0
