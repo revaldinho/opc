@@ -27,7 +27,7 @@ while True:
 
     # sign extend operand !
     if (0x1C<=opcode<=0x1F):
-        pass
+        operand = (operand | 0xFFF00000)  if (operand & 0x80000 != 0) else operand
     else:
         operand = (operand | 0xFFFF0000)  if (operand & 0x8000 != 0) else operand
     

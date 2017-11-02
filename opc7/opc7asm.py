@@ -4,6 +4,7 @@ symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
 pdict = {"1":0x0,"z":0x4,"nz":0x6,"c":0x8,"nc":0xA,"mi":0xC,"pl":0xE,"":0x0}
 reg_re = re.compile("(r\d*|psr|pc)")
 (wordmem,macro,macroname,newtext,wcount,errors,warnings,mnum,nextmnum)=([0x00000000]*1024*1024,dict(),None,[],0,[],[],0,0)
+
 def expand_macro(line, macro, mnum):  # recursively expand macros, passing on instances not (yet) defined
     global nextmnum
     (text,mobj)=([line],re.match("^(?P<label>\w*\:)?\s*(?P<name>\w+)\s*?\((?P<params>.*?)\)",line))
@@ -17,6 +18,7 @@ def expand_macro(line, macro, mnum):  # recursively expand macros, passing on in
                 newline = (newline.replace(s,r) if s else newline).replace('@','%s_%s' % (instname,mnum))
             text.extend(expand_macro(newline, macro, nextmnum))
     return(text)
+
 for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
     mobj =  re.match("\s*?MACRO\s*(?P<name>\w*)\s*?\((?P<params>.*)\)", line, re.IGNORECASE)
     if mobj:
@@ -26,6 +28,7 @@ for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
     elif macroname:
         macro[macroname][1].append(line)
     newtext.extend(expand_macro(('' if not macroname else '# ') + line, macro, mnum))
+
 for iteration in range (0,2): # Two pass assembly
     (wcount,nextmem) = (0,0)
     for line in newtext:
@@ -75,7 +78,15 @@ for iteration in range (0,2): # Two pass assembly
                         (dst,src,val) = (words[0],0,words[1] & 0xFFFFF)                        
                     else:
                         (dst,src,val) = (words + [0])[:3]
-                    words=[ (pdict[pred]<<28) |((op.index(inst)&0x1F)<<24)|(dst<<20)|(src<<16)| val&0xFFFF]
+                        ##i.e. the valid range of 16-bit IMM would be 0x0000->0x7FFF and 0xFFFF8000->0xFFFFFFFF.
+                        val = val & 0xFFFFFFFF
+                        if ( (inst not in ("in","out")) and (0x7FFF < val < 0x0FFFF8000)):
+                            errors.append("Error: 16b constant out of range in ...\n         %s" % (line.strip()))
+                        elif (inst=="lmov" and dst!=0xF and (0x7FFFF < val < 0x0FFF80000)):
+                            warnings.append("Warning: 20b constant with MSB set will be sign extended in ...\n         %s" % (line.strip()))
+                        else:
+                            val = val & 0xFFFF
+                    words=[ (pdict[pred]<<28)|((op.index(inst)&0x1F)<<24)|(dst<<20)|(src<<16)| val&0xFFFFF]
             (wordmem[nextmem:nextmem+len(words)], nextmem,wcount )  = (words, nextmem+len(words),wcount+len(words))
         elif inst == "ORG":
             nextmem = eval(operands,globals(),symtab)
@@ -83,6 +94,8 @@ for iteration in range (0,2): # Two pass assembly
             errors.append("Error: unrecognized instruction or macro %s in ...\n         %s" % (inst,line.strip()))
         if iteration > 0 :
             print("%06x: %-36s  %s"%(memptr,' '.join([("%08x" % i) for i in words]),line.rstrip()))
+
+
 print ("\nAssembled %d words of code with %d error%s and %d warning%s." % (wcount,len(errors),'' if len(errors)==1 else 's',len(warnings),'' if len(warnings)==1 else 's'))
 print ("\nSymbol Table:\n\n%s\n\n%s\n%s" % ('\n'.join(["%-32s 0x%08X (%08d)" % (k,v,v) for k,v in sorted(symtab.items()) if not re.match("r\d|r\d\d|pc|psr",k)]),'\n'.join(errors),'\n'.join(warnings)))
 with open("/dev/null" if len(errors)>0 else sys.argv[2],"w" ) as f:   ## write to hex file only if no errors else send result to null file

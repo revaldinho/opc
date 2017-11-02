@@ -68,7 +68,7 @@ ENDMACRO
 
         ORG 0x1000
 start:
-        PUSH (r13,r14) # Save r13 return address if running via the monitor
+        PUSH    (r13,r14) # Save r13 return address if running via the monitor
         mov     r8,r0,my_e+1
 
         ;; trivial banner + first digit and decimal point
@@ -94,27 +94,26 @@ L3:     mov     r11,r0                  # r11 = Q
         mov     r10,r12,1               # r10 = i+1
 L4:
         ld      r2,r12,remain           # r2 <- remain[i]
-        ASL     (r2)                    # Compute 16b result for r2 * 10
-        mov     r1,r2
+        ASL     (r2)                    # Compute 16b result for r2 * 10 and add to r11
+        add     r11,r2                  # ..first add 2*r2
         ASL     (r2)
         ASL     (r2)
-        add     r1,r2
-        add     r11,r1                  # accumulate into Q
-        ljsr    r13,udiv16           # r11/r10; r11 <- quo, r2 <- rem, r10 preserved
+        add     r11,r2                  # now add 8*r2 for total of 10*r2
+        ljsr    r13,udiv16              # r11/r10; r11 <- quo, r2 <- rem, r10 preserved
         sto     r2,r12,remain           # rem[i] <- r2
 
         mov     r10,r12                 # get loop ctr into r10 before decr so it's i+1 on next iter
-        sub     r12,r0,1                   # decr loop counter
-        c.sub   pc,r0,PC-L4                # loop if >=0
+        sub     r12,r0,1                # decr loop counter
+        c.sub   pc,r0,PC-L4             # loop if >=0
 
 L6:     mov     r1, r11, 48             # Convert quotient into ASCII digit
         ljsr    r13,oswrch
 
         cmp     r9,r0,saved_digits      # Need to save a digit ?
         nc.sto  r11,r8                  # Yes
-        nc.add  r8,r0,1                    # and increment the pointer
+        nc.add  r8,r0,1                 # and increment the pointer
 
-        sub     r9,r0,1                    # dec loop counter
+        sub     r9,r0,1                 # dec loop counter
         nz.mov  pc,r0,L3                # jump back into main program
 
         mov     r1, r0, 10              # Print Newline to finish off

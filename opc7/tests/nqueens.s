@@ -55,28 +55,31 @@ MACRO   POP( _data_ )
 ENDMACRO
 
 MACRO   PUSHALL()
-        PUSH (r13)
-        PUSH (r12)
-        PUSH (r11)
-        PUSH (r10)
-        PUSH ( r9)
-        PUSH ( r8)
-        PUSH ( r7)
-        PUSH ( r6)
-        PUSH ( r5)
+        mov     r14,r14, -9
+        sto     r5, r14, 1
+        sto     r6, r14, 2
+        sto     r7, r14, 3
+        sto     r8, r14, 4
+        sto     r9, r14, 5
+        sto     r10, r14, 6
+        sto     r11, r14, 7
+        sto     r12, r14, 8
+        sto     r13, r14, 9                        
 ENDMACRO
 
 MACRO   POPALL()
-        POP ( r5)
-        POP ( r6)
-        POP ( r7)
-        POP ( r8)
-        POP ( r9)
-        POP (r10)
-        POP (r11)
-        POP (r12)
-        POP (r13)
+        ld      r5, r14, 1
+        ld      r6, r14, 2
+        ld      r7, r14, 3
+        ld      r8, r14, 4
+        ld      r9, r14, 5
+        ld      r10, r14, 6
+        ld      r11, r14, 7
+        ld      r12, r14, 8
+        ld      r13, r14, 9
+        mov     r14, r14, 9
 ENDMACRO
+        
 
 MACRO   JSR ( _addr_ )
         ljsr r13, _addr_
@@ -114,19 +117,18 @@ L40:    cmp     r10,r12         # L1: IF X=R THEN L140 (all results)
         JSR     (display_result)
         mov     pc,r0,L140      # Run another iteration
 L40s:
-        add     r10,r0,1           # X = X+1
+        add     r10,r0,1        # X = X+1
         sto     r12,r10,results # A(X)=R
-L70:    add     r11,r0,1           # S = S+1
+L70:    add     r11,r0,1        # S = S+1
         mov     r9,r10          # Y = X
-L90:    sub     r9,r0,1            # Y = Y-1
-        z.add   pc,r0,L40-PC       # IF Y=0 THEN L40
+L90:    sub     r9,r0,1         # Y = Y-1
+        z.add   pc,r0,L40-PC    # IF Y=0 THEN L40
         ld      r1,r10,results  # r1 = A(X)
         ld      r2,r9,results   # r2 = A(Y)
         sub     r1,r2           # T= A(X)-A(Y)
-        z.add   pc,r0,L140-PC      # IF T=0 THEN L140
-        pl.add  pc,r0,L90a-PC      #(not isnt predicated so skip if positive)
-        not     r1,r1,-1        # T = ABS(T)
-L90a:                           # IF X-Y != ABS(T) GOTO L90
+        z.add   pc,r0,L140-PC   # IF T=0 THEN L140
+        mi.not  r1,r1,-1        # T = ABS(T)
+                                # IF X-Y != ABS(T) GOTO L90
         sub     r1,r10          # [if ABS(T)-X+Y!=0]
         add     r1,r9           #
         nz.add  pc,r0,L90-PC       
@@ -134,16 +136,16 @@ L140:   ld      r1,r10,results  # r1 = A(X)
         sub     r1,r0,1
         sto     r1,r10,results  # A(X) = A(X)-1
         nz.mov  pc,r0,L70       # IF A(X) GOTO L70
-        sub     r10,r0,1           # X = X-1
-        nz.add  pc,r0,L140-PC      # IF X GOTO L140
+        sub     r10,r0,1        # X = X-1
+        nz.add  pc,r0,L140-PC   # IF X GOTO L140
 L180:   mov     r2,r0
         mov     r1,r11
         ljsr    r13,printdec32 # Print S
-        mov      r1,r0,10
+        mov     r1,r0,10
         ljsr    r13,oswrch
-        mov      r1,r0,13
+        mov     r1,r0,13
         ljsr    r13,oswrch
-        halt    r0,r0,0xBEEB
+        halt    r0,r0,0x1234
         POP (r13,r14) # for running via monitor
         RTS     ()
 
@@ -296,7 +298,8 @@ results: WORD   0       # results will go here
 oswrch:
 oswrch_loop:
         in      r2, r0, 0xfe08
-        and     r2, r0, 0x8000
+        asr     r2, r2
+        and     r2, r0, 0x4000
         nz.sub  pc,r0, PC-oswrch_loop
         out     r1, r0, 0xfe09
         RTS     ()

@@ -19,10 +19,10 @@ ENDMACRO
 INT:
         PUSH   (r13)
         PUSH   (r12)
-        mov     r12,r0,SWI_LOG  # default to SI_LOG
+        lmov     r12,SWI_LOG  # default to SI_LOG
         getpsr  r13,psr         # get PSR into r13
         and     r13,r0,0xF0     # mask off SWI bits
-        z.mov   r12,r0,HWI_LOG  # if nonzero then point at HI_LOG instead
+        z.lmov  r12,HWI_LOG  # if nonzero then point at HI_LOG instead
         ld      r13,r12         # get count
         add     r13,r0,1        # increment count
         sto     r13,r12         # write back
@@ -33,17 +33,17 @@ INT:
 
 
 codestart:
-        mov    r14,r0,STACK   # Setup global stack pointer
+        lmov   r14,STACK   # Setup global stack pointer
         mov    r13,r0
         mov    r12,r0
-        mov    r1,r0,0x08
+        lmov   r1,0x08
         putpsr psr,r1         # Enable interrupts
 
 fib:
-        mov     r4, r0, results
-        mov     r5, r0, fibEnd
-        mov     r6, r0, fibLoop
-        mov     r10, r0, 1
+        lmov    r4, results
+        lmov    r5, fibEnd
+        lmov    r6, fibLoop
+        lmov    r10, 1
 
         mov     r1, r0    # r1 = 0
         mov     r2, r10   # r2 = 1

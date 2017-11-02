@@ -14,8 +14,6 @@ Standard instructions
         \    \____________________________  5b instruction opcode
          \________________________________  3b predicate bits                         
 
-NB all 16b operands are sign-extended to a full 32b word length.
-
 Long instructions
 
     ppp ooooo dddd nnnn  nnnnnnnnnnnnnnnn
@@ -34,6 +32,13 @@ and destination using the two 4 bit fields in the encoding. Two of the registers
 
 The address bus and program counter are 20b wide rather than a full 32 bits. Whenever the program counter is
 loaded into another register the top 12 bits will be zeroed.
+
+Sign Extension
+
+All 20b and 16b operands are sign-extended to a full 32b word length.
+
+The valid range of a 16b immediate is 0x0000->0x7FFF and 0xFFFF8000->0xFFFFFFFF, with the exception of operands for the IN and OUT
+instructions. The IO address range is limited to 16 address bits anyway so any 16b constant is valid for those two instructions.
 
 Addressing Modes and Effective Address/Data Computation
 -------------------------------------------------------

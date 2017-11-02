@@ -96,7 +96,7 @@ L3:     add  r12,r0,2             # next odd
         cmp   r12,r10
         nc.mov pc,r0,L1
 
-        halt    r0,r0,0xBEEB
+        halt    r0,r0,0x1234
         POP     (r13,r14) # restore r13 if called via monitor
         RTS     ()
 
@@ -136,11 +136,11 @@ PrintDec3:
         SEC     ()
 PrintDec4:
         rol     r1, r1
-        cmp     r1, r7          # detect the half-carry        
+        cmp     r1, r7           # detect the half-carry        
         nc.sub  pc,r0, PC-PrintDec2
-        movt    r1, r0,0        # clear upper 16 bits of R0
+        movt    r1, r0           # clear upper 16 bits of R0
         ljsr    r13,oswrch
-        mov     r1, r0, 0x1003
+        lmov    r1, 0x1003
         sub  r3,r0, 1
         pl.mov  pc,r0,PrintDec1
 
@@ -176,7 +176,8 @@ results:
 oswrch:
 oswrch_loop:
         in      r2, r0, 0xfe08
-        and     r2, r0, 0x8000
+        asr     r2, r2
+        and     r2, r0, 0x4000
         nz.sub  pc,r0, PC-oswrch_loop
         out     r1, r0, 0xfe09
         RTS     ()

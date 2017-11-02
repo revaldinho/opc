@@ -159,7 +159,7 @@ L3:     add    r11,r0,2             # skip even numbers so always increment by 2
         cmp    r11,r9
         mi.mov pc,r0,L1
 
-        halt    r0,r0,0xBEEB
+        halt    r0,r0,0x0001
         POP (r13,r14) # for running via monitor
         RTS     ()
 
@@ -285,10 +285,7 @@ bitmask:
         WORD 0x00100000,0x00200000,0x00400000,0x00800000
         WORD 0x01000000,0x02000000,0x04000000,0x08000000
         WORD 0x10000000,0x20000000,0x40000000,0x80000000
-
-
 results: WORD   0       # results will go here
-
 
         ORG 0xFFEE
         # --------------------------------------------------------------
@@ -303,9 +300,12 @@ results: WORD   0       # results will go here
         #       r2 used as temporary
         # ---------------------------------------------------------------
 oswrch:
+        PUSH    (r3)
+        lmov    r3,0x08000       
 oswrch_loop:
         in      r2, r0, 0xfe08
-        and     r2, r0, 0x8000
+        and     r2, r3
         nz.sub  pc,r0, PC-oswrch_loop
         out     r1, r0, 0xfe09
+        POP     (r3)
         RTS     ()

@@ -16,10 +16,6 @@ else
 endif
 
 set assembler = ../opc7asm.py
-#set assembler = ../opc7byteasm.py
-
-set testlist = ( string testpsr )
-
 set testlist = ( bigsieve  davefib davefib_int e-spigot-rev  fib hello math32  nqueens pi-spigot-rev  robfib sieve ) 
 
 set numtests = 0
@@ -35,6 +31,7 @@ foreach test ( $testlist )
     # Test bench expects the hex file to be called 'test.hex'
     cp ${test}.hex test.hex
     # Run icarus verilog to compile the testbench only if there is no stdin file
+    echo ""    
     echo "Simulating Test $test"    
     iverilog -D_simulation=1  ../opc7tb.v ../opc7cpu.v
     # -D_dumpvcd=1        
@@ -43,15 +40,17 @@ foreach test ( $testlist )
     if ( -e dump.vcd) then
         mv dump.vcd ${test}.vcd
     endif            
-    mv test.vdump ${test}.vdump
     python3 ../../utils/show_stdout.py -7 -f ${test}.sim >  ${test}.sim.stdout
+
+    gzip *sim *trace &
+    mv test.vdump ${test}.vdump
+    
     diff -s ${test}.*.stdout
     if ( $status != 0 ) then
         echo "FAIL - simulation doesn't match emulation result"
         @ fails++
     endif
 
-    gzip *sim *trace &
 end
 wait
 

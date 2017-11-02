@@ -201,7 +201,7 @@ L4:
         mov     r1, r0, 13
         ljsr    r13,oswrch
 
-        halt    r0,r0,0xBEEB
+        halt    r0,r0,0x1234
         POP     (r13)
         RTS     ()
 
@@ -285,9 +285,10 @@ ORG     0xFFEE
         # ---------------------------------------------------------------
 oswrch:
 oswrch_loop:
-#        in      r2, r0, 0xfe08
-#        and     r2, r0, 0x8000
-#        nz.dec  pc, PC-oswrch_loop
+        in      r2, r0, 0xfe08
+        asr     r2, r2
+        and     r2, r0, 0x4000
+        nz.lmov pc, oswrch_loop
         out     r1, r0, 0xfe09
         RTS     ()
 

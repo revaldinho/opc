@@ -2,15 +2,15 @@
 
     ORG   0x0000
 
-    mov       r1, r0, 48      # start with a '0'
-    mov       r2, r0, 43      # 43 characters takes us to 'Z'
+    lmov    r1,48      # start with a '0'
+    lmov    r2,43      # 43 characters takes us to 'Z'
 
 
     # convenience constants for best size and speed
-    mov       r3, r0, 1
-    mov       r4, r0, 0xfe09  # the output device (like Acorn's BBC Micro)
-    mov       r5, r0, LOOP
-    mov       r6, r0, -1
+    lmov    r3,1
+    lmov    r4,0xfe09  # the output device (like Acorn's BBC Micro)
+    lmov    r5,LOOP
+    lmov    r6,-1
 
 LOOP:
     out       r1, r4

@@ -37,44 +37,46 @@ MACRO   POP( _data_ )
     mov     r14, r14, 1
 ENDMACRO
 
+MACRO   JSR( _addr_ )
+    ljsr    r13,_addr_
+ENDMACRO
+
 MACRO   PUSHALL()
-        PUSH (r13)
-        PUSH (r12)
-        PUSH (r11)
-        PUSH (r10)
-        PUSH ( r9)
-        PUSH ( r8)
-        PUSH ( r7)
-        PUSH ( r6)
-        PUSH ( r5)
+        mov     r14,r14, -9
+        sto     r5, r14, 1
+        sto     r6, r14, 2
+        sto     r7, r14, 3
+        sto     r8, r14, 4
+        sto     r9, r14, 5
+        sto     r10, r14, 6
+        sto     r11, r14, 7
+        sto     r12, r14, 8
+        sto     r13, r14, 9                        
 ENDMACRO
 
 MACRO   POPALL()
-        POP ( r5)
-        POP ( r6)
-        POP ( r7)
-        POP ( r8)
-        POP ( r9)
-        POP (r10)
-        POP (r11)
-        POP (r12)
-        POP (r13)
-ENDMACRO
-
-MACRO   JSR ( _addr_ )
-        ljsr r13, _addr_
+        ld      r5, r14, 1
+        ld      r6, r14, 2
+        ld      r7, r14, 3
+        ld      r8, r14, 4
+        ld      r9, r14, 5
+        ld      r10, r14, 6
+        ld      r11, r14, 7
+        ld      r12, r14, 8
+        ld      r13, r14, 9
+        mov     r14, r14, 9
 ENDMACRO
 
 MACRO   SPRINT( _str_addr_, _eol_ )
         lmov r1, _str_addr_
-        mov r2, r0, _eol_
+        lmov    r2,_eol_
         movt r2, r0, (_eol_ >> 16)
-        JSR (sprint)        
-ENDMACRO        
-        
+        JSR (sprint)
+ENDMACRO
+
         mov   r13,r0                  # Initialise r13 to stop PUSH/POP ever loading X's to stack for regression runs
-        mov   r14,r0,0x0FFE           # Set stack to grow down from here for monitor
-        mov   pc,r0,0x1000            # Program start at 0x1000 for use with monitor/copro
+        lmov    r14,0x0FFE           # Set stack to grow down from here for monitor
+        lmov    pc,0x1000            # Program start at 0x1000 for use with monitor/copro
 
         ORG   0x1000
 start:
@@ -84,86 +86,86 @@ start:
         #       Test the Multiplication
         JSR    (newline)
         SPRINT (STR5,0x00000a0d)
-        SPRINT (STR6,0x0a0d0a0d)        
-        mov r12, r0, DATA
-        
+        SPRINT (STR6,0x0a0d0a0d)
+        lmov    r12,DATA
+
 outer:
         ld r1, r12,0
         z.lmov pc,qmul_test
         JSR (printdec32)
-        SPRINT (STR2,0)        
-        ld r1, r12,1                
+        SPRINT (STR2,0)
+        ld r1, r12,1
         JSR (printdec32)
-        PUSH (r1)        
-        SPRINT (STR1,0)        
+        PUSH (r1)
+        SPRINT (STR1,0)
         ld r1,r12,0
         ld r2,r12,1
         mov r5,r0
         JSR (umul32)
-        c.mov r5,r0,1        
+        c.lmov  r5,1
         JSR (printdec32)
         ror r5,r5
         nc.lmov pc, L1
-        SPRINT (STR12,0)                
-L1:     
+        SPRINT (STR12,0)
+L1:
         JSR (newline)
         add r12,r0,1
         lmov pc,outer
 
-qmul_test:      
+qmul_test:
         #       Test the Quick Multiplication
         JSR    (newline)
         SPRINT (STR13,0x00000a0d)
-        SPRINT (STR14,0x0a0d0a0d)        
-        mov r12, r0, DATA
-outer0:  
+        SPRINT (STR14,0x0a0d0a0d)
+        lmov    r12,DATA
+outer0:
         ld r1, r12,0
         z.lmov pc,div_test
         JSR (printdec32)
-        SPRINT (STR2,0)        
-        ld r1, r12,1                
+        SPRINT (STR2,0)
+        ld r1, r12,1
         JSR (printdec32)
-        PUSH (r1)        
-        SPRINT (STR1,0)        
+        PUSH (r1)
+        SPRINT (STR1,0)
         ld r1,r12,0
         ld r2,r12,1
         mov r5,r0
         JSR (qmul32)
-        JSR (printdec32)        
+        JSR (printdec32)
         JSR (newline)
         add r12,r0,1
         lmov pc,outer0
-        
-div_test:       
+
+div_test:
         JSR     (newline)
         #       Test the Division
         SPRINT (STR7,0x00000a0d)
-        SPRINT (STR8,0x0a0d0a0d)        
-        
-        mov r12, r0, DATA
-outer2:  
+        SPRINT (STR8,0x0a0d0a0d)
+
+        lmov    r12,DATA
+outer2:
         ld r1, r12,0
         z.lmov pc,sqrt_test
         JSR (printdec32)
         SPRINT (STR3,0)
-        ld r1, r12,1                
+        ld r1, r12,1
         JSR (printdec32)
         SPRINT (STR1,0)
         ld r1,r12,0
         ld r2,r12,1
         JSR (udiv32)
-        c.mov r5,r0,1
+        c.lmov  r5,1
         PUSH (r2)
         JSR (printdec32)
-        mov r1, r0, STR4
+        lmov    r1,STR4
         mov r2, r0
-        JSR (sprint)        
+        JSR (sprint)
         POP (r1)
         JSR (printdec32)
         ror r5,r5
         nc.lmov pc, L2
-        SPRINT (STR15,0)                
-L2:             
+        SPRINT (STR15,0)
+L2:
         JSR (newline)
         add r12,r0,1
         lmov pc,outer2
@@ -171,14 +173,14 @@ L2:
 sqrt_test:
         JSR    (newline)
         SPRINT (STR9,0x00000a0d)
-        SPRINT (STR10,0x0a0d0a0d)        
-        
-        mov r12, r0, DATA
+        SPRINT (STR10,0x0a0d0a0d)
+
+        lmov    r12,DATA
 outer3:
         ld r1, r12,0
         z.lmov pc,end
         SPRINT (STR11,0x000000000)
-        ld r1, r12,0        
+        ld r1, r12,0
         JSR (printdec32)
         SPRINT (STR1,0)
         ld r1,r12,0
@@ -187,8 +189,8 @@ outer3:
         JSR (newline)
         add r12,r0,1
         lmov pc,outer3
-end:    
-        halt    r0,r0,0xBEEB
+end:
+        halt    r0,r0,0x1234
         POP     (r13)
         RTS     ()
 
@@ -198,22 +200,22 @@ STR2:   BSTRING " x "
 STR3:   BSTRING " / "
 STR4:   BSTRING " REM "
 STR5:   BSTRING "MULTIPLICATION (UMUL32) TEST"
-STR6:   BSTRING "============================"                
-STR7:   BSTRING "DIVISION (UDIV32) TEST"        
-STR8:   BSTRING "======================"        
-STR9:   BSTRING "SQUARE ROOT (SQRT32) TEST"        
-STR10:  BSTRING "========================="        
+STR6:   BSTRING "============================"
+STR7:   BSTRING "DIVISION (UDIV32) TEST"
+STR8:   BSTRING "======================"
+STR9:   BSTRING "SQUARE ROOT (SQRT32) TEST"
+STR10:  BSTRING "========================="
 STR11:  BSTRING "Square Root of "
 STR12:  BSTRING " (Numeric overflow) "
 STR13:  BSTRING "MULTIPLICATION (QMUL32) TEST"
-STR14:  BSTRING "============================"                
+STR14:  BSTRING "============================"
 STR15:  BSTRING " (Divide by zero) "
-        
+
 FUNC:   WORD    umul32
         WORD    udiv32
         WORD    sqrt32
-        
-DATA:   
+
+DATA:
         WORD 0x00000001,0x00000002
         WORD 0x00000003,0x00000004
         WORD 0x00000009,0x0000000A
@@ -242,7 +244,7 @@ DATA:
         # Exit
         # - R1 holds Quotient
         # - R2 holds remainder
-        # - C = 0 if successful ; C = 1 if divide by zero        
+        # - C = 0 if successful ; C = 1 if divide by zero
         # - R3,R4 used as workspace and trashed
         # - all other registers preserved
         #
@@ -258,14 +260,14 @@ DATA:
         #
         # Routine returns on divide by zero with carry flag set.
         #
-        # ------------------------------------------------------------------        
+        # ------------------------------------------------------------------
 udiv32:
-        mov r4,r0,32       # loop counter
+        lmov    r4,32       # loop counter
         lmov pc, udiv
-udiv16:  
-        mov r4,r0,16       # loop counter
+udiv16:
+        lmov    r4,16       # loop counter
         movt r1,r0         # Move N into R5 upper half word
-        brot r1,r1         
+        brot r1,r1
         brot r1,r1
 udiv:
         mov r3,r0          # Initialise R
@@ -275,7 +277,7 @@ udiv_1:
         ASL (r1)           # left shift N
         rol r3,r3          # left shift R and import carry into LSB
         cmp r3, r2         # compare R with D
-        pl.sub r3, r2      # if >= 0 then do subtract for real..     
+        pl.sub r3, r2      # if >= 0 then do subtract for real..
         pl.add r1,r0,1     # ..and increment quotient
         sub r4,r0,1        # dec loop counter
         nz.lmov pc,udiv_1  # repeat 'til zero
@@ -285,13 +287,13 @@ udiv_1:
 
         # -----------------------------------------------------------------
         #
-        # umul32 
+        # umul32
         #
         # Multiply 2 32 bit numbers and return a 32 bit number with Carry
         # set if overflow occurs
         #
         # Entry
-        # - R1 holds A 
+        # - R1 holds A
         # - R2 holds B
         # - R13 holds return address
         #
@@ -314,36 +316,35 @@ udiv_1:
         #              SUM += B
         #          B <<= 1
         #      return ( SUM )
-        #
         # ------------------------------------------------------------------
 umul32:
-        lsr r3,r1         # shift A into r3                
+        lsr r3,r1         # shift A into r3
         mov r1,r0         # initialise product (preserve C)
         mov r4,r0         # clear sticky carry (preserve C)
-um32_1:       
+um32_1:
         c.add r1,r2       # add B into acc if carry
-        mi.mov r4,r0,1    # set sticky carry if accumulation overflows
-        c.mov r4,r0,1     # set sticky carry if accumulation overflows
+        mi.lmov r4,1      # set sticky carry if accumulation overflows
+        c.lmov  r4,1      # set sticky carry if accumulation overflows
         ASL (r2)          # multiply B x 2
-        mi.mov r4,r0,1    # set sticky carry if accumulation overflows
-        c.mov r4,r0,1     # set sticky carry if accumulation overflows        
+        mi.lmov r4,1      # set sticky carry if accumulation overflows
+        c.lmov  r4,1      # set sticky carry if accumulation overflows
         lsr r3,r3         # shift A to check LSB
         nz.lmov pc,um32_1 # if A is zero then exit else loop again (preserving carry)
         c.add r1,r2       # Add last copy of multiplicand into acc if carry was set
-        mi.mov r4,r0,1    # set sticky carry if accumulation overflows        
-        c.mov r4,r0,1     # set sticky carry if accumulation overflows
+        mi.lmov r4,1      # set sticky carry if accumulation overflows
+        c.lmov  r4,1      # set sticky carry if accumulation overflows
         ror r4,r4         # rotate right sticky carry into C to return
         RTS()
 
         # -----------------------------------------------------------------
         #
-        # qmul32 
+        # qmul32
         #
         # Quick multiply 2 32 bit numbers and return a 32 bit number  without
         # checking for overflow conditions
         #
         # Entry
-        # - R1 holds A 
+        # - R1 holds A
         # - R2 holds B
         # - R13 holds return address
         #
@@ -359,25 +360,25 @@ um32_1:
         # - R4 = sticky carry set if sign bit or carry out is ever set
         # ------------------------------------------------------------------
 qmul32:
-        lsr r3,r1         # shift A into r3                
+        lsr r3,r1         # shift A into r3
         mov r1,r0         # initialise product (preserve C)
-qm32_1:       
+qm32_1:
         c.add r1,r2       # add B into acc if carry
         ASL (r2)          # multiply B x 2
         lsr r3,r3         # shift A to check LSB
         nz.lmov pc,qm32_1 # if A is zero then exit else loop again (preserving carry)
         c.add r1,r2       # Add last copy of multiplicand into acc if carry was set
         RTS()
-        
+
 
         # -----------------------------------------------------------------
         #
-        # sqrt32 
+        # sqrt32
         #
         # Find square root of a 32 bit number
         #
         # Entry
-        # - R1 holds number to root 
+        # - R1 holds number to root
         # - R13 holds return address
         #
         # Exit
@@ -386,9 +387,9 @@ qm32_1:
         # - all other registers preserved
         #
         # ------------------------------------------------------------------
-        # 
+        #
         # def isqrt( num) :
-        #     res = 0   
+        #     res = 0
         #     bit = 1 << 30; ## Set second-to-top bit, ie b30 for 32 bits
         #     ## "bit" starts at the highest power of four <= the argument.
         #     while (bit > num):
@@ -402,7 +403,7 @@ qm32_1:
         #             res >>= 1
         #         bit >>= 2
         #     return res
-        # 
+        #
         # ------------------------------------------------------------------
 sqrt32:
         mov r2,r0             # zero result
@@ -419,9 +420,9 @@ sq32_L2:
         cmp r3,r0             # is R3 zero ?
         z.lmov pc, sq32_L5   # Yes ? then exit
         sub r1,r2             # Trial subtract r1 -= Res + bit
-        sub r1,r3         
+        sub r1,r3
         mi.lmov pc, sq32_L3  # if <0 then need to restore r1
-        asr r2,r2             # shift result right 
+        asr r2,r2             # shift result right
         add r2,r3           # .. and add bit
         lmov pc, sq32_L4
 sq32_L3:
@@ -433,12 +434,12 @@ sq32_L4:
         asr r3,r3
         lmov pc, sq32_L2
 
-sq32_L5:        
+sq32_L5:
         mov r1, r2            # move result into r1 for return
         RTS()
 
-        
-        # ------------------------------------------------------------        
+
+        # ------------------------------------------------------------
         # printdec32
         #
         # Print unsigned decimal integer from a 32b number to console
@@ -458,52 +459,52 @@ sq32_L5:
         # r3,r4 = Remainder (eventually bits only in r3)
         # ------------------------------------------------------------
 
-printdec32:   
-        PUSHALL    ()          # Save all registers above r4 to stack
+printdec32:
+        PUSHALL    ()           # Save all registers above r4 to stack
 
-        mov r7,r0,0            # leading zero flag     
-        mov r9,r0,8            # r9 points to end of 9 entry table
-        mov r3,r1              # move number into r3 to sav juggling over oswrch call
-pd32_l1:        
-        ld r5,r9,pd32_table    # get 32b divisor from table low word first
-        mov r8,r0              # set Q = 0
+        mov     r7,r0           # leading zero flag
+        lmov    r9,8            # r9 points to end of 9 entry table
+        mov     r3,r1           # move number into r3 to sav juggling over oswrch call
+pd32_l1:
+        ld      r5,r9,pd32_table # get 32b divisor from table low word first
+        mov     r8,r0            # set Q = 0
 pd32_l1a:
-        cmp  r3,r5             # Is number > decimal divisor
-        nc.lmov pc,pd32_l2     # If no then skip ahead and decide whether to print the digit
-        sub r3,r5              # If yes, then do the subtraction
-        add r8,r0,1            # Increment the quotient
-        lmov pc, pd32_l1a      # Loop again to try another subtraction
-        
+        cmp     r3,r5           # Is number > decimal divisor
+        nc.lmov pc,pd32_l2      # If no then skip ahead and decide whether to print the digit
+        sub     r3,r5           # If yes, then do the subtraction
+        add     r8,r0,1         # Increment the quotient
+        lmov    pc, pd32_l1a    # Loop again to try another subtraction
+
 pd32_l2:
-        mov r1,r8,48           # put ASCII val of quotient in r1
-        add r7,r8              # Add digit into leading zero flag        
-        nz.ljsr r13,oswrch     # Print only if the leading zero flag is non-zero
+        mov     r1,r8,48        # put ASCII val of quotient in r1
+        add     r7,r8           # Add digit into leading zero flag
+        nz.ljsr r13,oswrch      # Print only if the leading zero flag is non-zero
 
 pd32_l3:
-        sub r9,r0,1            # Point at the next divisor in the table 
-        pl.lmov pc,pd32_l1     # If entry number >= 0 then loop again
-        mov r1,r3,48           # otherwise convert remainder low word to ASCII
-        JSR   (oswrch)         # and print it
-        
+        sub     r9,r0,1         # Point at the next divisor in the table
+        pl.lmov pc,pd32_l1      # If entry number >= 0 then loop again
+        mov     r1,r3,48        # otherwise convert remainder low word to ASCII
+        JSR     (oswrch)        # and print it
 
-        POPALL  ()             # Restore all high registers and return
+
+        POPALL  ()              # Restore all high registers and return
         RTS()
 
 
 newline:
         PUSH  (r1)
         PUSH  (r2)
-        PUSH  (r13)                
-        mov   r1, r0, 10       # LF/CR pair to finish
+        PUSH  (r13)
+        lmov    r1,10       # LF/CR pair to finish
         JSR   (oswrch)
-        mov   r1, r0, 13
+        lmov    r1,13
         JSR   (oswrch)
         POP   (r13)
         POP   (r2)
-        POP   (r1)                
+        POP   (r1)
         RTS()
-        
-        # ------------------------------------------------------------        
+
+        # ------------------------------------------------------------
         # sprint
         #
         # Print packed byte string to console.
@@ -518,7 +519,7 @@ newline:
         #
         # If R2 == 0 then no additional characters are printed, otherwise
         # R2 might hold, say, 0x00001013 to print a CRLF pair at the end
-        # of the string. 
+        # of the string.
         # ------------------------------------------------------------
 sprint:
         PUSH (r13)
@@ -526,22 +527,22 @@ sprint:
         PUSH (r5)
         PUSH (r2)
         mov  r6,r1
-sprint_loop:    
+sprint_loop:
         ld   r3,r6
         JSR  (sprint_word)
         z.lmov pc, sprint_eol
         add  r6,r0,1
-        lmov pc,sprint_loop 
+        lmov pc,sprint_loop
 
-sprint_eol:     
+sprint_eol:
         POP (r3)
         JSR (sprint_word)
 sprint_exit:
         POP (r5)
-        POP (r6)        
+        POP (r6)
         POP (r13)
         RTS ()
-        
+
 sprint_word:
         # Print all characters held in r3 to console
         # Exit with Zero flag set if reached a zero character
@@ -567,25 +568,25 @@ sprint_word:
         JSR  (oswrch)
 spw_ret:
         POP (r13)
-        mov r1,r0,1     # Ensure Z flag not set if exiting here
+        lmov    r1,1     # Ensure Z flag not set if exiting here
         RTS()
 spw_retz:
         POP (r13)
         mov r1,r0       # Ensure Z flag set if exiting here
         RTS()
-        
-        
-        # Divisor table for printdec32, 
+
+
+        # Divisor table for printdec32,
 pd32_table:
-        WORD            10 
-        WORD           100 
-        WORD          1000 
-        WORD         10000 
-        WORD        100000 
-        WORD       1000000 
-        WORD      10000000 
-        WORD     100000000 
-        WORD    1000000000 
+        WORD            10
+        WORD           100
+        WORD          1000
+        WORD         10000
+        WORD        100000
+        WORD       1000000
+        WORD      10000000
+        WORD     100000000
+        WORD    1000000000
 
 
         ORG 0xFFEE
@@ -603,7 +604,8 @@ pd32_table:
 oswrch:
 oswrch_loop:
         in      r2, r0, 0xfe08
-        and     r2, r0, 0x8000
+        asr     r2, r2
+        and     r2, r0, 0x4000
         nz.lmov pc, oswrch_loop
         out     r1, r0, 0xfe09
         RTS     ()
