@@ -7,11 +7,18 @@
 
 ##include "macros.s"
 
+##ifdef CPU_OPC7
+# Currently fixed addresses on opc7
+EQU        BASE, 0x0000
+EQU        CODE, 0x0800
+EQU   UART_ADDR, 0xFFFFFE08
+##else
 # Inject _BASE_from the build script (C000 on Xilinx, F000 on ICE40)
 EQU        BASE, _BASE_
 EQU        CODE, 0xF800
-
 EQU   UART_ADDR, 0xFE08
+##endif
+
 EQU UART_STATUS, UART_ADDR
 EQU   UART_DATA, UART_ADDR + 1
 
@@ -126,26 +133,26 @@ echo_off:
 
     z.mov   pc, r0, go
 
-    cmp     r1, r0, 0xfffa
+    cmp     r1, r0, 0xfffa-0x10000
     c.mov   pc, r0, mon3
 
 #
 # Insert additional commands for (case-insensitive) letters here
 #
 
-    cmp     r1, r0, 0xfff3   # z
+    cmp     r1, r0, 0xfff3-0x10000   # z
     z.mov   pc, r0, dis
 
-    cmp     r1, r0, 0xffeb   # r
+    cmp     r1, r0, 0xffeb-0x10000   # r
     z.mov   pc, r0, regs
 
-    cmp     r1, r0, 0xffec   # s
+    cmp     r1, r0, 0xffec-0x10000   # s
     z.mov   pc, r0, step
 
-    cmp     r1, r0, 0x0005   # l
+    cmp     r1, r0, 0x0005           # l
     z.mov   pc, r0, srec
 
-    cmp     r1, r0, 0xfff1   # x
+    cmp     r1, r0, 0xfff1-0x10000   # x
     nz.mov  pc, r0, mon6
 
 # ---------------------------------------------------------
@@ -232,7 +239,7 @@ toggle_echo:
 
 go:
 ##ifdef CPU_OPC7
-    mov     r1, r0, 0xffff
+    mov     r1, r0, 0xffffffff
     movt    r1, r0, 0x000f
     and     r5, r1
     mov     r1, r0         # opcode for mov pc, r0 is 0x00f00000
@@ -324,6 +331,10 @@ dis_loop:
 #     - need to emulate the shadow PC/shadow PSR
 
 step:
+
+##ifdef CPU_OPC7
+    mov     pc, r0, mon1           # back to the - prompt
+##else
     mov     r10, r5, 1             # iteration count + 1
 
 step_loop:
@@ -474,6 +485,7 @@ pad2:
     JSR     (print_regs)
     POP     (r13)
     RTS     ()
+##endif
 
 # --------------------------------------------------------------
 #
@@ -576,8 +588,12 @@ osWRCH:
     PUSH    (r13)
 oswrch_loop:
     ld      r13, r0, UART_STATUS
-    and     r13, r0, 0x8000
+##ifdef CPU_OPC7
+    and     r13, r0, 0xffff8000
     nz.mov  pc, r0, oswrch_loop
+##else
+    mi.mov  pc, r0, oswrch_loop
+##endif
     sto     r1, r0, UART_DATA
     ld      r13, r0, HPOS     # increment the horizontal position
     mov     r13, r13, 1
