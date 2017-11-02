@@ -5,7 +5,7 @@
 ## COPYRIGHT 2017 Richard Evans
 ##
 ## This file is part of the One Page Computing project: http://revaldinho.github.io/opc
-## 
+##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU Lesser General Public License as published by
 ## the Free Software Foundation, either version 3 of the License, or
@@ -52,12 +52,12 @@ OPTIONAL SWITCHES ::
 
 EXAMPLES ::
 
-  python3 opc7asm.py -f test.s -o test.bin -g bin 
+  python3 opc7asm.py -f test.s -o test.bin -g bin
 '''
 
 header_text = '''
 # -----------------------------------------------------------------------------
-# O P C - 7 * A S S E M B L E R 
+# O P C - 7 * A S S E M B L E R
 # -----------------------------------------------------------------------------
 #
 # ADDR: CODE               : SOURCE
@@ -90,8 +90,8 @@ def expand_macro(line, macro, mnum):  # recursively expand macros, passing on in
 def preprocess( filename ) :
     # Pass 0 - read file, expand all macros and return a new text file
     global errors, warnings, nextmnum
-    (newtext,macro,macroname,mnum)=([],dict(),None,0)    
-    for line in open(filename, "r").readlines():       
+    (newtext,macro,macroname,mnum)=([],dict(),None,0)
+    for line in open(filename, "r").readlines():
         mobj =  re.match("\s*?MACRO\s*(?P<name>\w*)\s*?\((?P<params>.*)\)", line, re.IGNORECASE)
         if mobj:
             (macroname,macro[macroname])=(mobj.groupdict()["name"],([x.strip() for x in (mobj.groupdict()["params"]).split(",")],[]))
@@ -105,14 +105,14 @@ def preprocess( filename ) :
 def assemble( filename, listingon=True):
     global errors, warnings, nextmnum
 
-    op = "mov movt xor and or not cmp sub add brot ror lsr jsr asr rol s0F halt rti putpsr getpsr s13 s15 push pop out in sto ld ljsr lmov lsto lld".split() 
+    op = "mov movt xor and or not cmp sub add brot ror lsr jsr asr rol s0F halt rti putpsr getpsr s13 s15 push pop out in sto ld ljsr lmov lsto lld".split()
     symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
     pdict = {"1":0x0,"z":0x4,"nz":0x6,"c":0x8,"nc":0xA,"mi":0xC,"pl":0xE,"":0x0}
     reg_re = re.compile("(r\d*|psr|pc)")
     (wordmem,wcount)=([0x00000000]*1024*1024,0)
 
     newtext = preprocess(filename)
-    
+
     for iteration in range (0,2): # Two pass assembly
         (wcount,nextmem) = (0,0)
         for line in newtext:
@@ -127,7 +127,7 @@ def assemble( filename, listingon=True):
                     nextmem += len(opfields)
                 elif inst == "HALF":
                     nextmem += (len(opfields)+1)//2
-                elif inst == "BYTE":    
+                elif inst == "BYTE":
                     nextmem += (len(opfields)+3)//4
                 else:
                     nextmem += 1
@@ -137,7 +137,7 @@ def assemble( filename, listingon=True):
                     string_data = codecs.decode(''.join([ x for x in strings.groups() if x != None]),  'unicode_escape')
                     string_len = chr(len( string_data ) & 0xFF) if inst=="PBSTRING" else ''    # limit string length to 255 for PBSTRINGS
                     (step, wordstr) =  ( 4 if inst in("BSTRING","PBSTRING") else 1, string_len + string_data + chr(0) + chr(0) + chr(0) + chr(0))
-    
+
                     if inst in ("BSTRING","PBSTRING") :
                         words = [(ord(wordstr[i])|(ord(wordstr[i+1])<<8)|(ord(wordstr[i+2])<<16)|(ord(wordstr[i+3])<<24)) for  i in range(0,len(wordstr)-3,step) ]
                     else:
@@ -147,19 +147,19 @@ def assemble( filename, listingon=True):
                         warnings.append("Warning: suspected register field missing in ...\n         %s" % (line.strip()))
                     try:
                         exec("PC=%d+1" % nextmem, globals(), symtab) # calculate PC as it will be in EXEC state
-                        if inst == "BYTE":        
+                        if inst == "BYTE":
                             words = [int(eval( f,globals(), symtab)) for f in opfields ] + [0]*3
-                            words = ([(words[i+3]&0xFF)<<24|(words[i+2]&0xFF)<<16|(words[i+1]&0xFF)<<8|(words[i]&0xFF) for i in range(0,len(words)-3,4)]) 
-                        elif inst == "HALF":        
+                            words = ([(words[i+3]&0xFF)<<24|(words[i+2]&0xFF)<<16|(words[i+1]&0xFF)<<8|(words[i]&0xFF) for i in range(0,len(words)-3,4)])
+                        elif inst == "HALF":
                             words = [int(eval( f,globals(), symtab)) for f in opfields ] + [0]
-                            words = ([(words[i+1]&0xFFFF)<<16|(words[i]&0xFFFF) for i in range(0,len(words)-1,2)]) if inst=="HALF" else words 
+                            words = ([(words[i+1]&0xFFFF)<<16|(words[i]&0xFFFF) for i in range(0,len(words)-1,2)]) if inst=="HALF" else words
                         else :
                             words = [int(eval( f,globals(), symtab)) for f in opfields ]
                     except (ValueError, NameError, TypeError,SyntaxError):
                         (words,errors)=([0]*3,errors+["Error: illegal or undefined register name or expression in ...\n         %s" % line.strip() ])
                     if inst in op:
                         if len(words) < 3 and op.index(inst)>=op.index("ljsr"):
-                            (dst,src,val) = (words[0],0,words[1] & 0xFFFFF)                        
+                            (dst,src,val) = (words[0],0,words[1] & 0xFFFFF)
                         else:
                             (dst,src,val) = (words + [0])[:3]
                             ##i.e. the valid range of 16-bit IMM would be 0x0000->0x7FFF and 0xFFFF8000->0xFFFFFFFF.
@@ -228,12 +228,12 @@ if __name__ == "__main__":
             usage()
         else:
             sys.exit(1)
-            
+
     if filename != "":
 
         if size==0:
             size = 1024*1024 - start_adr
-            
+
         print(header_text)
         wordmem = assemble(filename, listingon)[start_adr:start_adr+size]
 
@@ -249,9 +249,8 @@ if __name__ == "__main__":
                         bytes.append( w & 0xFF)
                         bytes.append( (w>>8) & 0xFF)
                         bytes.append( (w>>16) & 0xFF)
-                        bytes.append( (w>>24) & 0xFF)                         
+                        bytes.append( (w>>24) & 0xFF)
                         f.write(bytes)
     else:
         usage()
     sys.exit( len(errors)>0)
-    

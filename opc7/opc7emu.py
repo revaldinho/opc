@@ -1,6 +1,6 @@
 
 import sys, re
-mnemonics="mov movt xor and or not cmp sub add brot ror lsr jsr asr rol s0F halt rti putpsr getpsr s13 s15 s16 s17 out in sto ld ljsr lmov lsto lld".split() 
+mnemonics="mov movt xor and or not cmp sub add brot ror lsr jsr asr rol s0F halt rti putpsr getpsr s13 s15 s16 s17 out in sto ld ljsr lmov lsto lld".split()
 op = dict([(opcode,mnemonics.index(opcode)) for opcode in mnemonics])
 dis = dict([(mnemonics.index(opcode),opcode) for opcode in mnemonics])
 pred_dict = {0:"",1:"0.",2:"z.",3:"nz.",4:"c.",5:"nc.",6:"mi.",7:"pl."}
@@ -13,10 +13,10 @@ if len(sys.argv) > 3:
         input_text = iter(''.join(f.readlines()))
 else:
     input_text = iter([chr(0)]*100000)
-    
-with open(sys.argv[1],"r") as f: 
+
+with open(sys.argv[1],"r") as f:
     wordmem = [ (int(x,16) & 0xFFFFFFFF) for x in f.read().split() ]
-(regfile, acc, c, z, pcreg, c_save, s, ei, swiid, interrupt, iomem) = ([0]*16,0,0,0,15,0,0,0,0,0, [0]*65536) 
+(regfile, acc, c, z, pcreg, c_save, s, ei, swiid, interrupt, iomem) = ([0]*16,0,0,0,15,0,0,0,0,0, [0]*65536)
 print ("PC     : Mem      : Instruction            : SWI I S C Z : %s\n%s" % (''.join(["  r%2d    " % d for d in range(0,16)]), '-'*202))
 while True:
     (pc_save,flag_save,regfile[0]) = (regfile[pcreg],(swiid,ei,s,c,z),0)    # always overwrite r0 and then dont care about assignments
@@ -30,14 +30,14 @@ while True:
         operand = (operand | 0xFFF00000)  if (operand & 0x80000 != 0) else operand
     else:
         operand = (operand | 0xFFFF0000)  if (operand & 0x8000 != 0) else operand
-    
+
     instr_str = "%s%s r%d,r%d,0x%05X" % ((pred_dict[p0<<2 | p1<<1 | p2] if (p0,p1,p2)!=(0,0,1) else ""),dis[opcode],dest,source,(operand & 0xFFFFF))
     instr_str = re.sub("r0","psr",instr_str,1) if (opcode in (op["putpsr"],op["getpsr"])) else instr_str
 
     regfile[pcreg] += 1
     eff_addr = (regfile[source] + operand)&0xFFFFFFFF  # EA_ED must be computed after PC is brought up to date
     ea_ed = wordmem[eff_addr & 0xFFFFF] if (opcode in(op["ld"],op["lld"])) else iomem[eff_addr&0xFFFF] if (opcode in(op["ld"],op["in"],op["lld"])) else eff_addr
-    
+
     if opcode == op["in"]:
         try:
             ea_ed = ord(input_text.__next__())
@@ -92,9 +92,9 @@ while True:
                 print_memory_access("STORE",ea_ed,regfile[dest])
             elif opcode == op["out"]:
                 iomem[ea_ed&0xFFFF] = regfile[dest]
-                print_memory_access("OUT",ea_ed,regfile[dest])           
+                print_memory_access("OUT",ea_ed,regfile[dest])
             if  (dest==pcreg) or opcode in (op["sto"],op["in"],op["lsto"],op["putpsr"], op["rti"]):
-                (swiid,ei,s,c,z) = flag_save 
+                (swiid,ei,s,c,z) = flag_save
             else:
                 (swiid,ei,s,c,z) = (swiid,ei,(regfile[dest]>>31) & 1, c, 1 if (regfile[dest]==0) else 0)
 if len(sys.argv) > 2:  # Dump memory for inspection if required
