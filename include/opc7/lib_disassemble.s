@@ -89,19 +89,28 @@ dis_imm16:
     brot    r1, r1
     JSR     (print_reg_num)
 
-    mov     r1, r0
-    movt    r1, r0, 0xffff              # inverse of mask for imm16
-    mov     pc, r0, dis_imm
+    mov     r1, r0, 0xffff              # r1 = constant mask for imm16
+    movt    r1, r0
+    mov     r2, r0, 0x8000              # r2 = sign bit for imm16
+    movt    r2, r0
+    mov     r3, r6                      # extract the constant
+    and     r3, r1
+    z.mov   pc, r0, dis7                # supress printing of zero constants for imm16
+
+    mov     pc, r0, dis_imm_se
 
 dis_imm20:
-    mov     r1, r0
-    movt    r1, r0, 0xfff0              # inverse of mask for imm20
+    mov     r1, r0, 0xffff              # r1 = constant mask for imm20
+    movt    r1, r0, 0x000f
+    mov     r2, r0                      # r2 = sign bit for imm20
+    movt    r2, r0, 0x0008
+    mov     r3, r6                      # extract the constant
+    and     r3, r1
 
-dis_imm:
-    xor     r1, r0, 0xffff              # invert all 32 bits to give contant mask
-    mov     r2, r6                      # extract the constant
-    and     r2, r1
-    z.mov   pc, r0, dis7
+dis_imm_se:
+    xor     r1, r0, 0xffff              # invert to give signed extension mask
+    and     r2, r3                      # test the sign bit
+    nz.or   r3, r1                      # if negative, then sign extend
 
     mov     r1, r0, 0x2c                # print ,0x
     JSR     (OSWRCH)
@@ -110,7 +119,7 @@ dis_imm:
     mov     r1, r0, ord('x')
     JSR     (OSWRCH)
 
-    mov     r1, r2
+    mov     r1, r3
     JSR     (print_hex_word)            # print the immediate value
 
 dis7:
