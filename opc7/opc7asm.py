@@ -83,7 +83,7 @@ for iteration in range (0,2): # Two pass assembly
                         if ( (inst not in ("in","out")) and (0x7FFF < val < 0x0FFFF8000)):
                             errors.append("Error: 16b constant out of range in ...\n         %s" % (line.strip()))
                         elif (inst=="lmov" and dst!=0xF and (0x7FFFF < val < 0x0FFF80000)):
-                            warnings.append("Warning: 20b constant with MSB set will be sign extended in ...\n         %s" % (line.strip()))
+                            errors.append("Error: 20b constant out of range in ...\n         %s" % (line.strip()))
                         else:
                             val = val & 0xFFFF
                     words=[ (pdict[pred]<<28)|((op.index(inst)&0x1F)<<24)|(dst<<20)|(src<<16)| val&0xFFFFF]
