@@ -17,6 +17,7 @@ endif
 
 set assembler = ../opc7asm.py
 set testlist = ( bigsieve  davefib davefib_int e-spigot-rev  fib hello math32  nqueens pi-spigot-rev  robfib sieve ) 
+set testlist = ( bperm)
 
 set numtests = 0
 set fails = 0

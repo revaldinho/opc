@@ -18,6 +18,7 @@ else
 endif
 
 set testnames = ( empty Leval ack acoding anseq apfel enig enigma-m3 evale fact fft16 growth hello invert kext kperms lambda modarith monbfns pi-spigot-bcpl queens shell23 splay tag Xsquare )
+set testnames = ( enigma-m3 )
 # NB cannot simulate tests needing stdin currently = enigma-m3
 set simlist = ( Leval ack acoding anseq apfel enig evale fact fft16 growth hello invert kext kperms lambda modarith monbfns pi-spigot-bcpl queens shell23 splay tag Xsquare )
 # Clean up first

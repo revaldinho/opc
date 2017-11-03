@@ -105,7 +105,7 @@ def preprocess( filename ) :
 def assemble( filename, listingon=True):
     global errors, warnings, nextmnum
 
-    op = "mov movt xor and or not cmp sub add brot ror lsr jsr asr rol s0F halt rti putpsr getpsr s13 s15 push pop out in sto ld ljsr lmov lsto lld".split()
+    op = "mov movt xor and or not cmp sub add bperm ror lsr jsr asr rol s0F halt rti putpsr getpsr s13 s15 push pop out in sto ld ljsr lmov lsto lld".split()
     symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
     pdict = {"1":0x0,"z":0x4,"nz":0x6,"c":0x8,"nc":0xA,"mi":0xC,"pl":0xE,"":0x0}
     reg_re = re.compile("(r\d*|psr|pc)")

@@ -1,6 +1,5 @@
-
-import sys, re
-mnemonics="mov movt xor and or not cmp sub add brot ror lsr jsr asr rol s0F halt rti putpsr getpsr s13 s15 s16 s17 out in sto ld ljsr lmov lsto lld".split()
+import sys, re, functools
+mnemonics="mov movt xor and or not cmp sub add bperm ror lsr jsr asr rol s0F halt rti putpsr getpsr s13 s15 s16 s17 out in sto ld ljsr lmov lsto lld".split()
 op = dict([(opcode,mnemonics.index(opcode)) for opcode in mnemonics])
 dis = dict([(mnemonics.index(opcode),opcode) for opcode in mnemonics])
 pred_dict = {0:"",1:"0.",2:"z.",3:"nz.",4:"c.",5:"nc.",6:"mi.",7:"pl."}
@@ -35,8 +34,11 @@ while True:
     instr_str = re.sub("r0","psr",instr_str,1) if (opcode in (op["putpsr"],op["getpsr"])) else instr_str
 
     regfile[pcreg] += 1
-    eff_addr = (regfile[source] + operand)&0xFFFFFFFF  # EA_ED must be computed after PC is brought up to date
-    ea_ed = wordmem[eff_addr & 0xFFFFF] if (opcode in(op["ld"],op["lld"])) else iomem[eff_addr&0xFFFF] if (opcode in(op["ld"],op["in"],op["lld"])) else eff_addr
+    if ( opcode != op["bperm"]):
+        eff_addr = (regfile[source] + operand)&0xFFFFFFFF  # EA_ED must be computed after PC is brought up to date
+        ea_ed = wordmem[eff_addr & 0xFFFFF] if (opcode in(op["ld"],op["lld"])) else iomem[eff_addr&0xFFFF] if (opcode in(op["ld"],op["in"],op["lld"])) else eff_addr
+    else:
+        (eff_addr, ea_ed ) = (operand & 0xFFFF,operand & 0xFFFF)
 
     if opcode == op["in"]:
         try:
@@ -81,8 +83,10 @@ while True:
                 (c, regfile[dest])  = ( (res>>32) & 1, res & 0xFFFFFFFF)
             elif opcode in (op["jsr"], op["ljsr"]):
                 (preserve_flag,regfile[dest],regfile[pcreg]) = (True,regfile[pcreg],ea_ed)
-            elif opcode == op["brot"]:
-                regfile[dest] = ((ea_ed>>8)|((ea_ed&0x0FF)<<24)) & 0xFFFFFFFF
+            elif opcode == op["bperm"]:
+                n = [ (ea_ed>>i)&0x3 for i in range(0,16,4) ]
+                bytes = [ (regfile[source]>>(n[i]*8))&0xFF for i in range(0,4)]
+                regfile[dest] = functools.reduce( lambda x,y: x|y, [ y<<x for (y,x) in zip(bytes,range(0,32,8))])
             elif opcode == op["putpsr"]:
                 (flag_save, interrupt) = (((ea_ed&0xF0)>>4,(ea_ed&0x8)>>3,(ea_ed&0x4)>>2,(ea_ed&0x2)>>1,(ea_ed)&1), (ea_ed&0xF0)!=0)
             elif opcode == op["getpsr"]:
