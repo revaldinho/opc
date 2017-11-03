@@ -652,8 +652,8 @@ AND rotorfn(x, map, pos, ring) = VALOF
 // representing A to Z except n which may be 26.
 
 AND prsigpath() BE
-{ //wrch(30) // print 'home' character on Beeb
-  newline()
+{ wrch(30) // print 'home' character on Beeb
+  //newline()
   prsigline(26, TRUE)
   prsigline(25, FALSE)
   prsigline(24, FALSE)
@@ -804,8 +804,11 @@ AND prsigkbd(n, sp, inF, outB) BE
   }
 
   writef("%c%c%c", c0,c1,c2)
-  IF n=iF UNLESS sp DO { writef("<<%c", letter); RETURN }
-  IF n=oB UNLESS sp DO { writef(">>%c", letter); RETURN }
+  UNLESS sp THEN {
+     TEST n=iF THEN { writef("<<%c", letter); RETURN }
+     ELSE TEST n=oB THEN { writef(">>%c", letter); RETURN }
+          ELSE { writef("   ") ; RETURN }
+  }
 }
 
 AND prsigwiring(n, sp, iF, oF, iB, oB) BE
