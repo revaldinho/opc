@@ -15,7 +15,7 @@ vcd_option = ""
 
 %.emu.stdout %.dump : %.hex opc7emu.py
 	${pyexec} ${emulator} $< $*.dump | tee  $*.trace | ${pyexec} ${show_stdout} -7 >  $*.emu.stdout
-	gzip $*.trace
+	gzip -f $*.trace
 
 %.diff: %.sim.stdout %.emu.stdout 
 	diff -a -s $*.emu.stdout $*.sim.stdout
