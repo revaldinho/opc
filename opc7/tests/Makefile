@@ -43,4 +43,4 @@ all_sim: opc7cpu.v opc7tb.v bperm.sim  bigsieve.sim  davefib.sim davefib_int.sim
 all_stdout: bperm.sim.stdout  bigsieve.sim.stdout  davefib.sim.stdout davefib_int.sim.stdout e-spigot-rev.sim.stdout  fib.sim.stdout hello.sim.stdout math32.sim.stdout  nqueens.sim.stdout pi-spigot-rev.sim.stdout  robfib.sim.stdout sieve.sim.stdout
 
 clean: 
-	rm -rf *dump* *sim* *trace* *stdout* *hex *~ *diff *exe *vcd a.out
+	rm -rf *dump* *sim* *trace* *stdout* *hex *~ *diff *exe *vcd a.out *lst
