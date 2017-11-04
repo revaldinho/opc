@@ -22,7 +22,7 @@ vcd_option = ""
 
 %.sim : %.hex ../opc7tb.v ../opc7cpu.v
 	cp $*.hex test.hex
-	iverilog -D_simulation=1 $vcd_option ../opc7tb.v ../opc7cpu.v > $*.sim 
+	iverilog -D_simulation=1 ${vcd_option} ../opc7tb.v ../opc7cpu.v > $*.sim 
 	./a.out > $@
 	mv test.vdump $*.vdump
 	if [ -e dump.vcd ] ; then mv dump.vcd $*.vcd ; fi
