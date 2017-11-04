@@ -84,45 +84,24 @@ srec_line_loop:
 ##endif
 
 srec_word_loop:
+    # the transmission order is little endian (i.e LSB first)
 ##ifdef CPU_OPC7
-
-#   This code is the best I could come up with to byte swap a 32-bit word (00112233->33221100)
-#
-#   JSR     (read_hex_2)            # r2 = BB (LSB)
-#   c.mov   pc, r0, srec_exit_bad_format
-#   add     r5, r2                  # accumulate BB in checksum
-#   mov     r6, r2
-#   JSR     (read_hex_2)            # r2 = BB
-#   c.mov   pc, r0, srec_exit_bad_format
-#   add     r5, r2                  # accumulate BB in checksum
-#   BROT    (r2, r2)
-#   BROT    (r2, r2)
-#   BROT    (r2, r2)
-#   or      r6, r2
-#   JSR     (read_hex_2)            # r2 = BB
-#   c.mov   pc, r0, srec_exit_bad_format
-#   add     r5, r2                  # accumulate BB in checksum
-#   BROT    (r2, r2)
-#   BROT    (r2, r2)
-#   or      r6, r2
-#   JSR     (read_hex_2)            # r2 = BB (MSB)
-#   c.mov   pc, r0, srec_exit_bad_format
-#   add     r5, r2                  # accumulate BB in checksum
-#   BROT    (r2, r2)
-#   or      r2, r6
-
-    # in 32-bit land, r2 does not need to be byte swapped (i.e. the transmission order was MSB through to LSB)
     JSR     (read_hex)              # r2 = BBBBBBBB
+    c.mov   pc, r0, srec_exit_bad_format
+
+    mov     r6, r2
     add     r5, r2                  # accumulate LSB in checksum
     BROT    (r2, r2)
     add     r5, r2                  # accumulate in checksum
     BROT    (r2, r2)
     add     r5, r2                  # accumulate in checksum
+    movt    r2, r2
     BROT    (r2, r2)
-    add     r5, r2                  # accumulate MSB in checksum
-    BROT    (r2, r2)
+    add     r5, r2                  # accumulate MSB checksum
+    movt    r6, r6
+    BROT    (r6, r6)
+    movt    r2, r6
 ##else
-    # in 16-bit land, r2 is now byte swapped (i.e. the transmission order was LSB then MSB)
     JSR     (read_hex_4)            # r2 = BBBB
     c.mov   pc, r0, srec_exit_bad_format
 

@@ -44,6 +44,7 @@ module system (
    wire        vda;
    wire        vio;
    
+   wire        cpuclken = 1;
    reg         sw4_sync;
    wire        reset_b;
    wire        uart_cs_b = !({address[15:1],  1'b0} == 16'hfe08);
@@ -177,13 +178,13 @@ module system (
 
    // The CPU
 `ifdef cpu_opc6
-   opc6cpu inst_cpu
+   opc6cpu CPU
      (
       .din(cpu_din),
       .clk(clk),
       .reset_b(reset_b),
       .int_b(2'b11),
-      .clken(1'b1),
+      .clken(cpuclken),
       .vpa(vpa),
       .vda(vda),
       .vio(vio),
@@ -199,7 +200,7 @@ module system (
       .clk(clk),
       .reset_b(reset_b),
       .int_b(1'b1),
-      .clken(1'b1),
+      .clken(cpuclken),
       .vpa(),
       .vda(),
       .dout(cpu_dout),
