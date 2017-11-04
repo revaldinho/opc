@@ -1,5 +1,3 @@
-// `define use_pll
-
 module system (
                input         clk100,
                output        led1,
@@ -21,16 +19,13 @@ module system (
                output        txd);
 
    // CLKSPEED is the main clock speed
-   parameter CLKSPEED = 25000000;
+   parameter CLKSPEED = 50000000;
 
    // BAUD is the desired serial baud rate
    parameter BAUD = 115200;
 
    // RAMSIZE is the size of the RAM address bus
    parameter RAMSIZE = 12;
-
-   // Long counter so we can see an LED flashing
-   reg  [23:0] clk_counter;
 
    // CPU signals
    wire        clk;
@@ -44,6 +39,8 @@ module system (
    wire        vda;
    wire        vio;
 
+   reg         cpuclken_old = 0;
+   wire        cpuclken;
    reg         sw4_sync;
    wire        reset_b;
    wire        uart_cs_b = !({address[15:1],  1'b0} == 16'hfe08);
@@ -83,106 +80,38 @@ module system (
    // Data Multiplexor
    assign cpu_din = uart_cs_b ? (ram_cs_b ? {16'b0, data_pins_in} : ram_dout) : {16'b0, uart_dout};
 
-`ifdef use_pll
-   // PLL to go from 100MHz to 40MHz
-   //
-   // In PHASE_AND_DELAY_MODE:
-   //     FreqOut = FreqRef * (DIVF + 1) / (DIVR + 1)
-   //     (DIVF: 0..63)
-   //     (DIVR: 0..15)
-   //     (DIVQ: 1..6, apparantly not used in this mode)
-   //
-   // The valid PLL output range is 16 - 275 MHz.
-   // The valid PLL VCO range is 533 - 1066 MHz.
-   // The valid phase detector range is 10 - 133MHz.
-   // The valid input frequency range is 10 - 133MHz.
-   //
-   //
-   // icepll -i 100 -o 40
-   // F_PLLIN:   100.000 MHz (given)
-   // F_PLLOUT:   40.000 MHz (requested)
-   // F_PLLOUT:   40.000 MHz (achieved)
-   //
-   // FEEDBACK: SIMPLE
-   // F_PFD:   20.000 MHz
-   // F_VCO:  640.000 MHz
-   //
-   // DIVR:  4 (4'b0100)
-   // DIVF: 31 (7'b0011111)
-   // DIVQ:  4 (3'b100)
-   //
-   // FILTER_RANGE: 2 (3'b010)
-
-
-   wire         PLL_BYPASS = 0;
-   wire         PLL_RESETB = 1;
-   wire         LOCK;
-   SB_PLL40_CORE #(
-        .FEEDBACK_PATH("SIMPLE"),
-        .DELAY_ADJUSTMENT_MODE_FEEDBACK("FIXED"),
-        .DELAY_ADJUSTMENT_MODE_RELATIVE("FIXED"),
-        .PLLOUT_SELECT("GENCLK"),
-        .SHIFTREG_DIV_MODE(1'b0),
-        .FDA_FEEDBACK(4'b0000),
-        .FDA_RELATIVE(4'b0000),
-        .DIVR(4'b0100),
-        .DIVF(7'b0011111),
-        .DIVQ(3'b100),
-        .FILTER_RANGE(3'b010),
-   ) uut (
-        .REFERENCECLK   (clk100),
-        .PLLOUTGLOBAL   (clk),
-        .PLLOUTCORE     (wegate),
-        .BYPASS         (PLL_BYPASS),
-        .RESETB         (PLL_RESETB),
-        .LOCK           (LOCK)
-   );
-`else // !`ifdef use_pll
-   wire LOCK = 1'b1;
-   reg [1:0] clkdiv = 2'b00;  // divider
+   reg [1:0] clkdiv = 2'b00;
    always @(posedge clk100)
      begin
-        case (clkdiv)
-          2'b11: clkdiv <= 2'b10;  // rising edge of clk
-          2'b10: clkdiv <= 2'b00;  // wegate low
-          2'b00: clkdiv <= 2'b01;  // wegate low
-          2'b01: clkdiv <= 2'b11;
-        endcase
+        clkdiv <= clkdiv + 1;
      end
-   assign clk = clkdiv[1];
-   assign wegate = clkdiv[0];
-`endif
-
+   assign clk = clkdiv[0];
+   assign wegate = 1'b1;
 
    always @(posedge clk)
      begin
-          sw4_sync <= sw4;
+        sw4_sync <= sw4;
+        cpuclken_old <= cpuclken;
      end
 
-   assign reset_b = sw4_sync & LOCK;
+   assign cpuclken = !reset_b | !cpuclken_old | !(vda | vpa);
 
-   always @(posedge clk)
-     begin
-        if (!reset_b)
-          clk_counter <= 0;
-        else
-          clk_counter <= clk_counter + 1;
-     end
+   assign reset_b = sw4_sync;
 
-   assign led1 = 0;        // !reset_b; // blue
-   assign led2 = LOCK;     // green
+   assign led1 = 0;        // blue
+   assign led2 = 1;        // green
    assign led3 = !rxd;     // yellow
    assign led4 = !txd;     // red
 
 
    // The CPU
-   opc7cpu inst_cpu
+   opc7cpu CPU
      (
       .din(cpu_din),
       .clk(clk),
       .reset_b(reset_b),
       .int_b(2'b11),
-      .clken(1'b1),
+      .clken(cpuclken),
       .vpa(vpa),
       .vda(vda),
       .vio(vio),
@@ -198,7 +127,7 @@ module system (
       .dout(ram_dout),
       .address(address[RAMSIZE-1:0]),
       .rnw(rnw),
-      .clk(!clk),
+      .clk(clk),
       .cs_b(ram_cs_b)
       );
 
