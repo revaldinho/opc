@@ -1,7 +1,12 @@
 `timescale 1ns / 1ns
 `define HALT 5'b1_0000
 `define EXEC 3'b011
-module opc7tb();
+module opc7tb(  ) ;
+  
+   parameter   inputfile = "test.hex";
+   parameter   outputfile = "test.vdump" ;
+
+  
    reg [31:0] mem [ 1048575:0 ], iomem[65535:0];
    reg        clk, reset_b, interrupt_b, int_clk, clken;
    wire [19:0] addr;
@@ -19,7 +24,7 @@ module opc7tb();
 `ifdef _dumpvcd
      $dumpvars;
 `endif
-     $readmemh("test.hex", mem); // Problems with readmemb - use readmemh for now
+     $readmemh(inputfile, mem); // Problems with readmemb - use readmemh for now
      iomem[16'hfe08] = 16'b0; 
      { clk, int_clk, reset_b}  = 0;
      clken = 1'b1;
@@ -73,7 +78,7 @@ module opc7tb();
     end
     if (dut0_u.IR_q== `HALT && dut0_u.FSM_q==`EXEC) begin
       $display("Simulation terminated with halt instruction at time", $time);       
-      $writememh("test.vdump",mem);
+      $writememh(outputfile, mem);
       $finish;
     end
   end

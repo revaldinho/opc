@@ -554,16 +554,16 @@ sprint_word:
         # Print all characters held in r3 to console
         # Exit with Zero flag set if reached a zero character
         PUSH (r13)
-        bperm r1,r3,7770        
+        bperm r1,r3,0x7770        
         z.lmov pc,spw_retz
         JSR  (oswrch)
-        bperm r1,r3,7771        
+        bperm r1,r3,0x7771        
         z.lmov pc,spw_retz
         JSR  (oswrch)
-        bperm r1,r3,7772
+        bperm r1,r3,0x7772
         z.lmov pc,spw_retz
         JSR  (oswrch)
-        bperm r1,r3,7773        
+        bperm r1,r3,0x7773        
         z.lmov pc,spw_retz
         JSR  (oswrch)
 spw_ret:
