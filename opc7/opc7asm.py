@@ -164,7 +164,7 @@ def assemble( filename, listingon=True):
                             (dst,src,val) = (words + [0])[:3]
                             ##i.e. the valid range of 16-bit IMM would be 0x0000->0x7FFF and 0xFFFF8000->0xFFFFFFFF.
                             val = val & 0xFFFFFFFF
-                            if ( (inst not in ("in","out")) and (0x7FFF < val < 0x0FFFF8000)):
+                            if ( (inst not in ("in","out", "bperm")) and (0x7FFF < val < 0x0FFFF8000)):
                                 errors.append("Error: 16b constant out of range in ...\n         %s" % (line.strip()))
                             elif (inst=="lmov" and dst!=0xF and (0x7FFFF < val < 0x0FFF80000)):
                                 errors.append("Error: 20b constant out of range in ...\n         %s" % (line.strip()))

@@ -144,8 +144,7 @@ L6:     mov     r1, r11, 48             # Convert quotient into ASCII digit
         # - r11 = quotient
         # --------------------------------------------------------------
 udiv16:
-        brot    r2, r10                 # save r10 and move into top half of r2
-        brot    r2,r2        
+        bperm   r2, r10, 0x1077         # save r10 and move into top half of r2, zeroing lower bytes
         mov     r1,r0,-16               # Setup a loop counter
 udiv16_loop:
         ASL     (r11)                   # shift left the quotient/dividend
@@ -153,8 +152,7 @@ udiv16_loop:
         c.sub   r11,r2,-1               # if yes then do the subtraction for real and add one to quotient
         add     r1,r0,1                 # increment loop counter zeroing carry
         nz.sub  pc,r0,PC-udiv16_loop    # loop again if not finished (r5=udiv16_loop)
-        brot    r2,r11                  # get top word of R11 into R2 for return
-        brot    r2,r2
+        bperm   r2,r11, 0x7732          # get top word of R11 into R2 for return
         movt    r2,r0
         movt    r11,r0                  # zero top word of R2
         RTS     ()                      # and return with quotient/remainder in r11/r2

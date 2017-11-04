@@ -96,7 +96,32 @@ a prefix on the instruction mnemonic in the assembler.
   |  1 |  1 |  0 | mi.        | Execute if Sign flag is set                        |
   |  1 |  1 |  1 | pl.        | Execute if Sign flag is clear                      |
   
-  
+
+Byte Permute Function
+---------------------
+							
+OPC7 has a powerful byte permute function which can perform various byte-wise shifts, rotations, swaps and replication.							
+							
+Bytes are picked from the source register (rs) and placed into the destination register (rd) according to the bit pattern
+provided in the 16b immediate data. The lower 16 bits of this control word are split into 4 nybbles. The lower two bits
+of each nybble determine which byte of the source will be placed in the corresponding byte position of the destination.
+Bytes (and nybbles) are numbered from 3 down to 0 reading from left to right (MSB to LSB). This is best illustrated
+with some simple examples.							
+							
+BPERM rd,rs, 0x3210		Has no effect on r1 - all bytes are put back in their original positions					
+BPERM rd,rs, 0x0123 		Reverses the order of the bytes in r1					
+BPERM rd,rs, 0x0321		Byte-wise rotate right					
+BPERM rd,rs, 0x2103		Byte-wise rotate left					
+BPERM rd,rs, 0x1032		Half-word swap/rotate					
+BPERM rd,rs, 0x0000		Replicate byte 0 into all bytes					
+BPERM rd,rs, 0x2301 		Shuffle bytes (rotate within half-words)					
+							
+In addition to picking bytes from the source, it's possible also to specify that bytes should be zeroed by setting bit 2
+of the appropriate control word nybble. Again, with some examples
+
+BPERM rd,rs, 0x4444		Zeroes all bytes in the destination 
+BPERM rd,rs, 0x4441 		Zeroes the upper 3 bytes of the destination and moves byte 1 from the source reg into byte zero
+							  
 Interrupts
 ----------
   

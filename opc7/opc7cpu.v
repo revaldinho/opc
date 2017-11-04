@@ -10,10 +10,10 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   reg [2:0]   FSM_q;
   reg         zero,carry,sign,enable_int,reset_s0_b,reset_s1_b,subnotadd_q;
   wire        pred          = (OR_q[29] ^ (OR_q[30]?(OR_q[31]?PSR_q[S]:PSR_q[Z]):(OR_q[31]?PSR_q[C]:1)));
-  wire [7:0]  bytes0        = (OR_q[1])?  ((OR_q[0]) ?RF_pipe_q[31:24] :RF_pipe_q[23:16]):(OR_q[0]) ? RF_pipe_q[15:8]:RF_pipe_q[7:0];
-  wire [7:0]  bytes1        = (OR_q[5])?  ((OR_q[4]) ?RF_pipe_q[31:24] :RF_pipe_q[23:16]):(OR_q[4]) ? RF_pipe_q[15:8]:RF_pipe_q[7:0];
-  wire [7:0]  bytes2        = (OR_q[9])?  ((OR_q[8]) ?RF_pipe_q[31:24] :RF_pipe_q[23:16]):(OR_q[8]) ? RF_pipe_q[15:8]:RF_pipe_q[7:0];
-  wire [7:0]  bytes3        = (OR_q[13])? ((OR_q[12])?RF_pipe_q[31:24] :RF_pipe_q[23:16]):(OR_q[12])? RF_pipe_q[15:8]:RF_pipe_q[7:0];    
+  wire [7:0]  bytes0        = {8{~OR_q[3] }} & (OR_q[1])?  ((OR_q[0]) ?RF_sout[31:24] :RF_sout[23:16]):(OR_q[0]) ? RF_sout[15:8]:RF_sout[7:0];
+  wire [7:0]  bytes1        = {8{~OR_q[7] }} & (OR_q[5])?  ((OR_q[4]) ?RF_sout[31:24] :RF_sout[23:16]):(OR_q[4]) ? RF_sout[15:8]:RF_sout[7:0];
+  wire [7:0]  bytes2        = {8{~OR_q[11]}} & (OR_q[9])?  ((OR_q[8]) ?RF_sout[31:24] :RF_sout[23:16]):(OR_q[8]) ? RF_sout[15:8]:RF_sout[7:0];
+  wire [7:0]  bytes3        = {8{~OR_q[15]}} & (OR_q[13])? ((OR_q[12])?RF_sout[31:24] :RF_sout[23:16]):(OR_q[12])? RF_sout[15:8]:RF_sout[7:0];    
   wire [31:0] RF_sout       = {32{(|src_q)&&IR_q[4:2]!=3'b111}} & ((src_q==4'hF)? {12'b0,PC_q} : RF_q[src_q]);
   wire [31:0] din_sxt       = (IR_q[4:2]==3'h7)? {{12{OR_q[19]}},OR_q[19:0]} : {{16{OR_q[15]}}, OR_q[15:0]};
   assign {rnw,dout,address} = {!(FSM_q==WRM), RF_pipe_q,(FSM_q==WRM||FSM_q==RDM)? OR_q[19:0] : PC_q};
@@ -24,7 +24,7 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
       MOVT,ROL     :{carry,result} = (IR_q==ROL)? {OR_q, PSR_q[C]} :{PSR_q[C], OR_q[15:0], RF_pipe_q[15:0]} ;
       ADD,SUB,CMP  :{carry,result} = RF_pipe_q + OR_q + subnotadd_q; // OR_q negated in EAD if required for sub/cmp
       XOR,GPSR     :{carry,result} = (IR_q==GPSR)?{PSR_q[C],8'b0,PSR_q}:{PSR_q[C],RF_pipe_q ^ OR_q};
-      NOT,BPERM    :{result,carry} = (IR_q==NOT)? {~OR_q,PSR_q[C]}:{bytes3,bytes2,bytes1,bytes0,PSR_q[C]};
+      NOT          :{result,carry} = {~OR_q,PSR_q[C]};      
       ROR,ASR,LSR  :{result,carry} = {(IR_q==ROR)?PSR_q[C]:(IR_q==ASR)?OR_q[31]:1'b0,OR_q};
       JSR,LJSR     :{result,carry} = { 12'b0, PC_q, PSR_q[C]};
       default      :{carry,result} = {PSR_q[C],OR_q} ;
@@ -33,8 +33,8 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   end // always @ ( * )
   always @(posedge clk)
     if (clken) begin
-      RF_pipe_q <= (IR_q==BPERM)?RF_sout:(dst_q==4'hF)? {12'b0,PC_q} : RF_q[dst_q] & {32{(|dst_q)}};
-      OR_q  <= (FSM_q==EAD)? ((IR_q==BPERM)?OR_q: (RF_sout+din_sxt) ^ {32{IR_q==SUB||IR_q==CMP}}) : din;
+      RF_pipe_q <= (dst_q==4'hF)? {12'b0,PC_q} : RF_q[dst_q] & {32{(|dst_q)}};
+      OR_q  <= (FSM_q==EAD)? (IR_q==BPERM)?({bytes3,bytes2,bytes1,bytes0}):(RF_sout+din_sxt) ^ {32{IR_q==SUB||IR_q==CMP}} : din;
       {reset_s0_b,reset_s1_b, subnotadd_q} <= {reset_b,reset_s0_b, IR_q!=ADD};
       if (!reset_s1_b)
         {PC_q,PCI_q,PSRI_q,PSR_q,FSM_q} <= 0;

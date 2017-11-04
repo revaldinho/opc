@@ -1,4 +1,12 @@
 
+MACRO BROR (_rd_, _rs_ )
+        bperm _rd_,_rs_,0x0321        
+ENDMACRO
+
+MACRO BROL (_rd_, _rs_ )
+        bperm _rd_,_rs_,0x2103        
+ENDMACRO
+        
 MACRO   CLC()
         c.add r0,r0
 ENDMACRO
@@ -266,9 +274,8 @@ udiv32:
         lmov pc, udiv
 udiv16:
         lmov    r4,16       # loop counter
-        movt r1,r0         # Move N into R5 upper half word
-        brot r1,r1
-        brot r1,r1
+        movt r1,r0         
+        bperm r1, r1, 0x1044 # Move N into R5 upper half word/zero lower half
 udiv:
         mov r3,r0          # Initialise R
         cmp r2,r0          # check D != 0
@@ -547,23 +554,16 @@ sprint_word:
         # Print all characters held in r3 to console
         # Exit with Zero flag set if reached a zero character
         PUSH (r13)
-        mov  r1,r3
-        and  r1,r0,0xFF
+        bperm r1,r3,7770        
         z.lmov pc,spw_retz
         JSR  (oswrch)
-        brot r3,r3
-        mov  r1,r3
-        and  r1,r0,0xFF
+        bperm r1,r3,7771        
         z.lmov pc,spw_retz
         JSR  (oswrch)
-        brot r3,r3
-        mov  r1,r3
-        and  r1,r0,0xFF
+        bperm r1,r3,7772
         z.lmov pc,spw_retz
         JSR  (oswrch)
-        brot r3,r3
-        mov  r1,r3
-        and  r1,r0,0xFF
+        bperm r1,r3,7773        
         z.lmov pc,spw_retz
         JSR  (oswrch)
 spw_ret:

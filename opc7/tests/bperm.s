@@ -7,12 +7,13 @@
         
         ld   r4, r0, string
 
-
         bperm r1,r4, 0x3210
         ljsr  r13,oswrch
         bperm r1,r4, 0x0123
         ljsr  r13,oswrch
         bperm r1,r4, 0x0011
+        ljsr  r13,oswrch
+        bperm r1,r4, 0x7777
         ljsr  r13,oswrch
         
         halt  r0,r0,0x123
