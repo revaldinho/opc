@@ -5,6 +5,9 @@ assembler ?= ../opc7asm.py
 emulator ?= ../opc7emu.py
 show_stdout ?= ../../utils/show_stdout.py
 
+vcd_option = ""
+#-D_dumpvcd=1
+
 .NOTPARALLEL : all_sim *.exe
 
 %.hex %.lst : %.s opc7asm.py
@@ -19,10 +22,11 @@ show_stdout ?= ../../utils/show_stdout.py
 
 %.sim : %.hex ../opc7tb.v ../opc7cpu.v
 	cp $*.hex test.hex
-	iverilog -D_simulation=1 -D_dumpvcd=1 ../opc7tb.v ../opc7cpu.v > $*.sim 
+	iverilog -D_simulation=1 $vcd_option ../opc7tb.v ../opc7cpu.v > $*.sim 
 	./a.out > $@
 	mv test.vdump $*.vdump
 	if [ -e dump.vcd ] ; then mv dump.vcd $*.vcd ; fi
+
 
 %.sim.stdout : %.sim
 	python3 ../../utils/show_stdout.py -7 -f $*.sim >  $*.sim.stdout
@@ -43,4 +47,4 @@ all_sim: opc7cpu.v opc7tb.v bperm.sim  bigsieve.sim  davefib.sim davefib_int.sim
 all_stdout: bperm.sim.stdout  bigsieve.sim.stdout  davefib.sim.stdout davefib_int.sim.stdout e-spigot-rev.sim.stdout  fib.sim.stdout hello.sim.stdout math32.sim.stdout  nqueens.sim.stdout pi-spigot-rev.sim.stdout  robfib.sim.stdout sieve.sim.stdout
 
 clean: 
-	rm -rf *dump* *sim* *trace* *stdout* *hex *~ *diff *exe *vcd a.out *lst
+	rm -rf *dump* *sim* *trace* *stdout* *hex *~ *diff *exe *vcd* a.out *lst

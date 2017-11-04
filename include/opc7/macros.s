@@ -109,5 +109,5 @@ MACRO   ROL(_reg1_, _reg2_)
 ENDMACRO
 
 MACRO  BROT(_reg1_, _reg2_)
-    brot   _reg1_, _reg2_
+    bperm _reg1_, _reg2_, 0x0321
 ENDMACRO

@@ -41,7 +41,7 @@ foreach test ( $testlist )
 end
 
 if ( $fails == 0 ) then
-    echo "P A S S  - all " $numtests " test matched between simulation and emulation"
+    echo "P A S S  - all " $numtests " tests matched between simulation and emulation"
 else
     echo "F A I L - " $fails " tests out of " $numtests " had mismatches between simulation and emulation"
 endif

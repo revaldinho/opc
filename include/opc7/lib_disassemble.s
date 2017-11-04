@@ -49,11 +49,8 @@ disassemble:
     mov     r1, r2, predicates          # find string for predicate
     JSR     (print_bstring)
 
-    mov     r2, r6
-    brot    r2, r2
-    brot    r2, r2
-    brot    r2, r2
-    and     r2, r0, 0x1F                # extract opcode
+    bperm   r2, r6, 0x2103
+    and     r2, r0, 0x1F                # extract opcode        
     add     r2, r2                      # two words per opcode
     mov     r1, r2, opcodes             # find string for opcode
     JSR     (print_bstring)
@@ -62,18 +59,14 @@ disassemble:
     mov     r1, r0, ord('r')
     JSR     (OSWRCH)
 
-    mov     r1, r6                      # extract destination register
-    brot    r1, r1
-    brot    r1, r1
+    bperm   r1, r6, 0x1032              # extract destination register
     ror     r1, r1
     ror     r1, r1
     ror     r1, r1
     ror     r1, r1
     JSR     (print_reg_num)
 
-    mov     r1, r6                      # test for long instructions
-    brot    r1, r1
-    brot    r1, r1
+    bperm   r1, r6, 0x1032              # test for long instructions
     and     r1, r0, 0x1C00
     cmp     r1, r0, 0x1C00
     z.mov   pc, r0, dis_imm20
@@ -84,9 +77,7 @@ dis_imm16:
     mov     r1, r0, ord('r')
     JSR     (OSWRCH)
 
-    mov     r1, r6                      # extract source register
-    brot    r1, r1
-    brot    r1, r1
+    bperm   r1, r6, 0x1032            # extract source register
     JSR     (print_reg_num)
 
     mov     r1, r0, 0xffffffff          # r1 = constant mask for imm16
@@ -168,7 +159,7 @@ opcodes:
     WORD    0x0000
     BSTRING "add"    #  01000
     WORD    0x0000
-    BSTRING "brot"   #  01001
+    BSTRING "bperm"   #  01001
     # WORD    0x0000
     BSTRING "ror"    #  01010
     WORD    0x0000
