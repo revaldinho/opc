@@ -3,12 +3,12 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   parameter HLT=5'h10,RTI=5'h11,PPSR=5'h12,GPSR=5'h13,OUT=5'h18,IN=5'h19,STO=5'h1A,LD=5'h1B,LJSR=5'h1C,LMOV=5'h1D,LSTO=5'h1E,LLD=5'h1F;
   parameter FET=3'h0,EAD=3'h1,RDM=3'h2,EXEC=3'h3,WRM=3'h4,INT=3'h5,EI=3,S=2,C=1,Z=0,INT_VECTOR0=20'h2,INT_VECTOR1=20'h4;
   reg [19:0]  PC_q,PCI_q;(* RAM_STYLE="DISTRIBUTED" *)
-  reg [31:0]  RF_q[14:0], RF_pipe_q, OR_q,result;
+  reg [31:0]  RF_q[14:0], RF_pipe_q, OR_q, result;
   reg [7:0]   PSR_q;
   reg [4:0]   IR_q;
   reg [3:0]   swiid,PSRI_q,dst_q,src_q;
   reg [2:0]   FSM_q, FSM_d;
-  reg         zero,carry,sign,enable_int,reset_s0_b,reset_s1_b,subnotadd_q, rnw_q, vpa_q, vda_q, vio_q, or_not_pc_q;
+  reg         zero,carry,sign,enable_int,reset_s0_b,reset_s1_b,subnotadd_q, rnw_q, vpa_q, vda_q, vio_q;
   wire        pred          = (OR_q[29] ^ (OR_q[30]?(OR_q[31]?PSR_q[S]:PSR_q[Z]):(OR_q[31]?PSR_q[C]:1)));
   wire [7:0]  bytes0        = {8{~OR_q[2] }} & ((OR_q[1])?  ((OR_q[0]) ?RF_sout[31:24] :RF_sout[23:16]):(OR_q[0]) ? RF_sout[15:8]:RF_sout[7:0]);
   wire [7:0]  bytes1        = {8{~OR_q[6] }} & ((OR_q[5])?  ((OR_q[4]) ?RF_sout[31:24] :RF_sout[23:16]):(OR_q[4]) ? RF_sout[15:8]:RF_sout[7:0]);
@@ -16,7 +16,7 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   wire [7:0]  bytes3        = {8{~OR_q[14]}} & ((OR_q[13])? ((OR_q[12])?RF_sout[31:24] :RF_sout[23:16]):(OR_q[12])? RF_sout[15:8]:RF_sout[7:0]);    
   wire [31:0] RF_sout       = {32{(|src_q)&&IR_q[4:2]!=3'b111}} & ((src_q==4'hF)? {12'b0,PC_q} : RF_q[src_q]);
   wire [31:0] din_sxt       = (IR_q[4:2]==3'h7)? {{12{OR_q[19]}},OR_q[19:0]} : {{16{OR_q[15]}}, OR_q[15:0]};
-  assign {rnw,dout,address} = {rnw_q, RF_pipe_q, (or_not_pc_q)? OR_q[19:0] : PC_q};
+  assign {rnw,dout,address} = {rnw_q, RF_pipe_q, (vpa_q)? PC_q : OR_q[19:0]};
   assign {vpa,vda,vio}      = {vpa_q, vda_q, vio_q };  
   always @( * ) begin
     case (IR_q)
@@ -44,11 +44,11 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
       OR_q  <= (FSM_q==EAD)? (IR_q==BPERM)?({bytes3,bytes2,bytes1,bytes0}):(RF_sout+din_sxt) ^ {32{IR_q==SUB||IR_q==CMP}} : din;
       {reset_s0_b,reset_s1_b, subnotadd_q} <= {reset_b,reset_s0_b, IR_q!=ADD};
       if (!reset_s1_b) begin
-        {PC_q,PCI_q,PSRI_q,PSR_q,FSM_q,vda_q,vio_q,or_not_pc_q} <= 0;
+        {PC_q,PCI_q,PSRI_q,PSR_q,FSM_q,vda_q,vio_q} <= 0;
         {rnw_q, vpa_q} <= 2'b11;        
       end      
       else begin
-        {FSM_q, rnw_q, or_not_pc_q} <= {FSM_d, !(FSM_d==WRM),(FSM_d==WRM||FSM_d==RDM) } ;
+        {FSM_q, rnw_q} <= {FSM_d, !(FSM_d==WRM) } ;
         {vpa_q, vda_q, vio_q} <= {(FSM_d==FET||FSM_d==EXEC),({2{FSM_d==RDM||FSM_d==WRM}}&{!(IR_q==IN||IR_q==OUT),IR_q==IN||IR_q==OUT})};        
         if ((FSM_q==FET)||(FSM_q==EXEC))
           {IR_q, dst_q, src_q} <= din[28:16] ;
