@@ -18,7 +18,7 @@ else
 endif
 
 set assembler = ../opc7asm.py
-set testlist = ( bperm bigsieve  davefib davefib_int e-spigot-rev  fib hello math32  nqueens pi-spigot-rev  robfib sieve )
+set testlist = ( bperm bigsieve  davefib davefib_int e-spigot-rev  fib hello math32  nqueens pi-spigot-rev  robfib sieve pi-spigot-bruce )
 set numtests = 0
 set fails = 0
 
@@ -28,12 +28,11 @@ make -j 4 all_emulation
 
 make all_simulation
 
+make all_diff -j 4
 
-foreach test ( $testlist )
+foreach test ( `ls -1 *diff` )
     @ numtests ++ 
-    echo ""    
-    diff -s ${test}.*.stdout
-    if ( $status != 0 ) then
+    if ( `grep -c identical $test` != 1 ) then
         echo "FAIL - $test simulation doesn't match emulation result"
         @ fails++
     endif

@@ -26,7 +26,7 @@ vcd_option = ""
 	gzip -f $*.trace
 
 %.diff: %.sim.stdout %.emu.stdout 
-	diff -a -s $*.emu.stdout $*.sim.stdout
+	diff -a -s $*.emu.stdout $*.sim.stdout > $@
 
 %.sim : %.hex ../opc7tb.v ../opc7cpu.v
 	cp $*.hex test.hex
