@@ -2,7 +2,6 @@
 # Remove non primary data files
 pushd tests
 
-
 if ( $#argv > 0 ) then
     if ( $argv[1] == "clean" ) then
         make clean

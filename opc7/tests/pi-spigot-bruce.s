@@ -19,6 +19,7 @@
         ;; r10 stands for r
         ;; r11 stands for q
         ;; r12 stands for p (a pointer)
+EQU   WORD_SIZE, 32
 
 MACRO   CLC()
         c.add r0,r0
@@ -93,7 +94,7 @@ start:
 
         ;; mov r14, r0, stack   ; initialise stack pointer
         JSR( init)
-        mov r8, r0, 0xFFFF      # Load mask into r8
+        mov r8, r0, 0xFFFFFFFF  # Load mask into r8
         movt r8, r0                          
         mov r2, r0, ndigits     # ldx #359
         mov r3, r0, psize       # ldy #1193
@@ -170,34 +171,30 @@ i1:     sto r1, r2, p-1         # was sta p,x
         RTS()
 
 mul:                            # uses y as loop counter
-        
         mov r10, r1             # sta r
-        mov r3, r0, 16          # ldy #16
+        mov r3, r0, WORD_SIZE   # ldy #16
 m1:     add r1, r1              # asl
-        add r11, r11            # asl q        
-        cmp r11, r8
-        mi.add  pc,r0, m2-PC    # bcc m2
+        add r11, r11            # asl q
+        nc.mov pc, r0, m2       # bcc m2
                                 # clc
-        add r1, r10,1           # adc r  (carry will be one)
+        add r1, r10             # adc r
 m2:     mov r3, r3, -1          # dey
-        nz.sub  pc,r0, PC-m1        # bne m1
+        nz.mov pc, r0, m1       # bne m1
         RTS()
 
 div:                            # uses y as loop counter
         mov r10, r1             # sta r
-        mov r3, r0, 16          # ldy #16
-        mov r1, r0              # lda #0
+        mov r3, r0, WORD_SIZE   # ldy #16
+        mov r1, r0, 0           # lda #0
         add r11, r11            # asl q
-d1:     rol r1, r1              # rol
+d1:     ROL (r1, r1)            # rol
         cmp r1, r10             # cmp r
-        nc.add  pc,r0, d2-PC        # bcc d2
-        c.sub r1,r0,1           # sbc r
-        sub r1,r10,0
-d2:     rol r11, r11            # rol q
+        nc.mov pc, r0, d2       # bcc d2
+        sub r1, r10             # sbc r
+d2:     ROL(r11, r11)           # rol q
         mov r3, r3, -1          # dey
-        nz.sub  pc,r0, PC-d1        # bne d1
+        nz.mov pc, r0, d1       # bne d1
         RTS()
-
 
 p:      WORD 0  # needs 1193 words but there's nothing beyond
 
