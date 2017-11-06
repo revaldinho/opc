@@ -3,6 +3,7 @@ VPATH=..
 SRCS = $(wildcard *.s)
 
 HEXS  = $(patsubst %.s,%.hex,$(SRCS))
+EXES  = $(patsubst %.s,%.exe,$(SRCS))
 DUMPS = $(patsubst %.s,%.dump,$(SRCS))
 DIFFS = $(patsubst %.s,%.diff,$(SRCS))
 SIMS  = $(patsubst %.s,%.sim,$(SRCS))
@@ -13,10 +14,8 @@ assembler ?= ../opc7asm.py
 emulator ?= ../opc7emu.py
 show_stdout ?= ../../utils/show_stdout.py
 
-vcd_option = ""
+vcd_option = 
 #-D_dumpvcd=1
-
-.NOTPARALLEL : all_sim *.exe
 
 %.hex %.lst : %.s opc7asm.py
 	python3 ${assembler} $< $@ >  $*.lst
@@ -28,13 +27,13 @@ vcd_option = ""
 %.diff: %.sim.stdout %.emu.stdout 
 	diff -a -s $*.emu.stdout $*.sim.stdout > $@
 
-%.sim : %.hex ../opc7tb.v ../opc7cpu.v
-	cp $*.hex test.hex
-	iverilog -D_simulation=1 ${vcd_option} ../opc7tb.v ../opc7cpu.v > $*.sim 
-	./a.out > $@
-	mv test.vdump $*.vdump
-	if [ -e dump.vcd ] ; then mv dump.vcd $*.vcd ; fi
+%.sim : %.hex %.exe
+	./$*.exe > $@
 
+%.exe : ../opc7tb.v ../opc7cpu.v
+	perl -pale 's/test\.(hex|dump|vcd)/$*\.\1/g' ../opc7tb.v > $*_tb.v
+	iverilog -D_simulation=1 ${vcd_option} -o $@ $*_tb.v ../opc7cpu.v 
+	rm -f $*_tb.v
 
 %.sim.stdout : %.sim
 	python3 ../../utils/show_stdout.py -7 -f $*.sim >  $*.sim.stdout
@@ -44,7 +43,9 @@ vcd_option = ""
 
 all: all_emulation all_simulation all_diff
 
-all_simulation: all_stdout all_sim
+all_exe: ${EXES}
+
+all_simulation: all_stdout all_sim all_exe
 
 all_emulation: opc7asm.py opc7emu.py ${DUMPS} ${HEXS}
 

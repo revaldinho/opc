@@ -26,7 +26,7 @@ set fails = 0
 
 make -j 4 all_emulation
 
-make all_simulation
+make all_simulation -j 2
 
 make all_diff -j 4
 
