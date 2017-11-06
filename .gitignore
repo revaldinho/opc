@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 */*~
 */#*#
 */*sim
@@ -68,7 +67,6 @@
 */xc95*/tmperr.err
 */xc95*/xlnx_auto_0_xdb/
 */xc95*/xst/
-=======
 *~
 *.lst
 *.lis
@@ -77,11 +75,19 @@
 *.dump
 *.trace
 *.vcd
-*/*/tests/*.lst
-*/*/tests/*.lis
-*/*/tests/*.log
-*/*/tests/*.hex
-*/*/tests/*.dump
-*/*/tests/*.trace
-*/*/tests/*.vcd
->>>>>>> 73564cf728d8e56badc36dd06e663111f29f0977
+*/*tests/*.lst
+*/*tests/*.lis
+*/*tests/*.log
+*/*tests/*.hex
+*/*tests/*.dump
+*/*tests/*.trace
+*/*tests/*.vcd
+*/*tests/*.gz
+*/*tests/*.diff
+*/*tests/*.exe
+*/*tests/*.sim
+*/*tests/*.stdout
+*/*smart*
+*/*/*smart*
+
+
