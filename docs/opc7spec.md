@@ -76,7 +76,7 @@ Instruction Set
 Notes:
 
   * Where a [p.] is shown in the table, the instruction can be prefixed with a predicate (see table below) for conditional execution dependent on the state of the chosen flags
-  * All effective data/address calculations are truncated to 20 bits and do not affect any of the processor flags
+  * All effective data/address calculations are truncated to 32 bits and do not affect any of the processor flags
   * add rd,rd can be used to synthesize an arithmetic shift left (asl) instruction
 
 Predication
@@ -96,31 +96,30 @@ a prefix on the instruction mnemonic in the assembler.
   |  1 |  1 |  0 | mi.        | Execute if Sign flag is set                        |
   |  1 |  1 |  1 | pl.        | Execute if Sign flag is clear                      |
   
-
 Byte Permute Function
 ---------------------
 							
-OPC7 has a powerful byte permute function which can perform various byte-wise shifts, rotations, swaps and replication.							
+OPC7 has a powerful byte permute function which can perform various byte-wise shifts, rotations, swaps and replication.		
 							
 Bytes are picked from the source register (rs) and placed into the destination register (rd) according to the bit pattern
 provided in the 16b immediate data. The lower 16 bits of this control word are split into 4 nybbles. The lower two bits
 of each nybble determine which byte of the source will be placed in the corresponding byte position of the destination.
 Bytes (and nybbles) are numbered from 3 down to 0 reading from left to right (MSB to LSB). This is best illustrated
-with some simple examples.							
+with some simple examples:
 							
-BPERM rd,rs, 0x3210		Has no effect on r1 - all bytes are put back in their original positions					
-BPERM rd,rs, 0x0123 		Reverses the order of the bytes in r1					
-BPERM rd,rs, 0x0321		Byte-wise rotate right					
-BPERM rd,rs, 0x2103		Byte-wise rotate left					
-BPERM rd,rs, 0x1032		Half-word swap/rotate					
-BPERM rd,rs, 0x0000		Replicate byte 0 into all bytes					
-BPERM rd,rs, 0x2301 		Shuffle bytes (rotate within half-words)					
+    BPERM rd,rs, 0x3210		Has no effect on r1 - all bytes are put back in their original positions
+    BPERM rd,rs, 0x0123 	Reverses the order of the bytes in r1					
+    BPERM rd,rs, 0x0321		Byte-wise rotate right					
+    BPERM rd,rs, 0x2103		Byte-wise rotate left					
+    BPERM rd,rs, 0x1032		Half-word swap/rotate					
+    BPERM rd,rs, 0x0000		Replicate byte 0 into all bytes					
+    BPERM rd,rs, 0x2301 	Shuffle bytes (rotate within half-words)					
 							
 In addition to picking bytes from the source, it's possible also to specify that bytes should be zeroed by setting bit 2
 of the appropriate control word nybble. Again, with some examples
 
-BPERM rd,rs, 0x4444		Zeroes all bytes in the destination 
-BPERM rd,rs, 0x4441 		Zeroes the upper 3 bytes of the destination and moves byte 1 from the source reg into byte zero
+    BPERM rd,rs, 0x4444		Zeroes all bytes in the destination 
+    BPERM rd,rs, 0x4441 		Zeroes the upper 3 bytes of the destination and moves byte 1 from the source reg into byte zero
 							  
 Interrupts
 ----------
@@ -130,5 +129,3 @@ OPC7 has two interrupt inputs for hardware interrupts: int\_b[1:0].
 If either of these inputs is taken low, then the processor with finish executing the current instruction and jump to a restart vector at either 0x0002 (for int\_b[0]) or 0x0004 (for int\_b[1]). If both interrupt pins are low at the same time then the processor will just to 0x0004 to service int\_b[1] first.
   
 Additionally there is an ability to cause software interrupts by writing a non-zero value to the SWI bits (see above) using the PUTPSR instruction. Software interrupts are also vectored to address 0x0002 in common with the hardware interrupt for int\_b[0]. The interrupt service routine is responsible for reading to processor status register to determine the interrupt source.
-  
-  
