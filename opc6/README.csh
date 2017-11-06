@@ -42,9 +42,6 @@ foreach test ( $testlist )
     end
 end
 
-make all_stdout
-make all_diff
-
 echo ""
 echo "Comparing memory dumps between emulation and simulation"
 echo "-------------------------------------------------------"
