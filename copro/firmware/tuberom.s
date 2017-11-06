@@ -396,7 +396,7 @@ cmdTest:
     PUSH   (r13)
     JSR    (read_hex)
     mov    r1, r2
-    JSR    (print_hex_4_spc)
+    JSR    (print_hex_word_spc)
     JSR    (print_dec_16)
     JSR    (OSNEWL)
     mov    r1, r0

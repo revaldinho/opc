@@ -32,13 +32,13 @@
 # Entry:
 #
 # Exit:
-# - r1 = 0 (success), 1 (escape), 2 (checksum error), 3 (bad format error) 
-# - r2, r3, r4 corrupted
+# - r1 = 0 (success), 1 (escape), 2 (checksum error), 3 (bad format error)
+# - r2, r3, r4, r5, r6 corrupted
 
 srec_load:
     PUSH    (r13)
 
-    mov     r4, r0, 0xffff          # initialize address to 0xffff meaning not yet set
+    mov     r4, r0, -1              # initialize address to 0xffff meaning not yet set
 
 srec_line_loop:
     mov     r1, r0
@@ -67,31 +67,52 @@ srec_line_loop:
     JSR     (read_hex_4)            # r2 = AAAA
     c.mov   pc, r0, srec_exit_bad_format
 
-    cmp     r4, r0, 0xffff          # test if address not set
+    cmp     r4, r0, -1              # test if address not set
     z.mov   r4, r2                  # AAAA now held in r4
 
     add     r5, r2                  # accumulate AAAA in checksum
-    bswp    r2, r2
+    BROT    (r2, r2)
     add     r5, r2
 
     DEC     (r3, 3)
     CLC     ()
     ror     r3, r3                  # convert to words
     c.mov   pc, r0, srec_exit_bad_format    # length expected to be even because we are a word based machine
-
+##ifdef CPU_OPC7
+    ror     r3, r3                  # convert to words (4 bytes)
+    c.mov   pc, r0, srec_exit_bad_format    # length expected to be even because we are a word based machine
+##endif
 
 srec_word_loop:
+    # the transmission order is little endian (i.e LSB first)
+##ifdef CPU_OPC7
+    JSR     (read_hex)              # r2 = BBBBBBBB
+    c.mov   pc, r0, srec_exit_bad_format
 
+    mov     r6, r2
+    add     r5, r2                  # accumulate LSB in checksum
+    BROT    (r2, r2)
+    add     r5, r2                  # accumulate in checksum
+    BROT    (r2, r2)
+    add     r5, r2                  # accumulate in checksum
+    movt    r2, r2
+    BROT    (r2, r2)
+    add     r5, r2                  # accumulate MSB checksum
+    movt    r6, r6
+    BROT    (r6, r6)
+    movt    r2, r6
+##else
     JSR     (read_hex_4)            # r2 = BBBB
     c.mov   pc, r0, srec_exit_bad_format
 
     add     r5, r2                  # accumulate BBBB in checksum
-    bswp    r2, r2
+    BROT    (r2, r2)
     add     r5, r2
+##endif
 
     sto     r2, r4                  # store the word
 
-        
+
     INC     (r4,1)                  # increment the address pointer
     DEC     (r3,1)
     nz.mov  pc, r0, srec_word_loop

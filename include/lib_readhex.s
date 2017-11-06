@@ -26,7 +26,7 @@ skip_spaces_loop:
 #
 # read_hex
 #
-# Read a multi-digit hex value, terminated by a non hex character
+# Read a word sized hex value, optionally terminated by a non-hex character
 #
 # Entry:
 # - r1 is the address of the hex string
@@ -39,12 +39,18 @@ skip_spaces_loop:
 
 read_hex:
     PUSH    (r13)
+    PUSH    (r3)
     JSR     (skip_spaces)
     mov     r2, r0          # r2 is will contain the hex value
-
+    mov     r3, r0, (WORD_SIZE >> 2)
 read_hex_loop:
     JSR     (read_hex_1)
-    nc.mov  pc, r0, read_hex_loop
+    c.mov   pc, r0, read_hex_exit      # non-hex char, exit with c=1
+    DEC     (r3, 1)
+    nz.mov  pc, r0, read_hex_loop
+    CLC     ()                         # successful, exit with c=0
+read_hex_exit:
+    POP     (r3)
     POP     (r13)
     RTS     ()
 

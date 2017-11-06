@@ -1,0 +1,94 @@
+#!/bin/bash
+#
+# Basic commands to synthesize and fit verilog into an FPGA without using the ISE.
+#
+# Clean up first
+
+# ./README [sx]
+if [ "$1" == "sx" ]; then
+    echo "Running build with SmartXplorer option"
+fi
+
+# code project name here temporarily
+project_name="opc7cpu"
+target="xc6slx9-csg225-3"
+
+# Clean up so only primary data remains
+rm -rf *~ xst .#* `ls -1 | egrep -v '(prj|xst|README)$'`
+#exit
+
+# Create new work directories
+mkdir tmp
+mkdir xst
+
+echo "work" > $project_name.lso
+
+# Synthesis
+xst \
+    -ifn "./${project_name}.xst" \
+    -intstyle xflow              \
+    -ofn "./${project_name}.syr"
+#
+ngdbuild    -dd _ngo  \
+	    -p  $target \
+	    -uc ../${project_name}.ucf \
+	    ${project_name}.ngc \
+	    ${project_name}.ngd
+
+
+if [ "$1" == "sx" ] ; then
+    smartxplorer ${project_name}.ngd -p ${target} -uc ../${project_name}.ucf -wd smartXplorer -ra
+else
+    # Default options, map then place and route the selected device
+    map -p $target \
+        -ir off -pr off -c 100 \
+        -ol high \
+        -timing \
+        -o ${project_name}_map.ncd \
+        ${project_name}.ngd \
+        ${project_name}.pcf
+
+    par -w \
+        -ol high \
+        ${project_name}_map.ncd \
+        ${project_name}.ncd \
+        ${project_name}.pcf
+
+    # Run the TA engine and generate reports
+    trce -v 3 \
+         -s 3 \
+         -fastpaths \
+         -xml ${project_name}.twx \
+         ${project_name}.ncd \
+         ${project_name}.pcf \
+         -o ${project_name}.twr
+
+    # Generate the JEDEC file for programming
+    bitgen \
+      -w			      \
+      -g DebugBitstream:No	      \
+      -g Binary:no		      \
+      -g CRC:Enable		      \
+      -g ConfigRate:6	      \
+      -g M2Pin:PullUp	      \
+      -g ProgPin:PullUp	      \
+      -g DonePin:PullUp	      \
+      -g TckPin:PullUp	      \
+      -g TdiPin:PullUp	      \
+      -g TdoPin:PullUp	      \
+      -g TmsPin:PullUp	      \
+      -g UnusedPin:PullDown	      \
+      -g UserID:0xFFFFFFFF	      \
+      -g StartUpClk:CClk	      \
+      -g DONE_cycle:4	      \
+      -g GTS_cycle:5	      \
+      -g GWE_cycle:6	      \
+      -g LCK_cycle:NoWait	      \
+      -g Security:None	      \
+      -g DonePipe:No	      \
+      -g DriveDone:No             \
+      ${project_name}.ncd
+
+    # dump a verilog netlist - something like this,..
+    netgen -w -ofmt verilog  -aka ${project_name}_map.ncd
+fi
