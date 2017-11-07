@@ -30,14 +30,20 @@ module system (
    // CPU signals
    wire        clk;
    wire [31:0] cpu_din;
+   wire [31:0] cpu_dout_nxt;
    wire [31:0] cpu_dout;
    wire [31:0] ram_dout;
    wire [15:0] uart_dout;
+   wire [19:0] address_nxt;
    wire [19:0] address;
    wire        rnw;
+   wire        rnw_nxt;
    wire        vpa;
+   wire        vpa_nxt;
    wire        vda;
+   wire        vda_nxt;
    wire        vio;
+   wire        vio_nxt;
 
    reg         cpuclken_old = 0;
    wire        cpuclken;
@@ -46,7 +52,7 @@ module system (
    wire        uart_cs_b = !({address[15:1],  1'b0} == 16'hfe08);
 
    // Map the RAM at both the top and bottom of memory (uart_cs_b takes priority)
-   wire         ram_cs_b = !((|address[15:RAMSIZE] == 1'b0)  || (&address[15:RAMSIZE] == 1'b1));
+   wire        ram_cs_b = 1'b0;
 
    // External RAM signals
    wire         wegate;
@@ -94,7 +100,8 @@ module system (
         cpuclken_old <= cpuclken;
      end
 
-   assign cpuclken = !reset_b | !cpuclken_old | !(vda | vpa);
+//   assign cpuclken = !reset_b | !cpuclken_old | !(vda | vpa);
+   assign cpuclken = 1'b1;
 
    assign reset_b = sw4_sync;
 
@@ -117,16 +124,22 @@ module system (
       .vio(vio),
       .dout(cpu_dout),
       .address(address),
-      .rnw(rnw)
+      .rnw(rnw),
+      .vpa_nxt(vpa_nxt),
+      .vda_nxt(vda_nxt),
+      .vio_nxt(vio_nxt),
+      .dout_nxt(cpu_dout_nxt),
+      .address_nxt(address_nxt),
+      .rnw_nxt(rnw_nxt)
     );
 
    // A block RAM - clocked off negative edge to mask output register
    ram RAM
      (
-      .din(cpu_dout),
+      .din(cpu_dout_nxt),
       .dout(ram_dout),
-      .address(address[RAMSIZE-1:0]),
-      .rnw(rnw),
+      .address(address_nxt[RAMSIZE-1:0]),
+      .rnw(rnw_nxt),
       .clk(clk),
       .cs_b(ram_cs_b)
       );
