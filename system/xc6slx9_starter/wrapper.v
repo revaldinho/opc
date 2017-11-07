@@ -4,9 +4,8 @@ module wrapper ( input clk, input[7:0] sw, output[7:0] led, input rxd, output tx
    system #(
     .CLKSPEED(50000000),
     .BAUD(115200),
-    .RAMSIZE(14),
     .SEVEN_SEG_DUTY_CYCLE(7)
-   ) system ( 
+   ) system (
       .clk(clk),
       .sw(sw),
       .led(led),
@@ -16,5 +15,5 @@ module wrapper ( input clk, input[7:0] sw, output[7:0] led, input rxd, output tx
       .an(an),
       .select(!select)
     );
-      
+
 endmodule
