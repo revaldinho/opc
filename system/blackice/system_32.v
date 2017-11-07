@@ -54,11 +54,7 @@ module system (
    wire        uart_cs_b = !(vio);
 
    // Map the RAM at both the top and bottom of memory (uart_cs_b takes priority)
-<<<<<<< HEAD
    wire        ram_cs_b = 1'b0;
-=======
-   wire         ram_cs_b = !((vpa || vda) && ((|address[15:RAMSIZE] == 1'b0)  || (&address[15:RAMSIZE] == 1'b1)));
->>>>>>> master
 
    // External RAM signals
    wire         wegate;

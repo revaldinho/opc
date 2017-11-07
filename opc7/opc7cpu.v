@@ -6,7 +6,7 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   parameter FET=3'h0,EAD=3'h1,RDM=3'h2,EXEC=3'h3,WRM=3'h4,INT=3'h5,EI=3,S=2,C=1,Z=0,INT_VECTOR0=20'h2,INT_VECTOR1=20'h4;
   reg [19:0]  address_q, address_next;
   reg [19:0]  PC_q,PC_next,PCI_q,PCI_next;(* RAM_STYLE="DISTRIBUTED" *)
-  reg [31:0]  RF_q[14:0], RF_pipe_q, RF_pipe_next, OR_q, OR_next, result;
+  reg [31:0]  RF_q[14:0], RF_pipe_q, RF_pipe_next, OR_q, OR_next, result, EA_next;
   reg [7:0]   PSR_q,PSR_next;
   reg [4:0]   IR_q, IR_next;
   reg [3:0]   swiid,PSRI_q,PSRI_next,dst_q,dst_next,src_q,src_next;
@@ -17,12 +17,7 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   wire [7:0]  bytes0        = {8{~OR_q[2] }} & ((OR_q[1])?  ((OR_q[0]) ?RF_sout[31:24] :RF_sout[23:16]):(OR_q[0]) ? RF_sout[15:8]:RF_sout[7:0]);
   wire [7:0]  bytes1        = {8{~OR_q[6] }} & ((OR_q[5])?  ((OR_q[4]) ?RF_sout[31:24] :RF_sout[23:16]):(OR_q[4]) ? RF_sout[15:8]:RF_sout[7:0]);
   wire [7:0]  bytes2        = {8{~OR_q[10]}} & ((OR_q[9])?  ((OR_q[8]) ?RF_sout[31:24] :RF_sout[23:16]):(OR_q[8]) ? RF_sout[15:8]:RF_sout[7:0]);
-<<<<<<< HEAD
   wire [7:0]  bytes3        = {8{~OR_q[14]}} & ((OR_q[13])? ((OR_q[12])?RF_sout[31:24] :RF_sout[23:16]):(OR_q[12])? RF_sout[15:8]:RF_sout[7:0]);
-  wire [31:0] RF_sout       = {32{(|src_q)&&IR_q[4:2]!=3'b111}} & ((src_q==4'hF)? {12'b0,PC_q} : RF_q[src_q]);
-=======
-  wire [7:0]  bytes3        = {8{~OR_q[14]}} & ((OR_q[13])? ((OR_q[12])?RF_sout[31:24] :RF_sout[23:16]):(OR_q[12])? RF_sout[15:8]:RF_sout[7:0]);    
->>>>>>> master
   wire [31:0] din_sxt       = (IR_q[4:2]==3'h7)? {{12{OR_q[19]}},OR_q[19:0]} : {{16{OR_q[15]}}, OR_q[15:0]};
   assign {rnw,dout,address} = {rnw_q, RF_pipe_q, address_q};
   assign {rnw_nxt,dout_nxt,address_nxt} = {rnw_next, RF_pipe_next, address_next};
@@ -68,7 +63,8 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
      src_next = src_q;
      RF_pipe_next = (dst_q==4'hF)? {12'b0,PC_q} : RF_q[dst_q] & {32{(|dst_q)}};
     // OR_next is a dont care in INT and WRM states but force it to come from internal FFs rather than the databus to avoid a false RAM-RAM path
-     OR_next  = (FSM_q==EAD||FSM_q==INT||FSM_q==WRM)? (IR_q==BPERM)?({bytes3,bytes2,bytes1,bytes0}):(RF_sout+din_sxt) ^ {32{IR_q==SUB||IR_q==CMP}} : din;
+     EA_next  = RF_sout+din_sxt ;    
+     OR_next  = (FSM_q==EAD||FSM_q==INT||FSM_q==WRM)? (IR_q==BPERM)?({bytes3,bytes2,bytes1,bytes0}): EA_next ^ {32{IR_q==SUB||IR_q==CMP}} : din;
      {reset_s0_b_next,reset_s1_b_next, subnotadd_next} = {reset_b,reset_s0_b, IR_q!=ADD};
      if (!reset_s1_b) begin
         {PC_next,PCI_next,PSRI_next,PSR_next,FSM_next,vda_next,vio_next} = 0;
@@ -92,7 +88,7 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
      end // else: !if(!reset_s1_b)
   end
   always @( * ) begin
-     address_next = (vpa_next)? PC_next : OR_next[19:0];
+     address_next = (vpa_next)? PC_next : EA_next[19:0];
   end
   always @(posedge clk)
     if (clken) begin
