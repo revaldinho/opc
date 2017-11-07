@@ -26,8 +26,8 @@ module system ( input clk, input[7:0] sw, output[7:0] led, input rxd, output txd
    parameter ASIZE   = 20;
    parameter RAMSIZE = 13;
 `else
-   parameter DSIZE   = 32;
-   parameter ASIZE   = 20;
+   parameter DSIZE   = 16;
+   parameter ASIZE   = 16;
    parameter RAMSIZE = 14;
 `endif
 
