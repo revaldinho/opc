@@ -54,7 +54,8 @@ module system (
    wire        uart_cs_b = !(vio);
 
    // Map the RAM at both the top and bottom of memory (uart_cs_b takes priority)
-   wire        ram_cs_b = 1'b0;
+   wire        ram_cs_b = !(vpa || vda);
+   wire        ram_cs_b_nxt = !(vpa_nxt || vda_nxt);
 
    // External RAM signals
    wire         wegate;
@@ -143,7 +144,7 @@ module system (
       .address(address_nxt[RAMSIZE-1:0]),
       .rnw(rnw_nxt),
       .clk(clk),
-      .cs_b(ram_cs_b)
+      .cs_b(ram_cs_b_nxt)
       );
 
    // A simple 115200 baud UART
