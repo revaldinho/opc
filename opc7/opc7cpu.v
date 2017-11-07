@@ -43,6 +43,7 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
       default: FSM_d = (FSM_q==RDM)? EXEC : FET;
     endcase
   end // always @ ( * )
+  wire[31:0] RF_q_dst_q = RF_q[dst_q];
   always @( * ) begin
      RF_pipe_next = RF_pipe_q;
      OR_next = OR_q;
@@ -61,7 +62,7 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
      IR_next = IR_q;
      dst_next = dst_q;
      src_next = src_q;
-     RF_pipe_next = (dst_q==4'hF)? {12'b0,PC_q} : RF_q[dst_q] & {32{(|dst_q)}};
+     RF_pipe_next = (dst_q==4'hF)? {12'b0,PC_q} : RF_q_dst_q & {32{(|dst_q)}};
     // OR_next is a dont care in INT and WRM states but force it to come from internal FFs rather than the databus to avoid a false RAM-RAM path
      EA_next  = RF_sout+din_sxt ;    
      OR_next  = (FSM_q==EAD||FSM_q==INT||FSM_q==WRM)? (IR_q==BPERM)?({bytes3,bytes2,bytes1,bytes0}): EA_next ^ {32{IR_q==SUB||IR_q==CMP}} : din;

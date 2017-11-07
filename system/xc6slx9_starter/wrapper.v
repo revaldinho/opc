@@ -3,6 +3,10 @@ module wrapper ( input clk, input[7:0] sw, output[7:0] led, input rxd, output tx
 
    system #(
     .CLKSPEED(50000000),
+`ifdef cpu_opc7
+    .CLKFX_MULTIPLY(2),
+    .CLKFX_DIVIDE(1),
+`endif            
     .BAUD(115200),
     .SEVEN_SEG_DUTY_CYCLE(7)
    ) system (
