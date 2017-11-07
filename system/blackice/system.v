@@ -47,10 +47,12 @@ module system (
    wire        cpuclken = 1;
    reg         sw4_sync;
    wire        reset_b;
-   wire        uart_cs_b = !({address[15:1],  1'b0} == 16'hfe08);
+
+   // Map the RAM everywhere in IO space (for performance)
+   wire        uart_cs_b = !(vio);
 
    // Map the RAM at both the top and bottom of memory (uart_cs_b takes priority)
-   wire         ram_cs_b = !((|address[15:RAMSIZE] == 1'b0)  || (&address[15:RAMSIZE] == 1'b1));
+   wire         ram_cs_b = !((vpa || vda) && ((|address[15:RAMSIZE] == 1'b0)  || (&address[15:RAMSIZE] == 1'b1)));
 
    // External RAM signals
    wire         wegate;
@@ -201,12 +203,14 @@ module system (
       .reset_b(reset_b),
       .int_b(1'b1),
       .clken(cpuclken),
-      .vpa(),
-      .vda(),
+      .vpa(vpa),
+      .vda(vda),
       .dout(cpu_dout),
       .address(address),
       .rnw(rnw)
       );
+   // Fake vio, just at the UART address
+   assign vio = vda && ({address[15:1],  1'b0} == 16'hfe08);
 `endif
 
    // A block RAM - clocked off negative edge to mask output register

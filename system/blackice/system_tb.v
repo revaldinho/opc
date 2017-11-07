@@ -133,7 +133,7 @@ system
 
    always @(posedge DUT.clk)
      if (DUT.cpuclken) begin
-        if (DUT.vda && !DUT.rnw && DUT.address[15:0] == 16'hfe09)
+        if (DUT.vio && !DUT.rnw && DUT.address[15:0] == 16'hfe09)
           if (DUT.cpu_dout == 10)
             $display("%t: UART Tx:  <lf>", $time);
           else if (DUT.cpu_dout == 13)
