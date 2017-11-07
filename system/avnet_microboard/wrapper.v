@@ -51,7 +51,6 @@ module wrapper
    system #(
     .CLKSPEED(40000000),
     .BAUD(115200),
-    .RAMSIZE(14),
     .SEVEN_SEG_DUTY_CYCLE(7)
    ) system (
       .clk(USER_CLOCK),
