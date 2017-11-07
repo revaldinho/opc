@@ -1,5 +1,5 @@
 `ifdef cpu_opc7
-// `define use_lookahead
+`define use_lookahead
 `endif
 
 module system ( input clk, input[7:0] sw, output[7:0] led, input rxd, output txd,
