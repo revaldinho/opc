@@ -587,14 +587,14 @@ osNEWL:
 osWRCH:
     PUSH    (r13)
 oswrch_loop:
-    ld      r13, r0, UART_STATUS
+    IN      (r13, UART_STATUS)
 ##ifdef CPU_OPC7
     and     r13, r0, 0xffff8000
     nz.mov  pc, r0, oswrch_loop
 ##else
     mi.mov  pc, r0, oswrch_loop
 ##endif
-    sto     r1, r0, UART_DATA
+    OUT     (r1, UART_DATA)
     ld      r13, r0, HPOS     # increment the horizontal position
     mov     r13, r13, 1
     sto     r13, r0, HPOS
@@ -616,10 +616,10 @@ oswrch_loop:
 # - r1 is the character read
 
 osRDCH:
-    ld      r1, r0, UART_STATUS
+    IN      (r1, UART_STATUS)
     and     r1, r0, 0x4000
     z.mov   pc, r0, osRDCH
-    ld      r1, r0, UART_DATA
+    IN      (r1, UART_DATA)
     RTS     ()
 
 
@@ -678,7 +678,7 @@ osWORD0_exit:
 # Serial port
 # -----------------------------------------------------------------------------
 
-##ifndef CPU_OPC7
+##ifdef CPU_OPC5LS
 
 # Limit check to precent code running into next block...
 
