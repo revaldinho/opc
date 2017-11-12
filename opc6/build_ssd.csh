@@ -20,7 +20,6 @@ set bcpltestlist = (  \
 	anseq  \
 	apfel  \
 	beebgfx  \
-	empty  \
 	enig  \
 	enigma-m3  \
 	evale  \
@@ -36,9 +35,12 @@ set bcpltestlist = (  \
 	monbfns  \
 	pi-spigot-bcpl  \
 	queens  \
-	shell23  \
-	splay  \
-	tag  )
+	shell23  )
+
+# too many tests for 1 SSD image!        
+# 	empty  \           
+#	splay  \
+#	tag  )
     
 
 pushd disk
