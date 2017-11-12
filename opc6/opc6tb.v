@@ -47,11 +47,18 @@ module opc6tb();
     always @ (negedge clk) begin
 `endif
       if (!rnw && !ceb && oeb && reset_b)
-        if ( !mreq_b)
+        if ( !mreq_b) begin
           mem[addr] <= data1;
-        else 
-          iomem[addr]<= data1;      
-      data0 <= (!mreq_b) ? mem[addr]: iomem[addr]; 
+          $display(" STORE:  Address : 0x%04x ( %d )  : Data : 0x%04x ( %d)",addr,addr,data1,data1);
+        end
+        else begin  
+          iomem[addr]<= data1;    
+          $display("   OUT:  Address : 0x%04x ( %6d )       :        Data : 0x%04x ( %6d) %c ",addr,addr,data1,data1,data1);
+      end
+      data0 <= (!mreq_b) ? mem[addr]: iomem[addr];
+      if ( dut0_u.FSM_q == dut0_u.RDM )
+        $display("  LOAD:  Address : 0x%04x ( %d )  : Data : 0x%04x ( %d)",addr,addr,data0,data0);       
+      
     end
   always @ (posedge int_clk)
     if ( (($random(seed) %100)> 85) && interrupt_b ==1'b1)
