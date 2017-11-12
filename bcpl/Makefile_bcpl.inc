@@ -48,9 +48,10 @@ bcpllib.sial : bcpllib.b
 %.sim : %.hex %.exe
 	./$*.exe > $@
 
-%.exe : ../${ARCH}tb.v ../${ARCH}cpu.v %_tb.v
+%.exe : ../${ARCH}tb.v ../${ARCH}cpu.v
 	perl -pale 's/test\.(hex|dump|vcd)/$*\.\1/g' ../${ARCH}tb.v > $*_tb.v
-	iverilog -D_simulation=1 ${vcd_option} -o $@ $*_tb.v ../${ARCH}cpu.v 
+	iverilog -D_simulation=1 ${vcd_option} -o $@ $*_tb.v ../${ARCH}cpu.v
+	rm -f $*_tb.v
 
 # -D_dumpvcd=1        
 
