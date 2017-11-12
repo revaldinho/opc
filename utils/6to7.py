@@ -24,7 +24,7 @@ for l in sys.stdin.readlines():
         print( "%s%s (%s,%s) %s" % (mobj.group(1),op,mobj.group(3),mobj.group(4).strip(),mobj.group(5)))
         matched = True
 
-    for (op, regex) in zip( ["jsr","mov","sto","ld"], [jsr_re,mov_re,sto_re,ld_re]):
+    for (op, regex) in zip( ["ljsr","lmov","lsto","lld"], [jsr_re,mov_re,sto_re,ld_re]):
          mobj = regex.match(l)
          if ( mobj ):            
              pred_op = "%s%s" % ("" if mobj.group(2)==None else mobj.group(2), op )
