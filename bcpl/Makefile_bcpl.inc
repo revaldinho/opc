@@ -13,7 +13,7 @@ HEXS       ?= $(patsubst %.b,%.hex,$(ALLSRCS))
 BCPLEXECS  ?= $(patsubst %.b,%,$(TESTSRCS))
 EMUSTDOUTS ?= $(patsubst %.b,%.emu.stdout,$(TESTSRCS))
 
-SIMSRCS     ?= $(shell ls -1 *.b | egrep -v '(bcpllib|beeb|enigma)'  )
+SIMSRCS     ?= $(shell ls -1 *.b | egrep -v '(bcpllib|beeb|enigma|empty)'  )
 SIMS        ?= $(patsubst %.b,%.sim,${SIMSRCS})
 SIMSTDOUTS  ?= $(patsubst %.b,%.sim.stdout,${SIMSRCS})
 DIFFS       ?= $(patsubst %.b,%.diff,${SIMSRCS})
@@ -70,7 +70,7 @@ all_emulation: ${HEXS} ${EMUSTDOUTS}
 all_sim: ../opc6cpu.v ../opc6tb.v ${EXES}
 
 
-all_diff: ${SIMSTDOUTS}  ${EMUSTDOUTS} 
+all_diff: ${SIMSTDOUTS}  ${EMUSTDOUTS} ${DIFFS}
 
 
 all_stdout: ${SIMS} ${SIMSTDOUTS} ${EMUSTDOUTS} 
