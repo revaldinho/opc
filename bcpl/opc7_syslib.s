@@ -2,8 +2,46 @@
 # Macros
 # -----------------------------------------------------------------------------
 
+MACRO BROR (_rd_, _rs_ )
+        bperm _rd_,_rs_,0x0321        
+ENDMACRO
+
+MACRO BROL (_rd_, _rs_ )
+        bperm _rd_,_rs_,0x2103        
+ENDMACRO
+        
 MACRO   CLC()
         c.add r0,r0
+ENDMACRO
+
+MACRO   SEC()
+        nc.ror     r0,r0,1
+ENDMACRO
+
+MACRO   ASL( _reg_ )
+        add     _reg_, _reg_
+ENDMACRO
+
+MACRO   ROL( _reg_ )
+        rol     _reg_, _reg_
+ENDMACRO
+
+MACRO   RTS ()
+        mov     pc,r13
+ENDMACRO
+
+MACRO   PUSH( _data_)
+    mov     r14, r14, -1
+    sto     _data_, r14, 1
+ENDMACRO
+
+MACRO   POP( _data_ )
+    ld      _data_, r14, 1
+    mov     r14, r14, 1
+ENDMACRO
+
+MACRO   JSR( _addr_ )
+    ljsr    r13,_addr_
 ENDMACRO
 
 MACRO   GETPSR(_reg_)
@@ -14,53 +52,8 @@ MACRO   PUTPSR(_reg_)
         putpsr  psr, _reg_
 ENDMACRO
 
-MACRO JSR( _address_)
-        ljsr    r13,_address_
-ENDMACRO
-
-MACRO RTS()
-        mov     pc, r13
-ENDMACRO
-
-MACRO   PUSH( _data_)
-        push    _data_, r14
-ENDMACRO
-
-MACRO   POP( _data_ )
-        pop     _data_, r14
-ENDMACRO
-
-MACRO   PUSH2( _d0_,_d1_)
-        push     _d0_,r14
-        push     _d1_,r14
-ENDMACRO
-
-MACRO   POP2( _d0_,_d1_)
-        pop      _d1_,r14
-        pop      _d0_,r14
-ENDMACRO
-
-MACRO   SEC()
-        nc.sub  r0,r0,1
-ENDMACRO
-
-MACRO   ASL( _reg_)
-        add _reg_,_reg_
-ENDMACRO
-
-MACRO   ROL( _reg_)
-        rol _reg_,_reg_
-ENDMACRO
-
 MACRO   NEG( _reg_)
         not _reg_,_reg_, -1
-ENDMACRO
-
-MACRO   NEG2( _regmsw_, _reglsw_)
-        not _reglsw_,_reglsw_
-        not _regmsw_,_regmsw_
-        inc _reglsw_, 1
-        adc _regmsw_, r0
 ENDMACRO
 
         # --------------------------------------------------------------
@@ -178,15 +171,17 @@ common_gbyt:
         # - R4 = sticky carry set if sign bit or carry out is ever set
         # ------------------------------------------------------------------
 __mulu:
-        lsr r5,r1         # shift A into r5
-        mov r1,r0         # initialise product (preserve C)
-        mov r4,r2         # move multiplicand (B) into r4, preserve C
+        PUSH    (r5)
+        lsr     r5,r1         # shift A into r5
+        mov     r1,r0         # initialise product (preserve C)
+        mov     r4,r2         # move multiplicand (B) into r4, preserve C
 qm32_1:
-        c.add r1,r4       # add B into acc if carry
-        ASL (r4)          # multiply B x 2
-        lsr r5,r5         # shift A to check LSB
+        c.add   r1,r4       # add B into acc if carry
+        ASL     (r4)          # multiply B x 2
+        lsr     r5,r5         # shift A to check LSB
         nz.lmov pc,qm32_1 # if A is zero then exit else loop again (preserving carry)
-        c.add r1,r4       # Add last copy of multiplicand into acc if carry was set
+        c.add   r1,r4       # Add last copy of multiplicand into acc if carry was set
+        POP     (r5)
         RTS()
 
         # -----------------------------------------------------------------
@@ -205,7 +200,7 @@ qm32_1:
         # - R1 holds Quotient
         # - R2 holds remainder         
         # - C = 0 if successful ; C = 1 if divide by zero
-        # - R4,R5 used as workspace and trashed
+        # - R4 used as workspace and trashed
         # - all other registers preserved
         #
         # Register Usage
@@ -222,138 +217,107 @@ qm32_1:
         #
         # ------------------------------------------------------------------
 __divu: 
-udiv32:        
-        lmov    r4,32       # loop counter
-        lmov pc, udiv
-        mov r5,r0          # Initialise Remainder in R5
-        cmp r2,r0          # check D != 0
-        z.mov pc, r13      # bail out if zero (and carry will be set also)
+udiv32:
+        PUSH    (r5)
+        lmov    r4,32         # loop counter
+        mov     r5,r0          # Initialise Remainder in R5
+        cmp     r2,r0          # check D != 0
+        z.mov   pc, r13      # bail out if zero (and carry will be set also)
 udiv_1:
-        ASL (r1)           # left shift N
-        rol r5,r5          # left shift R and import carry into LSB
-        cmp r5, r2         # compare R with D
-        pl.sub r3, r2      # if >= 0 then do subtract for real..
-        pl.add r1,r0,1     # ..and increment quotient
-        sub r4,r0,1        # dec loop counter
+        ASL     (r1)           # left shift N
+        rol     r5,r5          # left shift R and import carry into LSB
+        cmp     r5, r2         # compare R with D
+        pl.sub  r3, r2      # if >= 0 then do subtract for real..
+        pl.add  r1,r0,1     # ..and increment quotient
+        sub     r4,r0,1        # dec loop counter
         nz.lmov pc,udiv_1  # repeat 'til zero
-        c.add r0,r0        # clear carry
-        mov r2,r5          # put remainder into r2 for return
+        c.add   r0,r0        # clear carry
+        mov     r2,r5          # put remainder into r2 for return
+        POP     (r5)
         RTS()
 
-#
-# __div
-#
-# Divide a 16 bit number by a 16 bit number to yield a 16 b quotient and
-# remainder
-#
-# Entry:
-# - r1 16 bit dividend (A)
-# - r2 16 bit divisor (B)
-# - r13 holds return address
-# - r14 is global stack pointer
-# Exit
-# - r5  upwards preserved
-# - r1 = quotient
-# - r2 = remainder
-# --------------------------------------------------------------
+	# --------------------------------------------------------------
+	# Signed wrappers
+	#
+	# __mul
+	# __div
+	# __mod
+	#
+	# For mul and div, the sign of the result depends on the sign of both arguments
+	# - the A for of the wrapper achieves this
 
-__divu:
-
-divmod:
-        PUSH (r5,r14) 
-        mov     r4, r2              # Get divisor into r3
-        mov     r2, r0              # Get dividend/quotient into double word r1,2
-        lmov    r5,-16              # Setup a loop counter
-udiv16_loop:
-        ASL     (r1)                # shift left the quotient/dividend
-        ROL     (r2)                #
-        cmp     r2, r4              # check if quotient is larger than divisor
-        c.sub   r2, r4              # if yes then do the subtraction for real
-        c.adc   r1, r0              # ... set LSB of quotient using (new) carry
-        add     r5,r0, 1               # increment loop counter zeroing carry
-        nz.add  pc,r0,udiv16_loop-PC   # loop again if not finished 
-        POP (r5,r14) 
-        mov     pc,r13              # and return with quotient/remainder in r1/r2
-
-# --------------------------------------------------------------
-# Signed wrappers
-#
-# __mul
-# __div
-# __mod
-#
-# For mul and div, the sign of the result depends on the sign of both arguments
-# - the A for of the wrapper achieves this
-
-MACRO SW16A ( _sub_ )
-      PUSH2   (r13, r5)
-      mov     r5, r0         # keep track of signs
-      add     r1, r0
-      pl.add  pc,r0, l1_@ - PC
-      NEG     (r1)
-      add     r5,r0, 1
+MACRO SW32A ( _sub_ )
+        PUSH    (r13)
+        PUSH    (r5)
+        mov     r5, r0         # keep track of signs
+        add     r1, r0
+        pl.lmov pc,l1_@
+        NEG     (r1)
+        add     r5,r0, 1
 l1_@:
-      add     r2, r0
-      pl.add  pc,r0, l2_@ - PC
-      NEG     (r2)
-      sub     r5,r0, 1
+        add     r2, r0
+        pl.lmov pc,l2_@
+        NEG     (r2)
+        sub     r5,r0, 1
 l2_@:
-      ljsr    r13,_sub_
-      cmp     r5, r0
-      z.add   pc,r0, l3_@ - PC
-      NEG2    (r2, r1)
+        ljsr    r13,_sub_
+        cmp     r5, r0
+        z.lmov  pc, l3_@
+        NEG     (r2)
+        NEG     (r1)                
 l3_@:
-      POP2    (r13, r5)
-      mov     pc, r13
+        POP     (r5)
+        POP     (r13)
+        mov     pc, r13
 ENDMACRO
 
 __mul:
-      SW16A(__mulu)
+      SW32A(__mulu)
 
 __div:
-      SW16A(__divu)
+      SW32A(__divu)
 
         # For mod, the sign of the result depends only on the sign of the first arguments
         # - the B for of the wrapper achieves this
 
 __mod:  ## Find signed modulus of b MOD a
         ## NB division by zero should abort !! ABORT 5: Division by zero
-        PUSH (r13,r14) # save return address
-        PUSH (r2,r14) # save r2 (b)
+        PUSH    (r13)           # save return address
+        PUSH    (r2)            # save r2 (b)
         mov     r4,r2           # swap over r1 and r2
         not     r2,r1,-1        # r2 <- -r1
         mi.mov  r2,r1           # if negative then r2 <- r1
         not     r1,r4,-1        # r1 <- -r4
         mi.mov  r1,r4           # if negative then r1 <- r4
-        ljsr    r13,__divu   # do a unsigned divide/mod operation
+        ljsr    r13,__divu      # do a unsigned divide/mod operation
                                 # result is quo in r1, rem in r2
                                 # now adjust based on sign of original r2
         not     r1,r2,-1        # put -remainder in r1
-        POP (r4,r14) # get original 'b'
+        POP     (r4)            # get original 'b'
         pl.mov  r1,r2           # if was +ve then put rem in r1 instead
         mov     r2,r4           # restore r2 = 'b'
-        POP (pc,r14) # pop return address into pc to return
+        POP     (pc)            # pop return address into pc to return
 
 __xmod: ## Find signed modulus of a MOD b
         ## NB division by zero should abort !! ABORT 5: Division by zero
-        PUSH (r13,r14) # save return address
-        PUSH (r2,r14) # save r2 (b)
-        PUSH (r1,r14) # save r1 (a) for inspection of sign later
+        PUSH    (r13)           # save return address
+        PUSH    (r2)            # save r2 (b)
+        PUSH    (r1)            # save r1 (a) for inspection of sign later
         not     r3,r1,-1        # r1 <- -r1
         mi.mov  r3,r1           # if negative then r1 <- r1 ie A = ABS(A)
         mov     r1, r3
         not     r3,r2,-1        # r2 <- -r2
         mi.mov  r3,r2           # if negative then r2 <- r2 is A = ABS(B)
         mov     r2,r3
-        ljsr    r13,__divu   # do a unsigned divide/mod operation
+        ljsr    r13,__divu      # do a unsigned divide/mod operation
                                 # result is quo in r1, rem in r2
                                 # now adjust based on sign of original r2
         not     r1,r2,-1        # put -remainder in r1
-        POP (r4,r14) # get original 'a'
+        POP     (r4)            # get original 'a'
         cmp     r4,r0
         pl.mov  r1,r2           # if was +ve then put rem in r1 instead
-        POP (r2,r14) # restore original b
-        POP (pc,r14) # pop return address into pc to return
+        POP     (r2)            # restore original b
+        POP     (pc)            # pop return address into pc to return
 
         # ------------------------------------------------------------
         # sys()
