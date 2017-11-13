@@ -604,8 +604,8 @@ def process_sial(sialtext):
                     code("z.add pc,r0,_L%04d - PC" % (localcounter+1))                   
                 code("_L%04d:" % localcounter)
                 code(codestring)
-                code("dec r4,1")
-                if cpu_target == "opc6":                
+                code("sub r4,r0,1")                
+                if cpu_target == "opc6":
                     code("nz.inc pc,_L%04d - PC" % localcounter) # PC op preserves Z flag from dec r4
                 else:
                     code("nz.add pc,r0,_L%04d - PC" % localcounter) # PC op preserves Z flag from dec r4                    
@@ -887,7 +887,7 @@ def process_sial(sialtext):
                 code("mov r4,r1","Copy A into tmp register")
                 for l in labels[:-1]:
                     code("z.mov pc,r0,%s" % l)            
-                    code("dec r4,1")
+                    code("sub r4,r0,1")
                 code("z.mov pc,r0,%s" % labels[-1])
                 code("z.mov pc,r0,%s" % default, "default jump target")
             elif opcode == sialop['f_global'] :   # global    Kn G1 L1 ... Gn Ln   Global initialisation data

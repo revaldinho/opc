@@ -33,7 +33,7 @@ foreach test ( $testlist )
         iverilog -D_simulation=1 -D${option}=1 ../opc6tb.v ../opc6cpu.v
         # -D_dumpvcd=1
         # Execute the test bench
-        ./a.out | tee ${test}_${option}.sim
+        ./a.out  > ${test}_${option}.sim
         # Save the results
         if ( -e dump.vcd) then
             mv dump.vcd ${test}_${option}.vcd
