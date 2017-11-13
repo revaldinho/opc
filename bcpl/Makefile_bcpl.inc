@@ -30,9 +30,9 @@ bcpllib.sial : bcpllib.b
 	cintsys -c bcpl2sial ../../bcpl/bcpllib.b to bcpllib.sial
 
 
-%.s : %.sial ${ARCH}_rom.s ext_sial.h ${ARCH}_syslib.s bcpllib.sial ../../bcpl/sial2opc.py
+%.s : %.sial ${ARCH}_rom.s ext_sial.h ${ARCH}_syslib.s bcpllib.sial ../../bcpl/sial2opc.py ../../include/${ARCH}/macros.s
 	python3 ../../bcpl/sial2opc.py --${ARCH} -f $*.sial -f bcpllib.sial -s ../../bcpl/${ARCH}_syslib.s -g ../../bcpl/ext_sial.h ${OPT}  > $*.tmp.s
-	cat $*.tmp.s ../../bcpl/${ARCH}_rom.s > $*.s
+	cat ../../include/${ARCH}/macros.s $*.tmp.s ../../bcpl/${ARCH}_rom.s > $*.s
 	rm $*.tmp.s
 
 %.hex %.lst : %.s ${assembler}
@@ -40,7 +40,7 @@ bcpllib.sial : bcpllib.b
 
 %.emu.stdout %.dump : %.hex ${emulator}
 	if [ -e $*.stdin ] ; then ${pyexec} ${emulator} $*.hex $*.dump $*.stdin | grep OUT | ../../utils/show_stdout.py | tee $*.emu.stdout ; \
-	else ${pyexec} ${emulator} $*.hex $*.dump  | grep OUT | ../../utils/show_stdout.py | tee $*.emu.stdout ; fi
+	else ${pyexec} ${emulator} $*.hex $*.dump  | grep OUT | ../../utils/show_stdout.py --${ARCH}| tee $*.emu.stdout ; fi
 
 %.diff: %.sim.stdout %.emu.stdout 
 	diff -a -s $*.emu.stdout $*.sim.stdout | tee $*.diff

@@ -22,6 +22,10 @@ MACRO   CPU_BSTRING()
     BSTRING "OPC6"
 ENDMACRO
 
+MACRO   ASL( _reg_ )
+        add     _reg_, _reg_
+ENDMACRO
+
 MACRO   CLC()
     c.add r0,r0
 ENDMACRO
@@ -82,6 +86,16 @@ MACRO   POP( _data_ )
     pop     _data_, r14
 ENDMACRO
 
+MACRO   PUSH2( _d0_,_d1_)
+        push     _d0_,r14
+        push     _d1_,r14
+ENDMACRO
+
+MACRO   POP2( _d0_,_d1_)
+        pop      _d1_,r14
+        pop      _d0_,r14
+ENDMACRO
+        
 MACRO   IN(_reg_, _address_)
     in      _reg_, r0, _address_
 ENDMACRO
@@ -102,10 +116,21 @@ MACRO   LSR(_reg1_, _reg2_)
     lsr     _reg1_, _reg2_        
 ENDMACRO
 
-MACRO   ROL(_reg1_, _reg2_)
-    adc     _reg1_, _reg2_
+MACRO   ROL( _reg1_ )
+    adc     _reg1_, _reg1_
 ENDMACRO
 
 MACRO  BROT(_reg1_, _reg2_)
     bswp    _reg1_, _reg2_
+ENDMACRO
+
+MACRO   NEG( _reg_)
+        not _reg_,_reg_, -1
+ENDMACRO
+
+MACRO   NEG2( _regmsw_, _reglsw_)
+        not _reglsw_,_reglsw_
+        not _regmsw_,_regmsw_
+        inc _reglsw_, 1
+        adc _regmsw_, r0
 ENDMACRO

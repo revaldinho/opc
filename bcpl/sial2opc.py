@@ -174,13 +174,15 @@ def code ( codestring, source=""):
         trailing = ""
     print( "%s%-48s%s # %s" % (leading,newcodestring,trailing,source))
 
-def print_header():
+def print_wrapper():
+
+    initial_free_memory_ptr = "mov r10,r0,0xFFFF" if cpu_target=="opc6" else "lmov r10,0xFFFFFFFF"    
     print('''
         ## --------------------------------------------------------------
-        ## OPC6 assembly code generated from SIAL using sial2opc.py
+        ## OPC assembly code generated from SIAL using sial2opc.py
         ## --------------------------------------------------------------
         ##
-        ## OPC6 to SIAL resource mapping
+        ## OPC to SIAL resource mapping
         ##
         ## r1  == A
         ## r2  == B
@@ -197,61 +199,52 @@ def print_header():
         ## r13    == link reg  
         ## r14    == stack ptr          
         ## --------------------------------------------------------------
-    ''')
-
-def print_opc7_wrapper():
-    ## Not yet implemented
-    pass
-    
-def print_opc6_wrapper():
-    print('''    
         ## Cut off this section for running via the monitor on hardware
         ORG 0x0000 
         mov   r14,r0,0x0FFE                 # Set stack to grow down from here for monitor
         mov   pc,r0,0x1000                  # Program start at 0x1000 for use with monitor/copro
         ## --------------------------------------------------------------
         ORG 0x1000
-        push     r13, r14                   # Save all registers for clean return to monitor
-        push     r12, r14
-        push     r11, r14
-        push     r10, r14
-        push      r9, r14
-        push      r8, r14
-        push      r7, r14
-        push      r6, r14
-        push      r5, r14
-        push      r4, r14
-        push      r3, r14
-        push      r2, r14
-        push      r1, r14                
+        PUSH  (r13)                   # Save all registers for clean return to monitor
+        PUSH  (r12)
+        PUSH  (r11)
+        PUSH  (r10)
+        PUSH  (r9)
+        PUSH  (r8)
+        PUSH  (r7)
+        PUSH  (r6)
+        PUSH  (r5)
+        PUSH  (r4)
+        PUSH  (r3)
+        PUSH  (r2)
+        PUSH  (r1)                
         mov r9,r14                          # Snapshot stack pointer in case need of abort
         mov r12,r0,__global_vector          # Global vector and variable space
         mov r11,r0,__global_vector+0x1000   # Rest of space for local variables
-
-        mov r10,r12,0x1000                  # initial free vector memory pointer to 0xEFFF and grows downwards
+        %s                                  # initial free vector memory pointer grows downwards        
         mov r3,r11                          # duplicate r11 in r3 because standard subroutine entry will copy r3->r11
         mov r4,r0,__start                   # similar for r4 which will stack the subroutine entry point on entry
         jsr r13,r4                          # Call to main BCPL code
     
 __sys_exit:
-        halt r0,r0,0x999                    # Signal simulator to stop
-        pop     r1, r14                     # restore all registers before returning to monitor
-        pop     r2, r14
-        pop     r3, r14
-        pop     r4, r14
-        pop     r5, r14
-        pop     r6, r14
-        pop     r7, r14
-        pop     r8, r14
-        pop     r9, r14
-        pop    r10, r14
-        pop    r11, r14
-        pop    r12, r14
-        pop    r13, r14
+        halt r0,r0,0x0999                   # Signal simulator to stop
+        POP    (r1)                         # restore all registers before returning to monitor
+        POP    (r2)
+        POP    (r3)
+        POP    (r4)
+        POP    (r5)
+        POP    (r6)
+        POP    (r7)
+        POP    (r8)
+        POP    (r9)
+        POP    (r10)
+        POP    (r11)
+        POP    (r12)
+        POP    (r13)
         mov pc, r13                         # return to monitor using return address on stack 
 
         ## BCPL generated code follows
-''')
+    ''' % initial_free_memory_ptr )
 
 def process_syslib(syslib):
     # Verbatim print out of the syslib file
@@ -954,11 +947,7 @@ if __name__ == "__main__" :
         sialtext = optimize_sial( sialtext)
         
     if not noheader:
-        print_header()
-    if cpu_target == "opc6":
-        print_opc6_wrapper()
-    else:
-        print_opc7_wrapper()
+        print_wrapper()
         
     ## Process the SIAL text and create the global vector data
     (global_vector, gv_hightide) = process_sial(sialtext)
