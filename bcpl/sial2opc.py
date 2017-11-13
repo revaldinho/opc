@@ -175,8 +175,8 @@ def code ( codestring, source=""):
     print( "%s%-48s%s # %s" % (leading,newcodestring,trailing,source))
 
 def print_wrapper():
-
-    initial_free_memory_ptr = "mov r10,r0,0xFFFF" if cpu_target=="opc6" else "lmov r10,0xFFFFFFFF"    
+    stack_setup             = "mov r10,r0,0xFFFF" if cpu_target=="opc6" else "lmov r10,0xFFFFFFFF"
+    initial_free_memory_ptr = "mov r10,r0,0xEFFF" if cpu_target=="opc6" else "lmov r10,0xFFFFEFFF"
     print('''
         ## --------------------------------------------------------------
         ## OPC assembly code generated from SIAL using sial2opc.py
@@ -201,7 +201,7 @@ def print_wrapper():
         ## --------------------------------------------------------------
         ## Cut off this section for running via the monitor on hardware
         ORG 0x0000 
-        mov   r14,r0,0x0FFE                 # Set stack to grow down from here for monitor
+        %s                 # Set stack to grow down from here for monitor
         mov   pc,r0,0x1000                  # Program start at 0x1000 for use with monitor/copro
         ## --------------------------------------------------------------
         ORG 0x1000
@@ -244,7 +244,7 @@ __sys_exit:
         mov pc, r13                         # return to monitor using return address on stack 
 
         ## BCPL generated code follows
-    ''' % initial_free_memory_ptr )
+    ''' % (stack_setup,initial_free_memory_ptr) )
 
 def process_syslib(syslib):
     # Verbatim print out of the syslib file
