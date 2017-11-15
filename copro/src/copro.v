@@ -178,7 +178,7 @@ module copro (
 `endif
 `endif
 
-`ifdef cpu_opc7
+`ifdef no_memory_controller
    assign ram_cs_b  = 1'b1;
    assign ram_oe_b  = 1'b1;
    assign ram_we_b  = 1'b1;
@@ -187,7 +187,17 @@ module copro (
    assign ext_dout  = 32'hAAAAAAAA;
    assign cpu_clken = 1'b1;
 `else
-   memory_controller inst_memory_controller
+   memory_controller #
+     (
+      .DSIZE(DSIZE),
+      .ASIZE(ASIZE),
+`ifdef cpu_opc7
+      .INDEX_BITS(4) // 16 entry cache
+`else
+      .INDEX_BITS(6) // 64 entry cache
+`endif
+     )
+   inst_memory_controller
      (
       .clock      (cpu_clk),
       .reset_b    (rst_b_sync),
