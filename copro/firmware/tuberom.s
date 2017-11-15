@@ -1,11 +1,35 @@
 ##include "macros.s"
 
+##ifdef CPU_OPC7
+EQU        BASE, 0x00000
+EQU        CODE, 0x00200
+EQU        TUBE, 0xFFEF8
+EQU         MOS, 0x000C8
+EQU        WORK, 0x00100
+EQU       STACK, 0x00FFF
+EQU     MEM_BOT, 0x00600
+EQU     MEM_TOP, 0x00FFF
+EQU  END_MARKER, 0x80000000   # makes the end of each command -ve
+##else
 EQU        BASE, 0xE000
 EQU        CODE, 0xF800
-
-EQU       STACK, CODE - 1
+EQU        TUBE, 0xFEF8
+EQU         MOS, 0xFFC8
+EQU        WORK, 0x0000
+EQU       STACK, 0xF7FF
 EQU     MEM_BOT, 0x0100
-EQU     MEM_TOP, CODE - 1
+EQU     MEM_TOP, 0xF7FF
+EQU  END_MARKER, 0x8000       # makes the end of each command -ve
+##endif
+
+EQU    r1status, TUBE
+EQU      r1data, TUBE + 1
+EQU    r2status, TUBE + 2
+EQU      r2data, TUBE + 3
+EQU    r3status, TUBE + 4
+EQU      r3data, TUBE + 5
+EQU    r4status, TUBE + 6
+EQU      r4data, TUBE + 7
 
 EQU NUM_VECTORS, 27           # number of vectors in DefaultVectors table
 
@@ -18,43 +42,43 @@ EQU NUM_VECTORS, 27           # number of vectors in DefaultVectors table
 # 0x0002 = OPC5/6 IRQ0 address
 
 # 0x0004 = OPC6 IRQ1 address
-        
-EQU       USERV, 0x0010
-EQU        BRKV, 0x0011
-EQU       IRQ1V, 0x0012
-EQU       IRQ2V, 0x0013
-EQU        CLIV, 0x0014
-EQU       BYTEV, 0x0015
-EQU       WORDV, 0x0016
-EQU       WRCHV, 0x0017
-EQU       RDCHV, 0x0018
-EQU       FILEV, 0x0019
-EQU       ARGSV, 0x001A
-EQU       BGETV, 0x001B
-EQU       BPUTV, 0x001C
-EQU       GBPBV, 0x001D
-EQU       FINDV, 0x001E
-EQU        FSCV, 0x001F
-EQU       EVNTV, 0x0020
-EQU        UPTV, 0x0021       # not implemented
-EQU        NETV, 0x0022       # not implemented
-EQU        VDUV, 0x0023       # not implemented
-EQU        KEYV, 0x0024       # not implemented
-EQU        INSV, 0x0025       # not implemented
-EQU        REMV, 0x0026       # not implemented
-EQU        CNPV, 0x0027       # not implemented
-EQU       IND1V, 0x0028       # not implemented
-EQU       IND2V, 0x0029       # not implemented
-EQU       IND3V, 0x002A       # not implemented
 
-EQU      ERRBUF, 0x0030
-EQU      INPBUF, 0x0030
-EQU      INPEND, 0x00F6
+EQU       USERV, WORK + 0x0010
+EQU        BRKV, WORK + 0x0011
+EQU       IRQ1V, WORK + 0x0012
+EQU       IRQ2V, WORK + 0x0013
+EQU        CLIV, WORK + 0x0014
+EQU       BYTEV, WORK + 0x0015
+EQU       WORDV, WORK + 0x0016
+EQU       WRCHV, WORK + 0x0017
+EQU       RDCHV, WORK + 0x0018
+EQU       FILEV, WORK + 0x0019
+EQU       ARGSV, WORK + 0x001A
+EQU       BGETV, WORK + 0x001B
+EQU       BPUTV, WORK + 0x001C
+EQU       GBPBV, WORK + 0x001D
+EQU       FINDV, WORK + 0x001E
+EQU        FSCV, WORK + 0x001F
+EQU       EVNTV, WORK + 0x0020
+EQU        UPTV, WORK + 0x0021       # not implemented
+EQU        NETV, WORK + 0x0022       # not implemented
+EQU        VDUV, WORK + 0x0023       # not implemented
+EQU        KEYV, WORK + 0x0024       # not implemented
+EQU        INSV, WORK + 0x0025       # not implemented
+EQU        REMV, WORK + 0x0026       # not implemented
+EQU        CNPV, WORK + 0x0027       # not implemented
+EQU       IND1V, WORK + 0x0028       # not implemented
+EQU       IND2V, WORK + 0x0029       # not implemented
+EQU       IND3V, WORK + 0x002A       # not implemented
 
-EQU        ADDR, 0x00F6       # tube execution address
-EQU      TMP_R1, 0x00FC       # tmp store for R1 during IRQ
-EQU    LAST_ERR, 0x00FD       # last error
-EQU ESCAPE_FLAG, 0x00FF       # escape flag
+EQU      ERRBUF, WORK + 0x0030
+EQU      INPBUF, WORK + 0x0030
+EQU      INPEND, WORK + 0x00F6
+
+EQU        ADDR, WORK + 0x00F6       # tube execution address
+EQU      TMP_R1, WORK + 0x00FC       # tmp store for R1 during IRQ
+EQU    LAST_ERR, WORK + 0x00FD       # last error
+EQU ESCAPE_FLAG, WORK + 0x00FF       # escape flag
 
 MACRO ERROR (_address_)
     mov     r1, r0, _address_
@@ -68,6 +92,8 @@ ENDMACRO
 // These end up at 0x0000 and get used by the Real Co Pro
 ORG BASE
     mov      pc, r0, ResetHandler
+
+ORG BASE + 2
     mov      pc, r0, InterruptHandler
 
 ORG CODE
@@ -219,7 +245,7 @@ ByteHigh:
     cmp     r1, r0, 0x9d        # Fast return with Fast BPUT
     z.mov   pc, r0, FastReturn
     JSR     (WaitByteR2)        # Get carry - from bit 7
-    add     r1, r0, 0xff80
+    add     r1, r0, -0x80
     JSR     (WaitByteR2)        # Get high byte
     mov     r1, r3
     JSR     (WaitByteR2)        # Get low byte
@@ -319,7 +345,7 @@ cmdLoop0:
     mov     r2, r0, cmdTable-1      # initialize command table pointer (to char before)
 
 cmdLoop1:
-    mov     r3, r1, 0xffff          # initialize user command pointer (to char before)
+    mov     r3, r1, -1              # initialize user command pointer (to char before)
 
 cmdLoop2:
     add     r2, r0, 1               # increment command table pointer
@@ -448,18 +474,18 @@ cmdExecR2:
 
 cmdTable:
     STRING  "."
-    WORD    cmdEnd
+    WORD    cmdEnd  | END_MARKER
     STRING  "go"
-    WORD    cmdGo
+    WORD    cmdGo   | END_MARKER
     STRING  "mem"
-    WORD    cmdMem
+    WORD    cmdMem  | END_MARKER
     STRING  "help"
-    WORD    cmdHelp
+    WORD    cmdHelp | END_MARKER
     STRING  "test"
-    WORD    cmdTest
+    WORD    cmdTest | END_MARKER
     STRING  "srec"
-    WORD    cmdSrec
-    WORD    cmdEnd
+    WORD    cmdSrec | END_MARKER
+    WORD    cmdEnd  | END_MARKER
 
 # --------------------------------------------------------------
 
@@ -573,7 +599,7 @@ osRDCH:
     mov     r1, r0        # Send command &00 - OSRDCH
     JSR     (SendByteR2)
     JSR     (WaitByteR2)  # Receive carry
-    add     r1, r0, 0xff80
+    add     r1, r0, -0x80
     JSR     (WaitByteR2)  # Receive A
     POP     (r13)
     RTS     ()
@@ -676,13 +702,18 @@ LFD65:
     cmp     r2, r0, 0x05
     z.mov   pc, r0, Release
     JSR     (WaitByteR4)   # block address MSB - ignored for now
-    JSR     (WaitByteR4)   # block address ... - ignored for now
+    JSR     (WaitByteR4)   # block address ...
+##ifdef CPU_OPC7
+    # TODO: Needs rewriting for 32-bit OPC7
+    JSR     (WaitByteR4)   # block address ...
+    JSR     (WaitByteR4)   # block address ...
+##else
     JSR     (WaitByteR4)   # block address ...
     bswp    r1, r1
     mov     r3, r1
     JSR     (WaitByteR4)   # block address LSB
     or      r3, r1
-
+##endif
     IN      (r1, r3data)
     IN      (r1, r3data)
 
@@ -719,7 +750,10 @@ TransferHandlerTable:
 # ============================================================
 
 Type0:
-
+##ifdef CPU_OPC7
+    # TODO: Needs rewriting for 32-bit OPC7
+    mov     pc, r0, Release
+##else
     mov     r2, r0                # clean the odd byte flag (start with an even byte)
 
 Type0_loop:
@@ -744,6 +778,7 @@ Type0_loop:
 Type0_odd_byte:
     OUT     (r2, r3data)         # Send odd byte to Tube R3
     mov     pc, r0, Type0        # loop back, clearing odd byte flag
+##endif
 
 # ============================================================
 # Type 1 transfer: 1-byte host -> parasite (LOAD)
@@ -754,7 +789,10 @@ Type0_odd_byte:
 # ============================================================
 
 Type1:
-
+##ifdef CPU_OPC7
+    # TODO: Needs rewriting for 32-bit OPC7
+    mov     pc, r0, Release
+##else
     mov     r2, r0                # clean the odd byte flag (start with an even byte)
 
 Type1_loop:
@@ -783,7 +821,7 @@ Type1_odd_byte:
     sto     r2, r3                # Write word to memory, increment memory pointer
     mov     r3, r3, 1
     mov     pc, r0, Type1         # loop back, clearing odd byte flag
-
+##endif
 
 Type2:
     mov     pc, r0, Release
@@ -821,6 +859,8 @@ SWIHandler:
     EI      ()                   # re-enable interrupts
     ld      pc, r0, BRKV         # invoke the BRK handler
 
+##ifndef CPU_OPC7
+
 # Limit check to precent code running into next block...
 
 Limit1:
@@ -830,24 +870,17 @@ Limit1:
 # TUBE ULA registers
 # -----------------------------------------------------------------------------
 
-ORG 0xFEF8
-
-r1status:
+ORG TUBE
     WORD 0x0000     # 0xFEF8
-r1data:
     WORD 0x0000     # 0xFEF9
-r2status:
     WORD 0x0000     # 0xFEFA
-r2data:
     WORD 0x0000     # 0xFEFB
-r3status:
     WORD 0x0000     # 0xFEFC
-r3data:
     WORD 0x0000     # 0xFEFD
-r4status:
     WORD 0x0000     # 0xFEFE
-r4data:
     WORD 0x0000     # 0xFEFF
+
+##endif
 
 # -----------------------------------------------------------------------------
 # DEFAULT VECTOR TABLE
@@ -994,83 +1027,101 @@ Limit2:
 # MOS interface
 # -----------------------------------------------------------------------------
 
-ORG 0xFFC8
+ORG MOS
 
 NVRDCH:                      # &FFC8
     ld      pc, r0, osRDCH
-    WORD    0x0000
+
+ORG MOS + (0xCB-0xC8)
 
 NVWRCH:                      # &FFCB
     ld      pc, r0, osWRCH
-    WORD    0x0000
+
+ORG MOS + (0xCE-0xC8)
 
 OSFIND:                      # &FFCE
     ld      pc, r0, FINDV
-    WORD    0x0000
+
+ORG MOS + (0xD1-0xC8)
 
 OSGBPB:                      # &FFD1
     ld      pc, r0, GBPBV
-    WORD    0x0000
+
+ORG MOS + (0xD4-0xC8)
 
 OSBPUT:                      # &FFD4
     ld      pc, r0, BPUTV
-    WORD    0x0000
+
+ORG MOS + (0xD7-0xC8)
 
 OSBGET:                      # &FFD7
     ld      pc, r0, BGETV
-    WORD    0x0000
+
+ORG MOS + (0xDA-0xC8)
 
 OSARGS:                      # &FFDA
     ld      pc, r0, ARGSV
-    WORD    0x0000
+
+ORG MOS + (0xDD-0xC8)
 
 OSFILE:                      # &FFDD
     ld      pc, r0, FILEV
-    WORD    0x0000
+
+ORG MOS + (0xE0-0xC8)
 
 OSRDCH:                      # &FFE0
     ld      pc, r0, RDCHV
-    WORD    0x0000
+
+ORG MOS + (0xE3-0xC8)
 
 OSASCI:                      # &FFE3
     cmp     r1, r0, 0x0d
     nz.mov  pc, r0, OSWRCH
 
+ORG MOS + (0xE7-0xC8)
+
 OSNEWL:                      # &FFE7
     mov     pc, r0, osnewl_code
-    WORD    0x0000
-    WORD    0x0000
-    WORD    0x0000
+
+ORG MOS + (0xEC-0xC8)
 
 OSWRCR:                      # &FFEC
     mov     r1, r0, 0x0D
 
+ORG MOS + (0xEE-0xC8)
+
 OSWRCH:                      # &FFEE
     ld      pc, r0, WRCHV
-    WORD    0x0000
+
+ORG MOS + (0xF1-0xC8)
 
 OSWORD:                      # &FFF1
     ld      pc, r0, WORDV
-    WORD    0x0000
+
+ORG MOS + (0xF4-0xC8)
 
 OSBYTE:                      # &FFF4
     ld      pc, r0, BYTEV
-    WORD    0x0000
+
+ORG MOS + (0xF7-0xC8)
 
 OS_CLI:                      # &FFF7
     ld      pc, r0, CLIV
-    WORD    0x0000
 
 # -----------------------------------------------------------------------------
 # Reset vectors, used by PiTubeDirect
 # -----------------------------------------------------------------------------
 
+ORG MOS + (0xFA-0xC8)
+
 NMI_ENTRY:                   # &FFFA
-    WORD    0x0000
-    WORD    0x0000
+
+ORG MOS + (0xFC-0xC8)
 
 RST_ENTRY:                   # &FFFC
     mov     pc, r0, ResetHandler
+
+ORG MOS + (0xFE-0xC8)
 
 IRQ_ENTRY:                   # &FFFE
     mov     pc, r0, InterruptHandler
