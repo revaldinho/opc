@@ -701,13 +701,20 @@ LFD65:
     JSR     (WaitByteR4)
     cmp     r2, r0, 0x05
     z.mov   pc, r0, Release
-    JSR     (WaitByteR4)   # block address MSB - ignored for now
-    JSR     (WaitByteR4)   # block address ...
 ##ifdef CPU_OPC7
-    # TODO: Needs rewriting for 32-bit OPC7
+    JSR     (WaitByteR4)   # block address MSB
+    bperm   r3, r1, 0x4404
     JSR     (WaitByteR4)   # block address ...
+    or      r3, r1
+    bperm   r3, r3, 0x2104
     JSR     (WaitByteR4)   # block address ...
+    or      r3, r1
+    bperm   r3, r3, 0x2104
+    JSR     (WaitByteR4)   # block address LSB
+    or      r3, r1
 ##else
+    JSR     (WaitByteR4)   # block address MSB - ignored
+    JSR     (WaitByteR4)   # block address ... - ignored
     JSR     (WaitByteR4)   # block address ...
     bswp    r1, r1
     mov     r3, r1
@@ -749,11 +756,49 @@ TransferHandlerTable:
 # r3 - address register (16-bit memory address)
 # ============================================================
 
+# TODO: we should be able to have one common implementation
+# i.e. the 16-bit should be a degenerate case of 32-bit
+
 Type0:
 ##ifdef CPU_OPC7
-    # TODO: Needs rewriting for 32-bit OPC7
-    mov     pc, r0, Release
+
+# r2 also tracks when we need load a new word, because
+# we cycle a ff through from the MSB. So the continuation
+# test sees one of the following:
+#    ff 33 22 11     (3 bytes remaining)
+#    00 ff 33 22     (2 bytes remaining)
+#    00 00 ff 33     (1 bytes remaining)
+#    00 00 00 ff     (0 bytes remaining, need to reload)
+
+    mov     r2, r0                # clear the continuation flag
+
+Type0_loop:
+    IN      (r1, r4status)        # Test for an pending interrupt signalling end of transfer
+    and     r1, r0, 0x80
+    nz.mov  pc, r0, Release
+
+    IN      (r1, r3status)        # Wait for Tube R3 free
+    and     r1, r0, 0x40
+    z.mov   pc, r0, Type0_loop
+
+    bperm   r1, r2, 0x3214        # test continuation flag, more efficient than mov r1, r2 + and r1, r0, 0xffffff00
+    nz.mov  pc, r0, Type0_continuation
+
+    ld      r2, r3                # Read word from memory, increment memory pointer
+    mov     r3, r3, 1
+    OUT     (r2, r3data)          # Send LSB to Tube R3
+    or      r2, r0, 0xff          # set the continuation flag
+    bperm   r2, r2, 0x0321        # cyclic rotate, r2 = ff 33 22 11
+    mov     pc, r0, Type0_loop
+
+Type0_continuation:
+
+    OUT     (r2, r3data)         # Send odd byte to Tube R3
+    bperm   r2, r2, 0x4321       # shift right one byte
+    mov     pc, r0, Type0_loop   # loop back, clearing odd byte flag
+
 ##else
+
     mov     r2, r0                # clean the odd byte flag (start with an even byte)
 
 Type0_loop:
@@ -778,6 +823,7 @@ Type0_loop:
 Type0_odd_byte:
     OUT     (r2, r3data)         # Send odd byte to Tube R3
     mov     pc, r0, Type0        # loop back, clearing odd byte flag
+
 ##endif
 
 # ============================================================
@@ -788,11 +834,44 @@ Type0_odd_byte:
 # r3 - address register (16-bit memory address)
 # ============================================================
 
+# TODO: we should be able to have one common implementation
+# i.e. the 16-bit should be a degenerate case of 32-bit
+
 Type1:
 ##ifdef CPU_OPC7
-    # TODO: Needs rewriting for 32-bit OPC7
-    mov     pc, r0, Release
+
+    mov     r2, r0, 0xff          # set the last byte flag in byte 0
+
+Type1_loop:
+    IN      (r1, r4status)        # Test for an pending interrupt signalling end of transfer
+    and     r1, r0, 0x80
+    nz.mov  pc, r0, Release
+
+    IN      (r1, r3status)        # Wait for Tube R3 free
+    and     r1, r0, 0x80
+    z.mov   pc, r0, Type1_loop
+
+    IN      (r1, r3data)          # Read the last byte from Tube T3
+
+    and     r2, r2                # test last byte flag
+    mi.mov  pc, r0, Type1_last_byte
+
+    bperm   r2, r2, 0x2104
+    or      r2, r1
+    mov     pc, r0, Type1_loop
+
+Type1_last_byte:
+
+    bperm   r2, r2, 0x2104
+    or      r2, r1
+    bperm   r2, r2, 0x0123        # byte swap to make it little endian
+
+    sto     r2, r3                # Write word to memory, increment memory pointer
+    mov     r3, r3, 1
+    mov     pc, r0, Type1         # loop back, clearing last byte flag
+
 ##else
+
     mov     r2, r0                # clean the odd byte flag (start with an even byte)
 
 Type1_loop:
@@ -821,6 +900,7 @@ Type1_odd_byte:
     sto     r2, r3                # Write word to memory, increment memory pointer
     mov     r3, r3, 1
     mov     pc, r0, Type1         # loop back, clearing odd byte flag
+
 ##endif
 
 Type2:
