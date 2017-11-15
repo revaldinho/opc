@@ -5,7 +5,7 @@
         #
 
 
-        ORG 0x0700
+        ORG 0xFF00
         # --------------------------------------------------------------
         #
         # READCHAR - for simulation/emulation only 
@@ -46,7 +46,7 @@ osnewl_code:
 
         
         ## Dummy routines for all of the Tube ROM calls
-        ORG 0x07C8
+        ORG 0xFFC8
 NVRDCH: mov     pc, r0, osrdch
         WORD    0x0000
 NVWRCH:                      # &FFCB
