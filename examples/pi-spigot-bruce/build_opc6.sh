@@ -2,6 +2,8 @@
 
 ASM=opc6/opc6asm.py
 
+INC_FLAGS="-I ../../include/opc6 -I ../../include"
+
 function beeb_file {
       HEX=$1
       BIN=$2
@@ -15,12 +17,9 @@ function beeb_file {
 
     # Create the inf file
     echo -e "\$.`basename ${BIN}`\t${START}\t${EXEC}" > ${BIN}.inf
-
-    # tidy up
-    rm -f tmp.out tmp.lo tmp.hi
 }
 
-SSD=pitest.ssd
+SSD=pi_opc6.ssd
 
 MMB=../../utils/mmb_utils/beeb
 
@@ -46,10 +45,13 @@ do
 
         name=disk/PI${load}${key}
 
-        sed "s/#LOAD#/0x${load}/;s/#NDIGITS#/${ndmap[${key}]}/"<  main.s > tmp.s
-        python ../../${ASM} tmp.s tmp.hex
+        sed "s/#LOAD#/0x${load}/;s/#NDIGITS#/${ndmap[${key}]}/"<  main.s > tmp1.s
+
+	     # run the pre-processor to resolve and ##includes
+	     filepp $INC_FLAGS -kc '##' tmp1.s  > tmp2.s
+        python ../../${ASM} tmp2.s tmp.hex
         beeb_file tmp.hex ${name} ${load} ${len} ${load}
-        rm -f tmp.s tmp.hex
+        rm -f tmp1.s tmp2.s tmp.hex
     done
 done
 

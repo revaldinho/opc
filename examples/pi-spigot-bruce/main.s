@@ -19,23 +19,17 @@
         ;; r11 stands for q
         ;; r12 stands for p (a pointer)
 
-MACRO JSR( _address_)
-    jsr     r13, r0, _address_
-ENDMACRO
+##include "macros.s"
 
-MACRO RTS()
-    mov     pc, r13
-ENDMACRO
-
-MACRO   PUSH( _data_)
-    push    _data_, r14
-ENDMACRO
-
-MACRO   POP( _data_ )
-    pop     _data_, r14
-ENDMACRO
-
-EQU  oswrch, 0xffee
+##ifdef CPU_OPC7
+EQU      OSRDCH, 0x000e0
+EQU      OSNEWL, 0x000e7 
+EQU      OSWRCH, 0x000ee
+##else
+EQU      OSRDCH, 0xffe0
+EQU      OSNEWL, 0xffe7 
+EQU      OSWRCH, 0xffee
+##endif   
         
 # 3 digits in 10431 instructions, 26559 cycles
 # 4 digits in 16590 instructions, 42229 cycles
@@ -55,11 +49,11 @@ start:
         PUSH(r13)
         ;; trivial banner
         mov r1, r0, 0x4f
-        JSR(oswrch)
+        JSR(OSWRCH)
         mov r1, r0, 0x6b
-        JSR(oswrch)
+        JSR(OSWRCH)
         mov r1, r0, 0x20
-        JSR(oswrch)
+        JSR(OSWRCH)
         
 
         ;; mov r14, r0, stack   ; initialise stack pointer
@@ -106,10 +100,10 @@ l3:
         cmp r2, r0, ndigits-1   # cpx #358
         nc.mov pc, r0, l4       # bcc l4
         nz.mov pc, r0, l5       # bne l5
-        JSR (oswrch)
+        JSR (OSWRCH)
         mov r1, r0, 46          # lda #46
 l4:
-        JSR (oswrch)
+        JSR (OSWRCH)
 l5:     mov r1, r3              # tya
         xor r1, r0, 48          # eor #48
         mov r3, r6              # ply
@@ -120,7 +114,7 @@ l5:     mov r1, r3              # tya
         mov r3, r3, -3          # dey by 3
 l6:     mov r2, r2, -1          # dex
         nz.mov pc, r0, l1       # bne l1
-        JSR (oswrch)
+        JSR (OSWRCH)
         POP (r13)
         RTS()
 
@@ -134,7 +128,7 @@ i1:     sto r1, r2, p-1         # was sta p,x
 
 mul:                            # uses y as loop counter
         mov r10, r1             # sta r
-        mov r3, r0, 16          # ldy #16
+        mov r3, r0, WORD_SIZE   # ldy #16
 m1:     add r1, r1              # asl
         add r11, r11            # asl q
         nc.mov pc, r0, m2       # bcc m2
@@ -146,14 +140,14 @@ m2:     mov r3, r3, -1          # dey
 
 div:                            # uses y as loop counter
         mov r10, r1             # sta r
-        mov r3, r0, 16          # ldy #16
+        mov r3, r0, WORD_SIZE   # ldy #16
         mov r1, r0, 0           # lda #0
         add r11, r11            # asl q
-d1:     adc r1, r1              # rol
+d1:     ROL (r1, r1)            # rol
         cmp r1, r10             # cmp r
         nc.mov pc, r0, d2       # bcc d2
-        sbc r1, r10             # sbc r
-d2:     adc r11, r11            # rol q
+        sub r1, r10             # sbc r
+d2:     ROL (r11, r11)          # rol q
         mov r3, r3, -1          # dey
         nz.mov pc, r0, d1       # bne d1
         RTS()
