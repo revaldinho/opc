@@ -175,7 +175,7 @@ def code ( codestring, source=""):
     print( "%s%-48s%s # %s" % (leading,newcodestring,trailing,source))
 
 def print_wrapper():
-    stack_setup             = "mov r10,r0,0xFFFF" if cpu_target=="opc6" else "lmov r10,0xFFFFFFFF"
+    stack_setup             = "mov r14,r0,0xFEFF" if cpu_target=="opc6" else "lmov r14,0xFFFFFFFF"
     initial_free_memory_ptr = "mov r10,r0,0xEFFF" if cpu_target=="opc6" else "lmov r10,0xFFFFEFFF"
     print('''
         ## --------------------------------------------------------------
