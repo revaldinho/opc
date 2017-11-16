@@ -67,7 +67,7 @@ all_asm:  ${SIALS} ${ASMS} bcpllib.sial
 
 all_emulation: ${HEXS} ${EMUSTDOUTS}
 
-all_sim: ../opc6cpu.v ../opc6tb.v ${EXES}
+all_sim: ../${ARCH}cpu.v ../${ARCH}tb.v ${EXES}
 
 
 all_diff: ${SIMSTDOUTS}  ${EMUSTDOUTS} ${DIFFS}

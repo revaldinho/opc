@@ -42,8 +42,7 @@ common_pbyt:
         z.lmov  pc, merge_2nd_byte                 
         cmp     r7,r0,0x02         # third byte ?
         z.lmov  pc, merge_3rd_byte                
-        lmov  pc, merge_4th_byte   # else must be top byte
-        
+                                   # else must be top byte        
 merge_4th_byte: 
         bperm   r4,r3,0x0444       # Put bottom byte of 'C' into top byte of r4
         bperm   r5,r5,0x4210       # zero top byte of r5, preserve others
@@ -59,8 +58,6 @@ merge_2nd_byte:
 merge_1st_byte: 
         bperm   r4,r3,0x4440       # Put bottom byte of 'C' into bottom byte of r4
         bperm   r5,r5,0x3214       # zero bottom byte of r5, preserve others
-        lmov    pc, finish_pbyt
-
 finish_pbyt:            
         or      r5,r4              # Merge the bytes       
         sto     r5,r6              # write back to memory
@@ -128,12 +125,12 @@ qm32_1:
 
         # -----------------------------------------------------------------
         #
-        # udiv32 (udiv16)
+        # udiv32 
         #
-        # Divide 32(16) bit N by 32(16) bit D and return integer dividend and remainder
+        # Divide 32 bit N by 32 bit D and return integer dividend and remainder
         #
         # Entry
-        # - R1 holds N (in lower 16b for udiv 16)
+        # - R1 holds N
         # - R2 holds D
         # - R13 holds return address
         # - R14 global stack pointer
@@ -161,19 +158,19 @@ qm32_1:
 __divu: 
 udiv32:
         PUSH    (r5)
-        lmov    r4,32         # loop counter
+        lmov    r4,32          # loop counter
         mov     r5,r0          # Initialise Remainder in R5
         cmp     r2,r0          # check D != 0
-        z.mov   pc, r13      # bail out if zero (and carry will be set also)
+        z.mov   pc, r13        # bail out if zero (and carry will be set also)
 udiv_1:
         ASL     (r1)           # left shift N
         rol     r5,r5          # left shift R and import carry into LSB
         cmp     r5, r2         # compare R with D
-        pl.sub  r3, r2      # if >= 0 then do subtract for real..
-        pl.add  r1,r0,1     # ..and increment quotient
+        pl.sub  r5, r2         # if >= 0 then do subtract for real..
+        pl.add  r1,r0,1        # ..and increment quotient
         sub     r4,r0,1        # dec loop counter
-        nz.lmov pc,udiv_1  # repeat 'til zero
-        c.add   r0,r0        # clear carry
+        nz.lmov pc,udiv_1      # repeat 'til zero
+        c.add   r0,r0          # clear carry
         mov     r2,r5          # put remainder into r2 for return
         POP     (r5)
         RTS()
@@ -205,8 +202,8 @@ l2_@:
         ljsr    r13,_sub_
         cmp     r5, r0
         z.lmov  pc, l3_@
-        NEG     (r2)
-        NEG     (r1)                
+        NEG     (r2)         # NEG2    (r2,r1) for OPC6
+        NEG     (r1)
 l3_@:
         POP     (r5)
         POP     (r13)
@@ -236,6 +233,7 @@ __mod:  ## Find signed modulus of b MOD a
                                 # now adjust based on sign of original r2
         not     r1,r2,-1        # put -remainder in r1
         POP     (r4)            # get original 'b'
+        cmp     r4,r0           # compare with zero
         pl.mov  r1,r2           # if was +ve then put rem in r1 instead
         mov     r2,r4           # restore r2 = 'b'
         POP     (pc)            # pop return address into pc to return

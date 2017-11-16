@@ -79,14 +79,14 @@
 */*tests/*.lis
 */*tests/*.log
 */*tests/*.hex
-*/*tests/*.dump
+*/*tests/*dump
 */*tests/*.trace
 */*tests/*.vcd
 */*tests/*.gz
 */*tests/*.diff
 */*tests/*.exe
 */*tests/*.sim
-*/*tests/*.stdout
+*/*tests/*stdout
 */*smart*
 */*/*smart*
 
