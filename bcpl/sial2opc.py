@@ -129,10 +129,12 @@ def getnum20( str, ignore_errors=False ):
             raise BaseException("Error - getnum20 - found constant in illegal range: 0x%08X (%s)" % (num,str) )
     return (num)
 
-def getlongnum( str ):
+def getlongnum( str, ispositive=True ):
     # Convert literal of form K<n> into a number loaded into r8
     largeconstcode = []
     num = int(str[1:])
+    if not ispositive:
+        num = ( -num & 0xFFFFFFFF)
     largeconstcode.append("lmov r8,0x%08X"      % (num & 0xFFFF))
     largeconstcode.append("movt r8,r0,0x%04X"   % ((num>>16) & 0xFFFF))
     return (largeconstcode)
@@ -391,7 +393,7 @@ def optimize_sial( sialtext):
     
     # OPT-3: JZ/JNZ/JGE0/JLE0 instructions which follow a load/arithmetic/logical op do not need an additional compare so swap to f_ext_jne0/eq0
     prev_line = "000"
-    for i in range (2,len(sialtext)-2):
+    for i in range (3,len(sialtext)-2):
         line = sialtext[i]
         fields = line.split()
         if len(fields)>0 and fields[0].startswith("F"):
@@ -539,7 +541,13 @@ def process_sial(sialtext):
                 if cpu_target == "opc6":
                     code("mov %s,r0,%d" % (dest_r, -getnum(fields[1])), line)
                 else:
-                    code("lmov %s,%d" % (dest_r, -getnum20(fields[1])), line)                    
+                    try:
+                        code("lmov %s,%d" % (dest_r, -getnum20(fields[1])), line)
+                    except BaseException as e:
+                        code ("",line)
+                        for s in getlongnum(fields[1], False ):
+                            code(s);
+                        code("mov  %s,r8" % dest_r )                        
             elif opcode == sialop['f_sp'] :       # sp        Pn         P!n := a
                 code("sto %s,r11,%d" % (dest_r, getnum(fields[1])), line)
             elif opcode == sialop['f_sg'] :       # sg        Gn         G!n := a
@@ -892,7 +900,7 @@ def process_sial(sialtext):
             elif opcode == sialop['f_const'] :   # const  Ml Wnnn      Long Integer Constant (double word)                
                 n = getnum(fields[2], True)
                 code("%s:" % fields[1],line)
-                code("WORD 0x%08X, 0x%08X" %  (n & 0xFFFFFFFF))
+                code("WORD 0x%08X" %  (n & 0xFFFFFFFF))
             elif opcode == sialop['f_gbyt']:      #   gbyt                   a := b % a
                 code( "jsr r13,r0,__gbyt", line )
             elif opcode == sialop['f_xgbyt']:     #   xgbyt                  a := a % b
