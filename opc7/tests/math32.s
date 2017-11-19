@@ -50,29 +50,37 @@ MACRO   JSR( _addr_ )
 ENDMACRO
 
 MACRO   PUSHALL()
-        mov     r14,r14, -9
-        sto     r5, r14, 1
-        sto     r6, r14, 2
-        sto     r7, r14, 3
-        sto     r8, r14, 4
-        sto     r9, r14, 5
-        sto     r10, r14, 6
-        sto     r11, r14, 7
-        sto     r12, r14, 8
-        sto     r13, r14, 9                        
+        mov     r14,r14, -13
+        sto     r1, r14, 1
+        sto     r2, r14, 2
+        sto     r3, r14, 3
+        sto     r4, r14, 4
+        sto     r5, r14, 5
+        sto     r6, r14, 6        
+        sto     r7, r14, 7
+        sto     r8, r14, 8
+        sto     r9, r14, 9
+        sto     r10, r14, 10
+        sto     r11, r14, 11
+        sto     r12, r14, 12
+        sto     r13, r14, 13
 ENDMACRO
 
 MACRO   POPALL()
-        ld      r5, r14, 1
-        ld      r6, r14, 2
-        ld      r7, r14, 3
-        ld      r8, r14, 4
-        ld      r9, r14, 5
-        ld      r10, r14, 6
-        ld      r11, r14, 7
-        ld      r12, r14, 8
-        ld      r13, r14, 9
-        mov     r14, r14, 9
+        ld      r1, r14, 1        
+        ld      r2, r14, 2
+        ld      r3, r14, 3
+        ld      r4, r14, 4
+        ld      r5, r14, 5
+        ld      r6, r14, 6
+        ld      r7, r14, 7
+        ld      r8, r14, 8
+        ld      r9, r14, 9
+        ld      r10, r14, 10
+        ld      r11, r14, 11
+        ld      r12, r14, 12
+        ld      r13, r14, 13
+        mov     r14, r14, 13
 ENDMACRO
 
 MACRO   SPRINT( _str_addr_, _eol_ )
@@ -88,7 +96,7 @@ ENDMACRO
 
         ORG   0x1000
 start:
-        PUSH  (r13)
+        PUSHALL  ()
 
 
         #       Test the Multiplication
@@ -199,7 +207,7 @@ outer3:
         lmov pc,outer3
 end:
         halt    r0,r0,0x1234
-        POP     (r13)
+        POPALL  ()
         RTS     ()
 
 
@@ -589,7 +597,7 @@ pd32_table:
         WORD    1000000000
 
 
-        ORG 0xFFEE
+        ORG 0x00EE
         # --------------------------------------------------------------
         #
         # oswrch

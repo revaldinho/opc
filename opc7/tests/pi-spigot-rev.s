@@ -269,7 +269,7 @@ mypi:    WORD 0                          # Space for pi digit storage
 remain:  WORD 0                          # Array space for remainder data
 
 
-ORG     0xFFEE
+ORG     0x00EE
         # --------------------------------------------------------------
         #
         # oswrch

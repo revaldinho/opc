@@ -199,7 +199,7 @@ d2:     ROL(r11, r11)           # rol q
 p:      WORD 0  # needs 1193 words but there's nothing beyond
 
 
-        ORG 0xFFEE
+        ORG 0x00EE
 # --------------------------------------------------------------
 #
 # oswrch
