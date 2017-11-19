@@ -211,21 +211,21 @@ end:
         RTS     ()
 
 
-STR1:   BSTRING " = "
-STR2:   BSTRING " x "
-STR3:   BSTRING " / "
-STR4:   BSTRING " REM "
-STR5:   BSTRING "MULTIPLICATION (UMUL32) TEST"
-STR6:   BSTRING "============================"
-STR7:   BSTRING "DIVISION (UDIV32) TEST"
-STR8:   BSTRING "======================"
-STR9:   BSTRING "SQUARE ROOT (SQRT32) TEST"
-STR10:  BSTRING "========================="
-STR11:  BSTRING "Square Root of "
-STR12:  BSTRING " (Numeric overflow) "
-STR13:  BSTRING "MULTIPLICATION (QMUL32) TEST"
-STR14:  BSTRING "============================"
-STR15:  BSTRING " (Divide by zero) "
+STR1:   BSTRING " = " , "\0"
+STR2:   BSTRING " x " , "\0"
+STR3:   BSTRING " / " , "\0"
+STR4:   BSTRING " REM ", "\0"
+STR5:   BSTRING "MULTIPLICATION (UMUL32) TEST", "\0"
+STR6:   BSTRING "============================", "\0"
+STR7:   BSTRING "DIVISION (UDIV32) TEST", "\0"
+STR8:   BSTRING "======================", "\0"
+STR9:   BSTRING "SQUARE ROOT (SQRT32) TEST", "\0"
+STR10:  BSTRING "=========================", "\0"
+STR11:  BSTRING "Square Root of ", "\0"
+STR12:  BSTRING " (Numeric overflow) ", "\0"
+STR13:  BSTRING "MULTIPLICATION (QMUL32) TEST", "\0"
+STR14:  BSTRING "============================", "\0"
+STR15:  BSTRING " (Divide by zero) ", "\0"
 
 FUNC:   WORD    umul32
         WORD    udiv32
