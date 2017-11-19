@@ -892,7 +892,7 @@ def process_sial(sialtext):
             elif opcode == sialop['f_const'] :   # const  Ml Wnnn      Long Integer Constant (double word)                
                 n = getnum(fields[2], True)
                 code("%s:" % fields[1],line)
-                code("WORD 0x%08X, 0x%08X" %  (n & 0xFFFFFFFF , (n>>32) & 0xFFFFFFFF))
+                code("WORD 0x%08X, 0x%08X" %  (n & 0xFFFFFFFF))
             elif opcode == sialop['f_gbyt']:      #   gbyt                   a := b % a
                 code( "jsr r13,r0,__gbyt", line )
             elif opcode == sialop['f_xgbyt']:     #   xgbyt                  a := a % b
