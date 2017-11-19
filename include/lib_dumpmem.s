@@ -2,7 +2,18 @@
 
 ##define  _LIB_DUMPMEM_S
 
-##include "lib_printhex.s"        
+##include "lib_printhex.s"
+
+# set line and block len to fit in 80 cols
+# must be a power of two
+
+##ifdef CPU_OPC7
+EQU  LINE_LEN, 4
+EQU BLOCK_LEN, 64
+##else
+EQU  LINE_LEN, 8
+EQU BLOCK_LEN, 128
+##endif
 
 dump_mem:
     PUSH    (r13)
@@ -12,7 +23,7 @@ dump_mem:
 dump_mem_0:
     JSR     (OSNEWL)
 
-    cmp     r3, r0, 0x80
+    cmp     r3, r0, BLOCK_LEN
     c.mov   pc, r0, dump_mem_5
 
     mov     r1, r4
@@ -28,10 +39,10 @@ dump_mem_1:
     add     r3, r0, 1
 
     mov     r2, r3
-    and     r2, r0, 0x07
+    and     r2, r0, LINE_LEN - 1
     nz.mov  pc, r0, dump_mem_1
 
-    sub     r3, r0, 0x08
+    sub     r3, r0, LINE_LEN
 
 dump_mem_2:
     mov     r1, r4
@@ -51,7 +62,7 @@ dump_mem_4:
     JSR     (OSWRCH)
     add     r3, r0, 1
     mov     r2, r3
-    and     r2, r0, 0x07
+    and     r2, r0, LINE_LEN - 1
     nz.mov  pc, r0, dump_mem_2
     mov     pc, r0, dump_mem_0
 
@@ -61,4 +72,3 @@ dump_mem_5:
 
 
 ##endif
-      

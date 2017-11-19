@@ -24,6 +24,16 @@ module copro (
    output [18:0]    ram_addr
 );
 
+`ifdef cpu_opc7
+   parameter DSIZE   = 32;
+   parameter ASIZE   = 20;
+   parameter RAMSIZE = 12;
+`else
+   parameter DSIZE   = 16;
+   parameter ASIZE   = 16;
+   parameter RAMSIZE = 13;
+`endif
+
 // ---------------------------------------------
 // clock and reset signals
 // ---------------------------------------------
@@ -45,23 +55,23 @@ module copro (
 // ---------------------------------------------
 
    wire             int_cs_b;
-   wire [15:0]      int_dout;
+   wire [DSIZE-1:0] int_dout;
 
 // ---------------------------------------------
 // external memory controller wires
 // ---------------------------------------------
 
    wire             ext_cs_b;
-   wire [15:0]      ext_dout;
+   wire [DSIZE-1:0] ext_dout;
 
 // ---------------------------------------------
 // cpu wires
 // ---------------------------------------------
 
    wire             cpu_rnw;
-   wire [15:0]      cpu_addr;
-   wire [15:0]      cpu_din;
-   wire [15:0]      cpu_dout;
+   wire [ASIZE-1:0] cpu_addr;
+   wire [DSIZE-1:0] cpu_din;
+   wire [DSIZE-1:0] cpu_dout;
    wire             cpu_irq_b;
    reg              cpu_irq_b_sync;
    wire             cpu_clken;
@@ -103,17 +113,37 @@ module copro (
 // main instantiated components
 // ---------------------------------------------
 
-   ram inst_mem
+   ram #
+     (
+      .DSIZE(DSIZE),
+      .ASIZE(RAMSIZE)
+     )
+   inst_mem
      (
       .din        (cpu_dout),
       .dout       (int_dout),
-      .address    (cpu_addr[12:0]),
+      .address    (cpu_addr[RAMSIZE - 1:0]),
       .rnw        (cpu_rnw),
       .clk        (!cpu_clk),
       .cs_b       (int_cs_b)
       );
 
-`ifdef cpu_opc6
+`ifdef cpu_opc7
+   opc7cpu inst_cpu
+     (
+      .din        (cpu_din),
+      .dout       (cpu_dout),
+      .address    (cpu_addr),
+      .rnw        (cpu_rnw),
+      .clk        (cpu_clk),
+      .reset_b    (rst_b_sync),
+      .int_b      ({1'b1, cpu_irq_b_sync}),
+      .clken      (cpu_clken),
+      .vpa        (vpa),
+      .vda        (vda),
+      .vio        (vio)
+    );
+`else `ifdef cpu_opc6
    opc6cpu inst_cpu
      (
       .din        (cpu_din),
@@ -129,7 +159,7 @@ module copro (
       .vio        (vio)
     );
 
-`else   
+`else
    opc5lscpu inst_cpu
      (
       .din        (cpu_din),
@@ -143,10 +173,31 @@ module copro (
       .vpa        (vpa),
       .vda        (vda)
     );
-   assign vio = !cpu_mreq_b;   
+   // Fake vio, just at the UART address
+   assign vio = vda && ({cpu_addr[15:3],  3'b000} == 16'hfef8);
 `endif
-   
-   memory_controller inst_memory_controller
+`endif
+
+`ifdef no_memory_controller
+   assign ram_cs_b  = 1'b1;
+   assign ram_oe_b  = 1'b1;
+   assign ram_we_b  = 1'b1;
+   assign ram_data  = 8'b0;
+   assign ram_addr  = 19'b0;
+   assign ext_dout  = 32'hAAAAAAAA;
+   assign cpu_clken = 1'b1;
+`else
+   memory_controller #
+     (
+      .DSIZE(DSIZE),
+      .ASIZE(ASIZE),
+`ifdef cpu_opc7
+      .INDEX_BITS(4) // 16 entry cache
+`else
+      .INDEX_BITS(6) // 64 entry cache
+`endif
+     )
+   inst_memory_controller
      (
       .clock      (cpu_clk),
       .reset_b    (rst_b_sync),
@@ -163,7 +214,7 @@ module copro (
       .ram_data   (ram_data),
       .ram_addr   (ram_addr)
       );
-
+`endif
 
    tube inst_tube
      (
@@ -189,16 +240,22 @@ module copro (
 // address decode logic
 // ---------------------------------------------
 
-   assign cpu_mreq_b = !(vpa | vda);   
+   assign cpu_mreq_b = !(vpa | vda);
 
    // Tube mapped to FEF8-FEFF
-   assign p_cs_b   = !((cpu_addr[15:3] == 13'b1111111011111) && vio);
+   assign p_cs_b   = !vio;
 
+`ifdef cpu_opc7
+   // Internal RAM mapped to 00000:00FFF
+   assign int_cs_b = !((|cpu_addr[ASIZE-1:RAMSIZE] == 1'b0) && !cpu_mreq_b);
+   // External RAM mapped to everywhere else
+   assign ext_cs_b = !((|cpu_addr[ASIZE-1:RAMSIZE] == 1'b1) && !cpu_mreq_b);
+`else
    // Internal RAM mapped to 0000:0FFF and F000:FFFF
-   assign int_cs_b = !(((cpu_addr[15:12] == 4'h0) || (cpu_addr[15:12] == 4'hF)) && !cpu_mreq_b);
-
+   assign int_cs_b = !(((|cpu_addr[ASIZE-1:RAMSIZE-1] == 1'b0) || (&cpu_addr[ASIZE-1:RAMSIZE-1] == 1'b1)) && !cpu_mreq_b);
    // External RAM mapped to 1000:EFFF
-   assign ext_cs_b = !(((cpu_addr[15:12] > 4'h0) && (cpu_addr[15:12] < 4'hF)) && !cpu_mreq_b);
+   assign ext_cs_b = !(((|cpu_addr[ASIZE-1:RAMSIZE-1] == 1'b1) && (&cpu_addr[ASIZE-1:RAMSIZE-1] == 1'b0)) && !cpu_mreq_b);
+`endif
 
    // Data multiplexor
    assign cpu_din  =  !p_cs_b ? p_dout : !int_cs_b ? int_dout : ext_dout;

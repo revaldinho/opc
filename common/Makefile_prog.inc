@@ -23,9 +23,16 @@ $(PROG).mem: $(PROG).hex
 	mv $(PROG).mem.tmp $(PROG).mem
 
 # This is for use in PiTubeDirect (this is specific to copro)
+
+
 $(PROG).c: $(PROG).hex
 	echo '#include "$(PROG).h"' > $(PROG).c.tmp
+ifeq ($(CPU_NAME), opc7)
+	echo 'uint32_t $(PROG)_$(CPU_NAME)[0x800] = {' >> $(PROG).c.tmp
+	xxd -r -p < $(PROG).hex | dd ibs=$(ROMWIDTH) count=$$((16#0800)) | xxd -p -c$(ROMWIDTH) | awk '{print "0x" $$1 ","}' >> $(PROG).c.tmp
+else
 	echo 'uint16_t $(PROG)_$(CPU_NAME)[0x800] = {' >> $(PROG).c.tmp
 	xxd -r -p < $(PROG).hex | dd ibs=$(ROMWIDTH) skip=$$((16#F800)) count=$$((16#0800)) | xxd -p -c$(ROMWIDTH) | awk '{print "0x" $$1 ","}' >> $(PROG).c.tmp
+endif
 	echo '};' >> $(PROG).c.tmp
 	mv $(PROG).c.tmp $(PROG).c

@@ -136,11 +136,11 @@ def assemble( filename, listingon=True):
                     strings = re.match('.*STRING\s*\"(.*?)\"(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?.*?', line.rstrip())
                     string_data = codecs.decode(''.join([ x for x in strings.groups() if x != None]),  'unicode_escape')
                     string_len = chr(len( string_data ) & 0xFF) if inst=="PBSTRING" else ''    # limit string length to 255 for PBSTRINGS
-                    (step, wordstr) =  ( 4 if inst in("BSTRING","PBSTRING") else 1, string_len + string_data + chr(0) + chr(0) + chr(0) + chr(0))
-
                     if inst in ("BSTRING","PBSTRING") :
-                        words = [(ord(wordstr[i])|(ord(wordstr[i+1])<<8)|(ord(wordstr[i+2])<<16)|(ord(wordstr[i+3])<<24)) for  i in range(0,len(wordstr)-3,step) ]
+                        wordstr =  string_len + string_data + chr(0) + chr(0) + chr(0)
+                        words = [(ord(wordstr[i])|(ord(wordstr[i+1])<<8)|(ord(wordstr[i+2])<<16)|(ord(wordstr[i+3])<<24)) for  i in range(0,len(wordstr)-3,4) ]
                     else:
+                        wordstr = string_len + string_data
                         words = [ord(wordstr[i]) for  i in range(0,len(wordstr))]
                 else:
                     if ((len(opfields)==2 and not reg_re.match(opfields[1])) and inst not in "ljsr lmov lsto lld WORD HALF BYTE".split()):
