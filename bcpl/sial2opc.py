@@ -111,10 +111,31 @@ def getstring( s_list):
         str.append(c)
     return ''.join(str)
 
-def getnum( str ):
+def getnum( str, ignore_errors=False ):
     # Convert literal of form K<n> to number
     num = int(str[1:])
-    return num
+    if not ignore_errors:
+        if cpu_target == "opc6" and (num & 0xFFFF0000) and num > 0:
+            raise BaseException("Error - getnum - found constant larger than 16bits: 0x%08X" % num)
+        elif cpu_target == "opc7" and (0x7FFF < num < 0x0FFFF8000):
+            raise BaseException("Error - getnum - found constant in illegal range: 0x%08X (%s)" % (num,str) )
+    return (num)
+
+def getnum20( str, ignore_errors=False ):
+    # Convert literal of form K<n> to number
+    num = int(str[1:])
+    if not ignore_errors:
+        if cpu_target == "opc7" and (0x7FFFF < num < 0x0FFF80000):
+            raise BaseException("Error - getnum20 - found constant in illegal range: 0x%08X (%s)" % (num,str) )
+    return (num)
+
+def getlongnum( str ):
+    # Convert literal of form K<n> into a number loaded into r8
+    largeconstcode = []
+    num = int(str[1:])
+    largeconstcode.append("lmov r8,0x%08X"      % (num & 0xFFFF))
+    largeconstcode.append("movt r8,r0,0x%04X"   % ((num>>16) & 0xFFFF))
+    return (largeconstcode)
 
 def addsubtoincdec( s ) :
     # Swap add, sub with r0 operand and small immediate into inc, dec operations
@@ -194,6 +215,7 @@ def print_wrapper():
         ## System register usage
         ##
         ## r4,5,6 == tmp registers, not persistent across instructions
+        ## r8     == large constant register (OPC7 only)
         ## r9     == stack pointer on entry to BCPL (used for sys abort)
         ## r10    == Global memory wavefront
         ## r13    == link reg  
@@ -493,13 +515,31 @@ def process_sial(sialtext):
                 code("mov %s, r12, %d" % (dest_r, getnum(fields[1])), line)
             elif opcode == sialop['f_lll'] :      # lll       Ln         a := @ !Ln [ie address of label Ln]
                 code("mov %s, r0, %s" % (dest_r, fields[1]), line)
-            elif opcode in (sialop['f_lf'],sialop['f_lw']):# lf or lw   Ln        a := byte or word address of Ln [using word address for both]
+            elif opcode == sialop['f_lf']:        # lf        Ln        a := byte address of Ln
                 code("mov %s,r0,%s" % (dest_r, fields[1]),  line)
+            elif opcode == sialop['f_lw']:        # lw        Ln        Load word from label ? Not in SIAL spec doc
+                code("ld %s,r0,%s" % (dest_r, fields[1]),  line)
             elif opcode == sialop['f_l'] :        # l         Kn         a := n
-                n =  getnum(fields[1])
-                code("mov %s,r0,%d" % (dest_r, n), line)            
-            elif opcode == sialop['f_lm'] :       # lm        Kn         a := - n 
-                code("mov %s,r0,%d" % (dest_r, -getnum(fields[1])), line)
+                try:
+                    n =  getnum(fields[1])
+                    code("mov %s,r0,%d" % (dest_r, n), line)
+                except BaseException as e:
+                    if cpu_target == "opc7":
+                        try:
+                            n = getnum20(fields[1])
+                            code("lmov %s,%d" % (dest_r, n), line)
+                        except:
+                            code("",line)
+                            for s in getlongnum(fields[1]):
+                                code(s)
+                            code("mov %s,r8" % dest_r)                        
+                    else:
+                        raise e
+            elif opcode == sialop['f_lm'] :       # lm        Kn         a := - n
+                if cpu_target == "opc6":
+                    code("mov %s,r0,%d" % (dest_r, -getnum(fields[1])), line)
+                else:
+                    code("lmov %s,%d" % (dest_r, -getnum20(fields[1])), line)                    
             elif opcode == sialop['f_sp'] :       # sp        Pn         P!n := a
                 code("sto %s,r11,%d" % (dest_r, getnum(fields[1])), line)
             elif opcode == sialop['f_sg'] :       # sg        Gn         G!n := a
@@ -614,9 +654,14 @@ def process_sial(sialtext):
             elif opcode == sialop['f_ext_asr_a']: # f_ext_asr_a=      178    //  a := a >> 1
                 code("asr r1,r1", line)
             elif opcode == sialop['f_atbl'] :     # atbl      Kk         b := a; a := k
-                n = getnum(fields[1])
-                code("mov r2,r1", line)
-                code("mov r1,r0,%d" % n)
+                if cpu_target == "opc6":
+                    n = getnum(fields[1])
+                    code("mov r2,r1", line)
+                    code("mov r1,r0,%d" % n)
+                else:
+                    n = getnum20(fields[1])
+                    code("mov r2,r1", line)
+                    code("lmov r1,%d" % n)
             elif opcode == sialop['f_atblp'] :    # atblp     Pn         b := a; a := P!n            
                 code("mov r2,r1", line)
                 code("ld r1,r11,%d" % getnum(fields[1]))                        
@@ -839,11 +884,15 @@ def process_sial(sialtext):
                 code("ld r11,r11" )        # restore P pointer
                 code("mov pc,r4")          # return
             elif opcode == sialop['f_static'] :   # static    Ln Kk W1 ... Wk      Static variable or table
-                code("%s: WORD %s" % (fields[1], ','.join( [("%s"%getnum(i)) for i in fields[3:]])), line)
+                code("%s: WORD %s" % (fields[1], ','.join( [("%s"%getnum(i, True)) for i in fields[3:]])), line)
             elif opcode == sialop['f_string'] :   # string    Ml Kn C1 ... Cn      String constant
                 s = getstring(fields[2:])
                 code("%s:" % fields[1],line)
                 code("PBSTRING \"%s\"" % s)
+            elif opcode == sialop['f_const'] :   # const  Ml Wnnn      Long Integer Constant (double word)                
+                n = getnum(fields[2], True)
+                code("%s:" % fields[1],line)
+                code("WORD 0x%08X, 0x%08X" %  (n & 0xFFFFFFFF , (n>>32) & 0xFFFFFFFF))
             elif opcode == sialop['f_gbyt']:      #   gbyt                   a := b % a
                 code( "jsr r13,r0,__gbyt", line )
             elif opcode == sialop['f_xgbyt']:     #   xgbyt                  a := a % b
@@ -857,14 +906,23 @@ def process_sial(sialtext):
                 # Jump table on value of A, specific values per label ?
                 num_options = getnum(fields[1])            
                 default  = fields[2]
-                values = [getnum(fields[i]) for i in range(3,num_options*2+3,2)]            
-                labels = [fields[i] for i in range(4,num_options*2+4,2)]
-    
+                value_fields = [fields[i] for i in range(3,num_options*2+3,2)]            
+                labels = [fields[i] for i in range(4,num_options*2+4,2)]            
                 code("",line)
                 code("mov r4,r1","Copy A into tmp register")
-                for (v,l) in zip(values,labels):
-                    code("cmp r4,r0,%d" % v)
-                    code("z.mov pc,r0,%s" % l)            
+                for (vf,l) in zip(value_fields,labels):
+                    try:
+                        value = getnum(vf)
+                        code("cmp r4,r0,%d" % v)
+                        code("z.mov pc,r0,%s" % l)
+                    except BaseException as e:
+                        if cpu_target == "opc7":
+                            for s in getlongnum(vf):
+                                code(s)
+                            code("cmp r4,r8")
+                            code("z.mov pc,r0,%s" % l)
+                        else:
+                            raise e                            
                 code("mov pc,r0,%s" % default, "default jump target")
             elif opcode == sialop['f_swl'] :      #  swl       Kn Ld L1 ... Ln
                 # Jump table on value of A
