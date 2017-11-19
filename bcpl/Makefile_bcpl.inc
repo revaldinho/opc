@@ -39,7 +39,7 @@ bcpllib.sial : bcpllib.b
 	${pyexec} ${assembler} $*.s $*.hex  > $*.lst
 
 %.emu.stdout %.dump : %.hex ${emulator}
-	if [ -e $*.stdin ] ; then ${pyexec} ${emulator} $*.hex $*.dump $*.stdin | grep OUT | ../../utils/show_stdout.py | tee $*.emu.stdout ; \
+	if [ -e $*.stdin ] ; then ${pyexec} ${emulator} $*.hex $*.dump $*.stdin | grep OUT | ../../utils/show_stdout.py --${ARCH} | tee $*.emu.stdout ; \
 	else ${pyexec} ${emulator} $*.hex $*.dump  | grep OUT | ../../utils/show_stdout.py --${ARCH}| tee $*.emu.stdout ; fi
 
 %.diff: %.sim.stdout %.emu.stdout 
