@@ -33,7 +33,7 @@
         # but others all just have entry points present and return no data
         #
 
-        ORG 0x0700
+        ORG 0x0100
         # --------------------------------------------------------------
         #
         # READCHAR - for simulation/emulation only
@@ -74,76 +74,41 @@ osnewl_code:
 
 
         ## Dummy routines for all of the Tube ROM calls
-        ORG 0x07C8
+
+        EQU     MOS,    0x00C8
+        
+        ORG MOS
 NVRDCH: lmov    pc,osrdch
-        WORD    0x0000         
+
+        ORG MOS + (0xCB-0xC8)
+        
 NVWRCH:                      # &07CB
         lmov    pc,oswrch
-        WORD    0x0000
 
-OSFIND:                      # &07CE
-        RTS()
-        WORD    0x0000
-        WORD    0x0000
-OSGBPB:                      # &07D1
-        RTS()
-        WORD    0x0000
-        WORD    0x0000
-OSBPUT:                      # &07D4
-        RTS()
-        WORD    0x0000
-        WORD    0x0000
-OSBGET:                      # &07D7
-        RTS()
-        WORD    0x0000
-        WORD    0x0000
-
-OSARGS:                      # &07DA
-        RTS()
-        WORD    0x0000
-        WORD    0x0000
-
-OSFILE:                      # &07DD
-        RTS()
-        WORD    0x0000
-        WORD    0x0000
-
+        ORG MOS + (0xE0-0xC8)
 OSRDCH:                      # &07E0
 osrdch:
         lmov    pc,READCHAR
-        WORD    0x0000
 
+        ORG MOS + (0xE3-0xC8)
+        
 OSASCI:                      # &07E3
         cmp     r1, r0, 0x0d
         nz.lmov pc,OSWRCH
 
+        ORG MOS + (0xE7-0xC8)
+        
 OSNEWL:                      # &07E7
         lmov    pc,osnewl_code
-        WORD    0x0000
-        WORD    0x0000
-        WORD    0x0000
 
+        ORG MOS + (0xEC-0xC8)
+        
 OSWRCR:                      # &07EC
         lmov    r1,0x0D
 
+        ORG MOS + (0xEE-0xC8)
+        
 oswrch:
 OSWRCH:                      # &07EE
         lmov    pc,WRITECHAR
-        WORD    0x0000
-
-OSWORD:                      # &07F1
-        RTS()
-        WORD    0x0000
-        WORD    0x0000
-
-OSBYTE:                      # &07F4
-        RTS()
-        WORD    0x0000
-        WORD    0x0000
-
-OS_CLI:                      # &07F7
-        RTS()
-        WORD    0x0000
-        WORD    0x0000
-
 
