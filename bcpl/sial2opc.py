@@ -175,8 +175,8 @@ def code ( codestring, source=""):
     print( "%s%-48s%s # %s" % (leading,newcodestring,trailing,source))
 
 def print_wrapper():
-    stack_setup             = "mov r14,r0,0xFEFF" if cpu_target=="opc6" else "lmov r14,0xFFFFFFFF"
-    initial_free_memory_ptr = "mov r10,r0,0xEFFF" if cpu_target=="opc6" else "lmov r10,0xFFFFEFFF"
+    stack_setup             = "mov r14,r0,0x07FF" if cpu_target=="opc6" else "lmov r14,0xFFFFFFFF"
+    initial_free_memory_ptr = "mov r10,r0,0xFFFF" if cpu_target=="opc6" else "lmov r10,0xFFFFEFFF"
     print('''
         ## --------------------------------------------------------------
         ## OPC assembly code generated from SIAL using sial2opc.py
@@ -819,19 +819,19 @@ def process_sial(sialtext):
                 code ("c.mov r1,r0,0xFFFF") # C set if b >= a so return true
                 code ("nc.mov r1, r0")      # C not set if b < a so return false
             elif opcode == sialop['f_ge0'] :           # ge0                     a := a >= 0  [ ie !(0 >a) ]
-                code ("cmp r1,r0")          
+                code ("cmp r1,r0", line)          
                 code ("c.mov r1,r0,0xFFFF") # C set if a >= 0 so return true
                 code ("nc.mov r1, r0")      # C not set if 0 < a so return false
             elif opcode == sialop['f_ls0'] :           # ls0                     a := a < 0  [ ie !(0 <= a) ]
-                code ("cmp r1,r0")           
-                code ("nc.mov r1,r0,0xFFFF") # Carry not set if a < 0, so return all 1's = TRUE       
-                code ("c.mov r1,r0")         # Else carry set if a >= 0 so return all 0's = FALSE
+                code ("cmp r1,r0", line)           
+                code ("mi.mov r1,r0,0xFFFF") # If negative result set r1 all 1's
+                code ("pl.mov r1,r0")        # If positive result set r1 all 0's (won't be triggered by previous condition)
             elif opcode == sialop['f_le0'] :           # le0                     a := a <= 0  
-                code ("cmp r0,r1")         
+                code ("cmp r0,r1", line)         
                 code ("c.mov r1,r0,0xFFFF")      
                 code ("nc.mov r1,r0")
             elif opcode == sialop['f_gr0'] :           # gr0                     a := a > 0  [ ie !(0 >= a) ]
-                code ("cmp r0,r1")         # compare 0 with a
+                code ("cmp r0,r1", line)   # compare 0 with a
                 code ("c.mov r1,r0")       # C set if 0 >= a, return false
                 code ("nc.mov r1,r0,0xFFFF") # C not set if 0<a. return true
             elif opcode == sialop['f_rtn'] : # procedure return
