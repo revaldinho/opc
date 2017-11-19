@@ -236,7 +236,8 @@ __mod:  ## Find signed modulus of b MOD a
         cmp     r4,r0           # compare with zero
         pl.mov  r1,r2           # if was +ve then put rem in r1 instead
         mov     r2,r4           # restore r2 = 'b'
-        POP     (pc)            # pop return address into pc to return
+        POP     (r13)           # pop return address 
+        RTS     ()
 
 __xmod: ## Find signed modulus of a MOD b
         ## NB division by zero should abort !! ABORT 5: Division by zero
@@ -257,7 +258,8 @@ __xmod: ## Find signed modulus of a MOD b
         cmp     r4,r0
         pl.mov  r1,r2           # if was +ve then put rem in r1 instead
         POP     (r2)            # restore original b
-        POP     (pc)            # pop return address into pc to return
+        POP     (r13)           # pop return address 
+        RTS     ()
 
         # ------------------------------------------------------------
         # sys()
