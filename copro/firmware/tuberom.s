@@ -423,7 +423,7 @@ cmdTest:
     JSR    (read_hex)
     mov    r1, r2
     JSR    (print_hex_word_spc)
-    JSR    (print_dec_16)
+    JSR    (print_dec_word)
     JSR    (OSNEWL)
     mov    r1, r0
     POP    (r13)
