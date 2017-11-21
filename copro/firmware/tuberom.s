@@ -104,6 +104,10 @@ ORG CODE
 ##include "lib_srec.s"
 ##include "lib_dumpmem.s"
 
+##ifndef CPU_OPC5LS
+##include "lib_disassemble.s"
+##endif
+
 ResetHandler:
     mov     r14, r0, STACK              # setup the stack
 
@@ -402,6 +406,25 @@ cmdMem:
 
 # --------------------------------------------------------------
 
+##ifndef CPU_OPC5LS
+cmdDis:
+    PUSH    (r13)
+    JSR     (read_hex)
+
+    mov     r3, r0, 16
+dis_loop:
+    mov     r1, r2
+    JSR     (disassemble)
+    mov     r2, r1
+    JSR     (OSNEWL)
+    DEC     (r3, 1)
+    nz.mov  pc, r0, dis_loop
+    mov     r1, r0
+    POP     (r13)
+    RTS     ()
+##endif
+# --------------------------------------------------------------
+
 cmdHelp:
     PUSH   (r13)
     mov    r1, r0, msgHelp
@@ -478,6 +501,10 @@ cmdTable:
     WORD    cmdGo   | END_MARKER
     STRING  "mem"
     WORD    cmdMem  | END_MARKER
+##ifndef CPU_OPC5LS
+    STRING  "dis"
+    WORD    cmdDis  | END_MARKER
+##endif
     STRING  "help"
     WORD    cmdHelp | END_MARKER
     STRING  "test"
@@ -938,7 +965,7 @@ SWIHandler:
     EI      ()                   # re-enable interrupts
     ld      pc, r0, BRKV         # invoke the BRK handler
 
-##ifndef CPU_OPC7
+##ifdef CPU_OPC5LS
 
 # Limit check to precent code running into next block...
 
