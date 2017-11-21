@@ -377,16 +377,16 @@ def optimize_sial( sialtext):
                     #print ("# OPT-2a: Found ATB; load constant A + shift by A. Constant = %d" % getnum(prev_fields[1]))
                     #print ("#  %s ; %s " % (prev_fields[0], fields[0]))                    
                     sialtext[i-1] = ""  
-                    sialtext[i] = "F%d" % (sialop['f_ext_asr_a'] if opcode==sialop["f_rsh"] else sialop['f_ext_asl_a'])
+                    sialtext[i] = "F%d" % (sialop['f_ext_lsr_a'] if opcode==sialop["f_rsh"] else sialop['f_ext_asl_a'])
                 elif prev_opcode == sialop['f_l'] and prev_fields[1].startswith("K") and (0<getnum(prev_fields[1])<8):
                     shift_dist =  getnum(prev_fields[1])
                     #print ("# OPT-2b: Found load constant A + shift B by A. Constant = %d" % shift_dist )
                     #print ("#  %s ; %s " % (prev_fields[0], fields[0]))                    
                     # First shift is A := B shift by 1
-                    sialtext[i-1] = "F%d" % (sialop['f_ext_asr'] if opcode==sialop["f_rsh"] else sialop['f_ext_asl'])
+                    sialtext[i-1] = "F%d" % (sialop['f_ext_lsr'] if opcode==sialop["f_rsh"] else sialop['f_ext_asl'])
                     sialtext[i] = ""
                     if shift_dist > 1:  # subsequent shifts are A := A shift by 1                         
-                        sialtext[i:i] = ["F%d" % (sialop['f_ext_asr_a'] if opcode==sialop["f_rsh"] else sialop['f_ext_asl_a'])] * (shift_dist-1)
+                        sialtext[i:i] = ["F%d" % (sialop['f_ext_lsr_a'] if opcode==sialop["f_rsh"] else sialop['f_ext_asl_a'])] * (shift_dist-1)
             prev_line = line
             prev_fields = fields
             prev_opcode = opcode
@@ -635,7 +635,7 @@ def process_sial(sialtext):
             elif opcode in (sialop['f_lsh'],sialop['f_rsh']):
                 # lsh                  a := b << a            
                 # rsh                  a := b >> a
-                codestring = "add r1,r1" if opcode==sialop['f_lsh'] else "asr r1,r1"
+                codestring = "add r1,r1" if opcode==sialop['f_lsh'] else "lsr r1,r1"
                 code("mov r4,r1",line) # Get the number of places to shift in r4 + 1
                 code("mov r1,r2")      # r2 preserved so shift in r1
                 code("cmp r4,r0")      # is r4 ==0 (ie shift dist==0)?
@@ -655,12 +655,12 @@ def process_sial(sialtext):
             elif opcode == sialop['f_ext_asl']: # f_ext_asl=      175    //  a := b << 1
                 code("mov r1,r2", line)
                 code("add r1,r1")
-            elif opcode == sialop['f_ext_asr']: # f_ext_asl=      175    //  a := b >> 1
-                code("asr r1,r2")
+            elif opcode == sialop['f_ext_lsr']: # f_ext_asl=      175    //  a := b >> 1
+                code("lsr r1,r2")
             elif opcode == sialop['f_ext_asl_a']: # f_ext_asl_a=      177    //  a := a << 1
                 code("add r1,r1", line)
-            elif opcode == sialop['f_ext_asr_a']: # f_ext_asr_a=      178    //  a := a >> 1
-                code("asr r1,r1", line)
+            elif opcode == sialop['f_ext_lsr_a']: # f_ext_lsr_a=      178    //  a := a >> 1
+                code("lsr r1,r1", line)
             elif opcode == sialop['f_atbl'] :     # atbl      Kk         b := a; a := k
                 if cpu_target == "opc6":
                     n = getnum(fields[1])
@@ -797,9 +797,9 @@ def process_sial(sialtext):
                 code("add r1,r4")
                 code("sto r1,r12,%d" % getnum(fields[1]))
             elif opcode == sialop['f_il'] :      # il        Ln           a := !Ln + a; !Ln := a
-                code("ld r4,r0,%d" % getnum(fields[1]) ,line)
+                code("ld r4,r0,%s" % fields[1] ,line)
                 code("add r1,r4")
-                code("sto r1,r0,%d" % getnum(fields[1]))
+                code("sto r1,r0,%s" % fields[1])
             elif opcode in (sialop['f_ikp'],sialop['f_ikg']) :
                 #  ikp       Kk Pn      a := P!n + k; P!n := a
                 #  ikg       Kk Gn      a := G!n + k; G!n := a
