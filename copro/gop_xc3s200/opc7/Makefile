@@ -34,6 +34,17 @@ ROMLEN     = 0800
 # Width of the ROM (in bytes)
 ROMWIDTH   = 4
 
+# User Memory
+ifeq ($(PITUBEDIRECT),1)
+MEM_BOT   ?= 00000800
+MEM_TOP   ?= FFFFFFFF
+STACK     ?= FFFFFFFF
+else
+MEM_BOT   ?= 00000600
+MEM_TOP   ?= 00000FFF
+STACK     ?= 00000FFF
+endif
+
 # Common include files
 include $(ROOT)/common/Makefile.inc
 include $(ROOT)/common/Makefile_xilinx_cable_serial.inc

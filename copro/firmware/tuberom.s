@@ -6,9 +6,6 @@ EQU        CODE, 0x00200
 EQU        TUBE, 0xFFEF8
 EQU         MOS, 0x000C8
 EQU        WORK, 0x00100
-EQU       STACK, 0x00FFF
-EQU     MEM_BOT, 0x00600
-EQU     MEM_TOP, 0x00FFF
 EQU  END_MARKER, 0x80000000   # makes the end of each command -ve
 ##else
 EQU        BASE, 0xE000
@@ -16,11 +13,13 @@ EQU        CODE, 0xF800
 EQU        TUBE, 0xFEF8
 EQU         MOS, 0xFFC8
 EQU        WORK, 0x0000
-EQU       STACK, 0xF7FF
-EQU     MEM_BOT, 0x0100
-EQU     MEM_TOP, 0xF7FF
 EQU  END_MARKER, 0x8000       # makes the end of each command -ve
 ##endif
+
+# These are passed in directly from the makefile
+EQU     MEM_BOT, _MEM_BOT_
+EQU     MEM_TOP, _MEM_TOP_
+EQU       STACK, _STACK_
 
 EQU    r1status, TUBE
 EQU      r1data, TUBE + 1
