@@ -41,8 +41,7 @@ common_pbyt:
         cmp     r7,r0,0x01         # second byte ?
         z.lmov  pc, merge_2nd_byte                 
         cmp     r7,r0,0x02         # third byte ?
-        z.lmov  pc, merge_3rd_byte                
-                                   # else must be top byte        
+        z.lmov  pc, merge_3rd_byte # else must be top byte                                                          
 merge_4th_byte: 
         bperm   r4,r3,0x0444       # Put bottom byte of 'C' into top byte of r4
         bperm   r5,r5,0x4210       # zero top byte of r5, preserve others
