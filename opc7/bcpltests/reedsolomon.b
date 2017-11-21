@@ -47,7 +47,7 @@ LET start() = VALOF
 { LET argv = VEC 50
 
  //  UNLESS rdargs("testno/n", argv, 50) DO
- //  { writef("*nBad arguments for qr*n")
+ //  { writef("*n*cBad arguments for qr*n*c")
  //    RESULTIS 0
  //  }
 
@@ -91,7 +91,7 @@ AND initlogs() BE
   gf_log2 := getvec(255)
   gf_exp2 := getvec(510) // 510 = 255+255
   UNLESS gf_log2 & gf_exp2 DO
-  { writef("initlogs: More space needed*n")
+  { writef("initlogs: More space needed*n*c")
     abort(999)
   }
 
@@ -123,7 +123,7 @@ AND gf_div(x, y) = VALOF
 { // Perform GF division using logarithms base 2.
   // Since log 0 is undefined x=0 and y=0 are special cases.
   IF y=0 DO
-  { writef("gf_div: Division by zero*n")
+  { writef("gf_div: Division by zero*n*c")
     abort(999)
   }
   IF x=0 RESULTIS 0
@@ -228,7 +228,7 @@ AND gf_poly_divmod(p, q, r) BE
   LET t = VEC 255  // Vector to hold the next product of the generator
 
   UNLESS q!1 > 0 DO
-  { writef("The divisor must have a non zero leading coefficient*n")
+  { writef("The divisor must have a non zero leading coefficient*n*c")
     abort(999)
     RETURN
   }
@@ -501,14 +501,14 @@ to confirm the accuracy the description just given.
 
 AND rs_calc_syndromes(codeword, e, s) BE
 { // e = the number of error correction bytes
-  //writef("*nrs_calc_syndromes:*n")
+  //writef("*n*crs_calc_syndromes:*n*c")
   //writef("codeword:  "); pr_poly(codeword)
   LET degs = e-1
   s!0 := degs  // The degree of the syndromes polynomial.
   FOR i = 0 TO e-1 DO
   { LET p2i = gf_pow(2,i)
     LET res = gf_poly_eval(codeword, p2i)
-    //writef("%i2 2^i = %x2 => %x2 %i3*n", i, p2i, res, res)
+    //writef("%i2 2^i = %x2 => %x2 %i3*n*c", i, p2i, res, res)
     //s!(i+1) := res // s!(i+1) = codeword(2^i)
     s!(degs+1-i) := res // si = codeword(2^i)
   }
@@ -626,8 +626,8 @@ AND rs_find_error_locator() BE
   LET C       = VEC 50  // To hold a correction polynomial
   LET P1      = VEC 50
 
-  //writef("*nComputing the error locator polynomial Lambda*n")
-  //writef("using the Berlekamp-Massey algorithm.*n*n")
+  //writef("*n*cComputing the error locator polynomial Lambda*n*c")
+  //writef("using the Berlekamp-Massey algorithm.*n*c*n*c")
 
   Lambda!0, Lambda!1 := 0, 1  // Polynomial: Lambda(x) = 1
   C!0, C!1, C!2 := 1, 1, 0    // Polynomial: C(x) = x+0
@@ -639,19 +639,19 @@ AND rs_find_error_locator() BE
     //writef("Lambda: "); pr_poly(Lambda)
     //writef("R:      "); pr_poly(R)
     //writef("S:      "); pr_poly(S)
-    //writef("k=%n l=%n*n", k, l)
+    //writef("k=%n l=%n*n*c", k, l)
 
     // First calculate delta
     FOR i = 0 TO l DO
     { LET Li = Lambda!(degL+1-i)   // Li -- Coeff of x^i in current Lambda
       LET f = S!(degs+1 - (k-1-i)) // R(2^(k-1-i))
       LET Lif = gf_mul(Li, f)
-      //writef("i=%n delta: %x2*n", i, delta)
+      //writef("i=%n delta: %x2*n*c", i, delta)
       delta := delta XOR Lif
-      //writef("i=%n Li=%x2 f=%x2 Lif=%x2 => delta=%x2*n",
+      //writef("i=%n Li=%x2 f=%x2 Lif=%x2 => delta=%x2*n*c",
       //        i,   Li,    f,    Lif,       delta)
     }
-    //writef("delta: %x2*n", delta)
+    //writef("delta: %x2*n*c", delta)
 
     IF delta DO
     { gf_poly_scale(C, delta, P1)
@@ -701,7 +701,7 @@ AND rs_demo() BE
 
   LET v = getvec(1000)
 
-  writef("reedsolomon entered*n")
+  writef("reedsolomon entered*n*c")
 
   S       := v       // For the syndromes polynomial
   M       := v + 100 // For the codeword for msg
@@ -753,13 +753,13 @@ AND rs_demo() BE
 
   // Typically: Lambda(x) =  L3**x^3 +  L2**x^2 + L1**x^1 + 1
 
-  writef("*nLambda(x) =  ")
+  writef("*n*cLambda(x) =  ")
   FOR i = e/2 TO 1 BY -1 DO
     writef("L%n**x^n +  ", i, i)
-  writef("1*n")
+  writef("1*n*c")
 
 
-  writef("*nIt can be shown that:*n*n")
+  writef("*n*cIt can be shown that:*n*c*n*c")
 
   FOR row = 0 TO e/2-1 DO
   { writef("( S%n ) ", row+e/2)
@@ -768,16 +768,16 @@ AND rs_demo() BE
     FOR col = e/2-1 TO 0 BY -1 DO writef(" S%n", col+row)
     writef(" ) ")
     wrch(row=0 -> 'x', ' ')
-    writef(" ( L%n )*n", row+1)
+    writef(" ( L%n )*n*c", row+1)
   }
 
   newline()
 
-  writef("*nwhere ")
+  writef("*n*cwhere ")
   FOR i = e-1 TO 0 BY -1 DO writef("S%n ", i)
   writef("= ")
   FOR i = e-1 TO 0 BY -1 DO writef("%x2 ", gf_poly_eval(R, gf_exp2!i))
-  writef("*n*n")
+  writef("*n*c*n*c")
 
   FOR row = 0 TO e/2-1 DO
   { writef("( %x2 ) ", gf_poly_eval(R, gf_exp2!(row+e/2)))
@@ -786,20 +786,20 @@ AND rs_demo() BE
     FOR col = e/2-1 TO 0 BY -1 DO writef(" %x2", gf_poly_eval(R, gf_exp2!(col+row)))
     writef(" ) ")
     wrch(row=0 -> 'x', ' ')
-    writef(" ( L%n )*n", row+1)
+    writef(" ( L%n )*n*c", row+1)
   }
 
   newline()
-  writef("*nThis can be solved using the Berlekamp-Massey algorithm.*n")
+  writef("*n*cThis can be solved using the Berlekamp-Massey algorithm.*n*c")
 
   rs_find_error_locator()
-  writef("*nLambda:   "); pr_poly(Lambda)  // 98 1B D0 01
+  writef("*n*cLambda:   "); pr_poly(Lambda)  // 98 1B D0 01
 
   writef("So ")
   FOR i = 1 TO e/2 DO writef(" L%n=%x2", i, Lambda!(e/2+1-i))
-  writef("*nand")
+  writef("*n*cand")
   FOR i = 0 TO e-1 DO writef(" S%n=%x2", i, S!(S!0+1-i))
-  writef("*n*n")
+  writef("*n*c*n*c")
 
   FOR row = 0 TO e/2-1 DO
   { LET a = 0
@@ -809,36 +809,36 @@ AND rs_demo() BE
       a := a XOR gf_mul(b,c)
       writef("%x2**%x2", b,c)
       TEST i=e/2-1
-      THEN writef(" = %x2    -- S%n = %x2*n",
+      THEN writef(" = %x2    -- S%n = %x2*n*c",
                   a, e/2+row, gf_poly_eval(R, gf_exp2!(e/2+row)))
       ELSE writef(" + ") 
     }
   }
 
-  writef("*nIf the coeff of x^i in R(x) is corrupt then*
-         * Lambda(2^-i) should be zero.*n*n")
+  writef("*n*cIf the coeff of x^i in R(x) is corrupt then*
+         * Lambda(2^-i) should be zero.*n*c*n*c")
 
-  writef("The solutions of Lambda(x)=0 can be solved by trial and error*n*n")
+  writef("The solutions of Lambda(x)=0 can be solved by trial and error*n*c*n*c")
 
   e_pos!0 := -1 // No error positions yet found.
   FOR i = 0 TO R!0 DO
   { LET Xi = gf_exp2!i
     LET a = gf_poly_eval(Lambda, gf_inverse(Xi))
     IF a=0 DO
-    { writef("Lambda(2^-%i2) = 0*n", i)
+    { writef("Lambda(2^-%i2) = 0*n*c", i)
       e_pos!0 := e_pos!0+1
       e_pos!(e_pos!0+1) := i
     }
   }
 
-  writef("*nSo the error locations numbered from the left are: ")
+  writef("*n*cSo the error locations numbered from the left are: ")
   pr_poly_dec(e_pos)
   newline()
 
   rs_find_error_evaluator(S, Lambda, Omega)
   newline()
 
-  writef("Checking Omega*n*n")
+  writef("Checking Omega*n*c*n*c")
 
   FOR row = 0 TO e/2-1 DO
   { LET sum = 0
@@ -850,17 +850,17 @@ AND rs_demo() BE
       writef("%x2**%x2", Sj, Li)
       sum := sum XOR gf_mul(Sj,Li)
     }
-    writef(" = %x2*n", sum)
+    writef(" = %x2*n*c", sum)
   }
   newline()
 
   writef("Lambda:     "); pr_poly(Lambda)
 
-  writef("The formal differential of Lambda(x) is*n*n")
+  writef("The formal differential of Lambda(x) is*n*c*n*c")
   writef("Ldash(x) = L1 + 2**L2**x^1 + 3**L3**x^2 + *
-                         *4**L4**x^3 + 5**L5**x^4 + ...*n")
-  writef("but here 2=1+1=0,  3=1+1+1=1,  4=1+1+1+1=0, etc, so:*n")
-  writef("Ldash(x) = L1 + L3**x^2 + L5**x^4 + ...*n*n")
+                         *4**L4**x^3 + 5**L5**x^4 + ...*n*c")
+  writef("but here 2=1+1=0,  3=1+1+1=1,  4=1+1+1+1=0, etc, so:*n*c")
+  writef("Ldash(x) = L1 + L3**x^2 + L5**x^4 + ...*n*c*n*c")
 
   gf_poly_copy(Lambda, Ldash)
   // Clear the coefficients of the even powers
@@ -870,13 +870,13 @@ AND rs_demo() BE
   writef("Ldash:      "); pr_poly(Ldash)
 
 
-  writef("*nLet Xi = 2^i and invXi = 2^-i*n")
-  writef("*nIf Lambda(invXi) = 0, i will correspond to*
-         * the position of an error in R*n*n")
+  writef("*n*cLet Xi = 2^i and invXi = 2^-i*n*c")
+  writef("*n*cIf Lambda(invXi) = 0, i will correspond to*
+         * the position of an error in R*n*c*n*c")
   
   writef("To correct the coefficient at this position*
-         * we subtract Yi defined as follows:*n")
-  writef("Yi = Xi ** Omega(invXi) / Ldash(invXi)*n")
+         * we subtract Yi defined as follows:*n*c")
+  writef("Yi = Xi ** Omega(invXi) / Ldash(invXi)*n*c")
 
   newline()
   FOR i = 0 TO R!0 DO
@@ -890,9 +890,9 @@ AND rs_demo() BE
       LET q = gf_div(OmegaInvXi, LdashInvXi)
       LET Yi = gf_mul(Xi, q)
       writef("j=%i2 i=%i2 Xi=%x2 invXi=%x2 OmegaInvXi=%x2*
-             * LdashInvXi=%x2 q=%x2 Yi=%x2*n",
+             * LdashInvXi=%x2 q=%x2 Yi=%x2*n*c",
              j, i, Xi, invXi, OmegaInvXi, LdashInvXi, q, Yi)
-      writef("So add %x2 to %x2 at position %i2 in R to give %x2*n*n",
+      writef("So add %x2 to %x2 at position %i2 in R to give %x2*n*c*n*c",
                      Yi,    R!j,            j,              R!j XOR Yi)
       R!j := R!j XOR Yi // Subtract Yi
     }

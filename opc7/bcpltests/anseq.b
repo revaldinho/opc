@@ -20,7 +20,7 @@ FOR i = 0 TO 31 DO
   FOR j = -1 TO 1 DO
   { LET a = x+j
     LET r = sqrt(a)
-    writef("%x8: r=%x8  r****2=%x8  (r+1)****2=%x8*n", 
+    writef("%x8: r=%x8  r****2=%x8  (r+1)****2=%x8*n*c", 
             a,     r,          r*r,            (r+1)*(r+1))
   }
 }

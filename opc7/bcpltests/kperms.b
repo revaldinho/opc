@@ -9,10 +9,10 @@ $( LET a, b, c, d = 1, 3, 1, 2
    word := v
    word%0 := maxn
    count, len := 0, 0
-   writef("*nAnagrams with %n As, %n Bs, %n Cs and %n Ds*n*n",
+   writef("*n*cAnagrams with %n As, %n Bs, %n Cs and %n Ds*n*c*n*c",
                            a,     b,     c,        d)
    p4(0, a, b, c, d)
-   writef("*n*nCount = %n*n", count)
+   writef("*n*c*n*cCount = %n*n*c", count)
    RESULTIS 0
 $)
 

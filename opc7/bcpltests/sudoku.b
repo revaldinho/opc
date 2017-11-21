@@ -94,7 +94,7 @@ LET start() = VALOF
 
 //UNLESS rdargs("r1/n,r2/n,r3/n,r4/n,r5/n,r6/n,r7/n,r8/n,r9/n",
 //               argv, 50) DO
-//{ writef("Bad arguments for SUDOKU*n")
+//{ writef("Bad arguments for SUDOKU*n*c")
 //  RESULTIS 0
 //}
 //
@@ -113,11 +113,11 @@ LET start() = VALOF
 //}
 
   initboard(r1,r2,r3,r4,r5,r6,r7,r8,r9)
-  writef("*nInitial board*n")
+  writef("*n*cInitial board*n*c")
   prboard()
   count := 0
   ta1()
-  writef("*n*nTotal number of solutions: %n*n", count)
+  writef("*n*c*n*cTotal number of solutions: %n*n*c", count)
   RESULTIS 0
 }
 
@@ -293,7 +293,7 @@ AND ti9() BE try(@i9, suc, @rowibits, @col9bits, @squ9bits)
 // suc is only called when a solution has been found.
 AND suc() BE
 { count := count + 1
-  writef("*nSolution number %n*n", count)
+  writef("*n*cSolution number %n*n*c", count)
   prboard()
 }
 
@@ -312,7 +312,7 @@ AND c(n) = VALOF SWITCHON n INTO
 }
 
 AND prboard() BE
-{ LET form = "%c %c %c   %c %c %c   %c %c %c*n"
+{ LET form = "%c %c %c   %c %c %c   %c %c %c*n*c"
   newline()
   writef(form, c(a1),c(a2),c(a3),c(a4),c(a5),c(a6),c(a7),c(a8),c(a9))
   writef(form, c(b1),c(b2),c(b3),c(b4),c(b5),c(b6),c(b7),c(b8),c(b9))

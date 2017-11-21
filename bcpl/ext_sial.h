@@ -179,9 +179,9 @@ f_ldres=    149
 // Extensions
 
 f_ext_asl=        155    //  a := b << 1
-f_ext_asr=        156    //  a := b >> 1
+f_ext_lsr=        156    //  a := b >> 1
 f_ext_asl_a=      157    //  a := a << 1
-f_ext_asr_a=      158    //  a := a >> 1
+f_ext_lsr_a=      158    //  a := a >> 1
 
 f_ext_jeq0=      159    //   as f_jeq0 but no need for compare as Z flag set by prev. instruction
 f_ext_jne0=     160    //   as f_jne0 but no need for compare as Z flag set by prev. instruction

@@ -14,16 +14,16 @@ LET start() = VALOF
 
   numfromstr(pi, upb, "3.14159265358979323846264338327950*
                        *288419716939937510582097494459230")
-  writef("*nPi is*n")
+  writef("*n*cPi is*n*c")
   print(pi, 0)
 
   // Calculate root 163
   sqrt163(root163)
-  writef("*nRoot 163 is*n")
+  writef("*n*cRoot 163 is*n*c")
   print(root163, 0)
 
   mult(x, pi, root163)
-  writef("*nPi times Root 163 is*n")
+  writef("*n*cPi times Root 163 is*n*c")
   print(x, 0)
 
   // Divide x by 2**10 (=1024) to make the computation
@@ -40,7 +40,7 @@ LET start() = VALOF
     }
   }
   // Output the result
-  writef("*ne to the Pi root 163 is*n")
+  writef("*n*ce to the Pi root 163 is*n*c")
   print(ex, exponent)
   RESULTIS 0
 }
@@ -101,7 +101,7 @@ AND mult(x, y, z) BE
 
 AND exp(ex, x) BE
 { // This calculates e to the power x by summing the series
-  // whose nth term is x**n/n!
+  // whose nth term is x**n*c/n!
   LET n = 0
   LET term = VEC upb
   numfromstr(term, upb, "1.")

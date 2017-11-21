@@ -26,7 +26,7 @@ LET setdata() BE
 
 LET start() = VALOF
 { setdata()
-  writef("Solving a 3-SAT problem with %n terms*n*n", upb+1)
+  writef("Solving a 3-SAT problem with %n terms*n*c*n*c", upb+1)
   try(0, all, 0, 0)
   RESULTIS 0
 }

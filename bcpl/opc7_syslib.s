@@ -274,6 +274,7 @@ __xmod: ## Find signed modulus of a MOD b
         # Sys_(sa)rdch  =  10
         # Sys_callnative=  53
         # Sys_quit      =   0
+        # Sys_setcount  =  -1
         #
         # Entry -
         #     Routine will be called with BCPL stack frame
@@ -299,6 +300,7 @@ __xmod: ## Find signed modulus of a MOD b
         EQU     K_Sys_sardch,    10
         EQU     K_Sys_rdch,      10
         EQU     K_Sys_quit,       0
+        EQU     K_Sys_setcount,  -1
 
 __sys:
                                         # BCPL routine entry boilerplate:
@@ -320,7 +322,11 @@ __sys:
         z.lmov  pc,__Sys_sawrch
         cmp     r1,r0,K_Sys_sardch
         z.lmov  pc,__Sys_sardch
-        ## Any undecoded calls result in system exit
+                                        # Small subset of codes for unimplemented calls which use a dummy function
+                                        # rather than causing a system quite
+        cmp     r1,r0,K_Sys_setcount    
+        z.lmov  pc,__Sys_dummy
+        ## Any other undecoded calls result in system exit
         lmov    pc,__Sys_quit
 __sys_return:
                                          # BCPL routine exit boilerplate:
@@ -328,7 +334,21 @@ __sys_return:
         ld r11,r11                       # restore old stack pointer
         mov pc,r4                        # return to calling routine
 
+        # ------------------------------------------------------------
+        # Sys_dummy()
+        #
+        # Provide a dummy call and return for some as-yet-unimplemented
+        # functions to use.
+        #
+        # Entry:
+        # Exit:
+        #       r1  - holds data returned from function
+        # ------------------------------------------------------------
 
+__Sys_dummy:      
+        RTS     ()                # return via sys function
+
+        
         # ------------------------------------------------------------
         # Sys_EXT()
         #
