@@ -403,7 +403,10 @@ def optimize_sial( sialtext):
             if opcode in (sialop['f_jne0'],sialop['f_jeq0'], sialop['f_jge0'], sialop['f_jls0']):
                 # OK to skip over a STO which will preserve flags
                 if ( sialop['f_sp'] <= prev_opcode <= sialop['f_sl']) :
-                    prev_opcode = int((sialtext[i-2].split())[0][1:])
+                    try:
+                        prev_opcode = int((sialtext[i-2].split())[0][1:])
+                    except IndexError as e:
+                        pass
                 if ( sialop["f_lp"] <= prev_opcode <= sialop["f_lm"]) or \
                    ( sialop['f_add'] <= prev_opcode <= sialop['f_sub']) or \
                    ( sialop['f_and'] <= prev_opcode <= sialop['f_eqv']) or \
@@ -560,10 +563,21 @@ def process_sial(sialtext):
             elif opcode == sialop['f_ag'] :       # ag        Gn         a := a + G!n
                 code("ld r4,r12,%d" % getnum(fields[1]), line)   
                 code("add r1,r4")
-            elif opcode == sialop['f_a'] :        # a         Kn         a := a + n
-                n = getnum(fields[1])
-                code("add r1,r0,%d" % n, line)   
-            elif opcode == sialop['f_s'] :        # s         Kn         a := a - n
+            elif opcode in (sialop['f_a'], sialop['f_s']) :        # a         Kn         a := a + n
+                operation = "add" if opcode == sialop['f_a'] else "sub"
+                
+                try:                                               # s         Kn         a := a - n                    
+                    n = getnum(fields[1])
+                    code("%s r1,r0,%d" % (operation,n), line)
+                except BaseException as e:
+                    if cpu_target == "opc7":
+                        code ("",line)
+                        for s in getlongnum(fields[1], False ):
+                            code(s);                        
+                        code("%s %s,r4" % (operation,dest_r) )
+                    else:
+                        raise e
+            elif opcode == sialop['f_s'] :        
                 n = getnum(fields[1])
                 code("sub r1,r0,%d" % n, line)   
             elif opcode in (sialop['f_lkp'], sialop['f_lkg']):
@@ -667,9 +681,13 @@ def process_sial(sialtext):
                     code("mov r2,r1", line)
                     code("mov r1,r0,%d" % n)
                 else:
-                    n = getnum20(fields[1])
-                    code("mov r2,r1", line)
-                    code("lmov r1,%d" % n)
+                    code("mov r2,r1", line)                    
+                    try:
+                        n = getnum20(fields[1])
+                        code("lmov r1,%d" % n)
+                    except BaseException as e:
+                        n = getlongnum(fields[1])
+                        code("mov r1,r4")                                                
             elif opcode == sialop['f_atblp'] :    # atblp     Pn         b := a; a := P!n            
                 code("mov r2,r1", line)
                 code("ld r1,r11,%d" % getnum(fields[1]))                        

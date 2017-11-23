@@ -1,3 +1,12 @@
+
+        #
+        # Standard global variables (see libhdr.h) offset from the global pointer
+        #
+        EQU     rootnode,            9  
+        EQU	result2,            10
+        EQU	returncode,         11
+        EQU	cis,                12
+        EQU	cos,                13
         # --------------------------------------------------------------
         #
         # __pbyt,__xpbyt,__gbyt, __xgbyt
@@ -84,7 +93,154 @@ common_gbyt:
         cmp     r7,r0,0x03         # last byte ?
         z.bperm r1,r5,0x4443       # if zero get next byte and zero others
         RTS     ()
-        
+
+        # -----------------------------------------------------------------
+        # __muldiv
+        #
+        # Multiply 2 32 bit numbers to get a 64 bit number and then
+        # divide that by another 32 bit number to return 32b quotient
+        # and remainder.
+        #
+        # (Q,R) = (A * B) / C
+        #
+        # This is a wrapper for the unsigned umuldiv routine
+        #
+        # Handling signs for muldiv:
+        # 
+        # A B C    Q R
+        # + + +    + +
+        # + + -    - +
+        # + - +    - -      ie R = + if Sa = Sb      else -
+        # + - -    + -         Q = - if Sa ^ Sb ^ Sc else +
+        # - + +    - -
+        # - + -    + -
+        # - - +    + +
+        # - - -    - +
+        # -----------------------------------------------------------------        
+        # Entry
+        # - R1 holds A
+        # - R2 holds B
+        # - R3 holds C
+        # - R13 holds return address
+        # - R14 holds global stack pointer
+        #
+        # Exit
+        # - R1 Quotient
+        # - R2 Remainder
+        # - R3 preserved
+        # - R4 used as workspace and trashed
+        # - R5 used as workspace and preserved
+        # - all other registers preserved
+        # -----------------------------------------------------------------
+__muldiv:
+        PUSH    (r13)
+        PUSH 	(r5)
+        PUSH 	(r3)        
+        PUSH 	(r2)
+        PUSH 	(r1)
+        cmp     r1,r0         # ABS(A)
+        mi.not  r1,r1,-1
+        cmp     r2,r0         # ABS(B)
+        mi.not  r2,r2,-1
+        cmp     r3,r0         # ABS(C)
+        mi.not  r3,r3,-1        
+        JSR  	(__umuldiv)   # quotient in R1, rem in R2 on exit
+        mov  	r5,r0         # Zero R5 to start accumulating sign bits
+        POP  	(r4)          # Get A
+        rol 	r0,r4         # Get sign of A in Carry
+        rol  	r5,r0         # and into LSB of r5
+        POP  	(r4)          # Get B
+        rol  	r0,r4         # Get sign of B in carry
+        c.xor   r5,r0,1       # XOR with sign of A if carry set
+        cmp     r5,r0        
+        nz.not  r2,r2,-1      # if nonzero (Sa!=Sb) then negate Remainder
+        POP     (r4)          # Get C
+        rol     r0,r4         # Get sign of C in carry        
+        c.xor   r5,r0,1       # XOR with (Sa XOR Sb) if carry set
+        cmp     r5,r0
+        nz.not  r1,r1,-1      # if nonzero (Sa ^ Sb ^ Sc) then negate Quotient
+        mov     r3,r4         # restore r3
+        POP     (r5)          # restore r5
+        POP     (r13)         # restore return address
+        RTS     ()
+        # -----------------------------------------------------------------
+        # __umuldiv
+        #
+        # Multiply 2 32 bit numbers to get a 64 bit number and then
+        # divide that by another 32 bit number to return quotient and remainder.
+        #
+        # (Q,R) = (A * B) / C
+        # 
+        # Entry
+        # - R1 holds A
+        # - R2 holds B
+        # - R3 holds C
+        # - R13 holds return address
+        # - R14 holds global stack pointer
+        #
+        # Exit
+        # - R1 Quotient
+        # - R2 Remainder
+        # - R3 preserved
+        # - R4 used as workspace and trashed
+        # - R5,6  used as workspace and preserved
+        # - all other registers preserved
+        #
+        # ------------------------------------------------------------------
+        # Multipler Register Usage
+        #                _____________ _____________
+        #               |____ r0 _____|_____ r5 ____|  Multiplicand A
+        # Working Set   |____ r2 _____|_____ r1 ____|  Product
+        #               |____ r4 _____|_____ r3 ____|  Multiplicand B
+        #               
+        #      (B starts in r3 but left shifts during operation into r4)
+        # ------------------------------------------------------------------
+__umuldiv:
+        PUSH    (r6)
+        PUSH    (r5)
+        mov     r6,r3         # Put divider for second part of operation in r6
+        lsr     r5,r1         # Shift right multiplicant A into r5, LSB into C
+        mov     r3,r2         # Move B into r3 (preserve C)
+        mov     r4,r0         # Zero MSW of multiplicand B (preserve C)        
+        mov     r1,r0         # initialise product LSW  (preserve C)
+        mov     r2,r0         # initialise product MSW  (preserve C)
+umd_l0: nc.lmov pc,umd_l2     # no carry - nothing to add
+        add     r1,r3         # else add B into acc if carry from shift
+        nc.add  r2,r4         # and then add the upper word of B if no carry
+        c.add   r2,r4,1       # or add upper word with carry (assume that a no carry add above never results in a carry)
+umd_l2: ASL     (r3)          # multiply B x 2
+        rol     r4,r4
+        lsr     r5,r5         # shift A to check LSB
+        nz.lmov pc,umd_l0     # if A is zero then exit else loop again (preserving carry)
+        nc.lmov pc,umd_l3     # no carry - go direct to division routine
+        add     r1,r3         # add B into acc if carry from final shift
+        nc.add  r2,r4         # and then add the upper word of B if no carry
+        c.add   r2,r4,1       # or add upper word with carry (assume that a no carry add above never results in a carry)        
+        # ------------------------------------------------------------------
+        # Division
+        #                ____________ ____________
+        # Working Set   |____ r2 ____|____ r1 ____| Remainder Quotient (Q shifting in from RHS)
+        #               |____ r3 ____|____ r0 ____| Divisor in MSW
+        # ------------------------------------------------------------------
+umd_l3: mov     r3,r6         # restore r3
+        cmp     r3,r0         # Bail out on divide by zero
+        z.lmov  pc,umd_div0                
+        mov     r4,r0,32      # loop counter
+umd_l1: ASL     (r1)          # Shift RNQ 1 place left
+        rol     r2,r2
+        cmp     r2,r3         # RNQ >= divisor ?
+        pl.sub  r2,r3         # Yes, then do subtract for real RNQ = RNQ - D .. and 'plus' flag will be regenerated..
+        pl.add  r1,r0,1       # ..and used to selectively increment quotient (no need to propagate a carry to MSW)
+        sub     r4,r0,1       # decrement loop counter
+        nz.lmov pc,umd_l1                              
+        POP     (r5)
+        POP     (r6)        
+        RTS     ()            # Exit r1 = quotient    ; r2 = remainder
+umd_div0:
+        # Should do a system abort here with divide by zero message
+        POP     (r5)
+        POP     (r6)        
+        RTS     ()
         # -----------------------------------------------------------------
         #
         # qmul32, __mulu
@@ -264,16 +420,7 @@ __xmod: ## Find signed modulus of a MOD b
         # sys()
         #
         # Provide a sys() call at global_vector 3 for BCPL to handle
-        # the following functions (numbering to match libhdr.h)
-        #
-        # Sys_EXT       =  68
-        # Sys_getvec    =  21
-        # Sys_freevec   =  22
-        # Sys_(sa)wrch  =  11
-        # Sys_(sa)rdch  =  10
-        # Sys_callnative=  53
-        # Sys_quit      =   0
-        # Sys_setcount  =  -1
+        # the following functions in EQU directives (numbering to match libhdr.h)
         #
         # Entry -
         #     Routine will be called with BCPL stack frame
@@ -290,8 +437,9 @@ __xmod: ## Find signed modulus of a MOD b
         #     r11 restored to original value
         #     Other registers dependent on system call
         # ------------------------------------------------------------
-
         EQU     K_Sys_EXT,       68
+        EQU     K_Sys_cputime,   30
+        EQU     K_Sys_muldiv,    26 
         EQU     K_Sys_getvec,    21
         EQU     K_Sys_freevec,   22
         EQU     K_Sys_sawrch,    11
@@ -321,9 +469,14 @@ __sys:
         z.lmov  pc,__Sys_sawrch
         cmp     r1,r0,K_Sys_sardch
         z.lmov  pc,__Sys_sardch
+        cmp     r1,r0,K_Sys_muldiv
+        z.lmov  pc,__Sys_muldiv
+        
                                         # Small subset of codes for unimplemented calls which use a dummy function
                                         # rather than causing a system quite
         cmp     r1,r0,K_Sys_setcount    
+        z.lmov  pc,__Sys_dummy
+        cmp     r1,r0,K_Sys_cputime    
         z.lmov  pc,__Sys_dummy
         ## Any other undecoded calls result in system exit
         lmov    pc,__Sys_quit
@@ -347,7 +500,35 @@ __sys_return:
 __Sys_dummy:      
         RTS     ()                # return via sys function
 
-        
+        # ------------------------------------------------------------
+        # Sys_muldiv()
+        #
+        # Call library muldiv function
+        #
+        # sys( Sys_muldiv, A, B, C )
+        #
+        # Entry:
+        #       r4 - holds first parameter
+        #       r13- hold return address (to clean up stack in main sys fn)
+        #       Mem[r11+5] points to parameter2 ...
+        #
+        # Exit:
+        #       r1  - quotient
+        #       r2  - remainder
+        # ------------------------------------------------------------
+__Sys_muldiv:
+        PUSH    (r13)
+        PUSH    (r3)
+        PUSH    (r2)
+        mov     r1,r4             # put parameter A in r1
+        ld      r2,r11,5          # put parameter B in r2
+        ld      r3,r11,6          # put parameter C in r3
+        JSR     (__muldiv)        # On return quotient in R1 and Remainder in R2
+        sto     r2,r12,result2    # Need to put second result into global vector variable 'result2'
+        POP     (r2)              # restore original r2 = Accumulator B
+        POP     (r3)              # restore original r3 = Accumulator C
+        POP     (r13)
+        RTS     ()                # return via sys function
         # ------------------------------------------------------------
         # Sys_EXT()
         #
@@ -368,7 +549,7 @@ __Sys_EXT:
         PUSH    (r2)
         ld      r1, r11,5         # get parameter1 in r1
         mov     r2, r11,6         # use r2 to point to vector of other parameters
-        jsr     pc, r4            # call user routine
+        jsr     r13, r4            # call user routine
         POP     (r2)
         POP     (r13)
         RTS     ()                # return via sys function
@@ -458,4 +639,5 @@ __Sys_sardch:
         POP     (r12)
         POP     (r13)
         RTS     ()
+
 

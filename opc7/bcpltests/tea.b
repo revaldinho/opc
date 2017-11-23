@@ -40,28 +40,28 @@ AND decrypt(v, n, k) BE // precondition: n>1
 
 AND start() = VALOF
 { data := getvec(SIZE)
-writef("%n*n", DELTA)
+writef("%n*n*c", DELTA)
 
   UNLESS data DO
-  { writef("Insufficient space*n")
+  { writef("Insufficient space*n*c")
     RESULTIS 20
   }
 
-  writef("Testing DJW's tea encryption algorithm*n")
+  writef("Testing DJW's tea encryption algorithm*n*c")
   FOR i=0 TO SIZE DO data!i := i
   kt := TABLE #x00000003,#x00000002,#x00000001,#x00000000
 
-  writef("*nKey Table*n");      pr(kt, 4)
+  writef("*n*cKey Table*n*c");      pr(kt, 4)
 
-  writef("*nRaw data*n");       pr(data, 32)
+  writef("*n*cRaw data*n*c");       pr(data, 32)
 
   encrypt(data, SIZE, kt)
 
-  writef("*nEncrypted data*n"); pr(data, 32)
+  writef("*n*cEncrypted data*n*c"); pr(data, 32)
 
   decrypt(data, SIZE, kt)
 
-  writef("*nDecrypted data*n"); pr(data, 32)
+  writef("*n*cDecrypted data*n*c"); pr(data, 32)
 
   freevec(data)
 

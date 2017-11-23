@@ -10,8 +10,10 @@ GLOBAL {
   InvMixColumns_st
   Cipher
   InvCipher
-  prstate
-  prbytes
+  prstate_s
+  prstate_t
+  prv
+  prmat
 
   // The s state matrix
   s00; s01; s02; s03
@@ -24,14 +26,12 @@ GLOBAL {
   t10; t11; t12; t13
   t20; t21; t22; t23
   t30; t31; t32; t33
-
-  stateS
-  stateT
 }
 
 MANIFEST {
-  Keylen=16   // 16 = 4x4
-  Nr=10       // Number of rounds
+  n=4         // 4x4 matrices are being used
+  Keylen=2*n*n
+  Nr=14       // Number of rounds
 }
 
 // The ShiftRows() function shifts the rows in the state to the left.
@@ -55,19 +55,24 @@ LET InvShiftRows_ts() BE
 // state matrix with values in the S-box.
 LET SubBytes_ts() BE
 { // Apply sbox from t state to s state
-  FOR i = 0 TO 15 DO stateS!i := sbox%(stateT!i)
+  s00, s01, s02, s03 := sbox%t00, sbox%t01, sbox%t02, sbox%t03
+  s10, s11, s12, s13 := sbox%t10, sbox%t11, sbox%t12, sbox%t13
+  s20, s21, s22, s23 := sbox%t20, sbox%t21, sbox%t22, sbox%t23
+  s30, s31, s32, s33 := sbox%t30, sbox%t31, sbox%t32, sbox%t33
 }
 
 // The InvSubBytes Function Substitutes the values in the
 // state matrix with values in an RS-box.
 LET InvSubBytes_st() BE
 { // Apply rsbox from s state to t state
-  FOR i = 0 TO 15 DO stateT!i := rsbox%(stateS!i)
+  t00, t01, t02, t03 := rsbox%s00, rsbox%s01, rsbox%s02, rsbox%s03
+  t10, t11, t12, t13 := rsbox%s10, rsbox%s11, rsbox%s12, rsbox%s13
+  t20, t21, t22, t23 := rsbox%s20, rsbox%s21, rsbox%s22, rsbox%s23
+  t30, t31, t32, t33 := rsbox%s30, rsbox%s31, rsbox%s32, rsbox%s33
 }
 
 LET inittables() BE
-{ // This assuming a little ender 32-bit implementation.
-  sbox  := TABLE 
+{ sbox  := TABLE 
     #x7B777C63, #xC56F6BF2, #x2B670130, #x76ABD7FE,
     #x7DC982CA, #xF04759FA, #xAFA2D4AD, #xC072A49C,
     #x2693FDB7, #xCCF73F36, #xF1E5A534, #x1531D871,
@@ -106,44 +111,53 @@ LET inittables() BE
 
 LET AddRoundKey_st(i) BE
 { // Add key round i from s state to t state
-  LET K = @Rkey!(16*i)   // n = number of elements per row
-  FOR i = 0 TO 15 DO stateT!i := stateS!i XOR K!i
+  LET K = @Rkey!(n*i)   // n = number of elements per row
+
+  t00, t01, t02, t03 := s00 XOR K%00, s01 XOR K%04, s02 XOR K%08, s03 XOR K%12
+  t10, t11, t12, t13 := s10 XOR K%01, s11 XOR K%05, s12 XOR K%09, s13 XOR K%13
+  t20, t21, t22, t23 := s20 XOR K%02, s21 XOR K%06, s22 XOR K%10, s23 XOR K%14
+  t30, t31, t32, t33 := s30 XOR K%03, s31 XOR K%07, s32 XOR K%11, s33 XOR K%15
 }
 
 LET AddRoundKey_ts(i) BE
 { // Add key round i from s state to t state
-  LET K = @Rkey!(16*i)   // n = number of elements per row
-  FOR i = 0 TO 15 DO stateS!i := stateT!i XOR K!i
+  LET K = @Rkey!(n*i)   // n = number of elements per row
+
+  s00, s01, s02, s03 := t00 XOR K%00, t01 XOR K%04, t02 XOR K%08, t03 XOR K%12
+  s10, s11, s12, s13 := t10 XOR K%01, t11 XOR K%05, t12 XOR K%09, t13 XOR K%13
+  s20, s21, s22, s23 := t20 XOR K%02, t21 XOR K%06, t22 XOR K%10, t23 XOR K%14
+  s30, s31, s32, s33 := t30 XOR K%03, t31 XOR K%07, t32 XOR K%11, t33 XOR K%15
 }
 
 LET KeyExpansion(key) BE
 { LET rcon = 1
 
-  // The first round key is the cipher key itself,
-  // stored column by column.
-  Rkey!00, Rkey!01, Rkey!02, Rkey!03 := key%00, key%04, key%08, key%12
-  Rkey!04, Rkey!05, Rkey!06, Rkey!07 := key%01, key%05, key%09, key%13
-  Rkey!08, Rkey!09, Rkey!10, Rkey!11 := key%02, key%06, key%10, key%14
-  Rkey!12, Rkey!13, Rkey!14, Rkey!15 := key%03, key%07, key%11, key%15
+  // The first two round keys are the
+  // first and last 16 bytes of the cipher key.
+  FOR i = 0 TO Keylen-1 DO Rkey%i := key%i
 
-  // Add 10 more keys to the round schedule
-  FOR i = 1 TO 10 DO
-  { LET p = @Rkey!(16*i) // Pointer to space for key in round i
-    LET q = p-16        // Pointer to round key i-1
+  // Add 7 more key pairs to the round schedule
+  // making a total of 16 16-byte keys although
+  // only 15 are used.
+  FOR i = 1 TO 7 DO
+  { LET p = Keylen*i
+    LET q = p-Keylen
 
-    p!00 := q!00 XOR sbox%(q!07) XOR rcon
-    p!04 := q!04 XOR sbox%(q!11)
-    p!08 := q!08 XOR sbox%(q!15)
-    p!12 := q!12 XOR sbox%(q!03)
+    Rkey%(p+0) := Rkey%(q+0) XOR sbox%(Rkey%(p-3)) XOR rcon
+    Rkey%(p+1) := Rkey%(q+1) XOR sbox%(Rkey%(p-2))
+    Rkey%(p+2) := Rkey%(q+2) XOR sbox%(Rkey%(p-1))
+    Rkey%(p+3) := Rkey%(q+3) XOR sbox%(Rkey%(p-4))
 
-    FOR j = 1 TO 3 DO
-    { p!(00+j) := q!(00+j) XOR p!(j-01)
-      p!(04+j) := q!(04+j) XOR p!(j+03)
-      p!(08+j) := q!(08+j) XOR p!(j+07)
-      p!(12+j) := q!(12+j) XOR p!(j+11)
-    }
+    FOR q = p+4 TO p+15 DO Rkey%q := Rkey%(q-4) XOR Rkey%(q-Keylen)
 
     rcon := mul(2, rcon)
+
+    Rkey%(p+16) := Rkey%(q+16) XOR sbox%(Rkey%(p+12))
+    Rkey%(p+17) := Rkey%(q+17) XOR sbox%(Rkey%(p+13))
+    Rkey%(p+18) := Rkey%(q+18) XOR sbox%(Rkey%(p+14))
+    Rkey%(p+19) := Rkey%(q+19) XOR sbox%(Rkey%(p+15))
+
+    FOR q = p+20 TO p+31 DO Rkey%q := Rkey%(q-4) XOR Rkey%(q-Keylen)
   }
 }
 
@@ -229,54 +243,43 @@ LET Cipher(in, out) BE
   s20, s21, s22, s23 := in%02, in%06, in%10, in%14
   s30, s31, s32, s33 := in%03, in%07, in%11, in%15
 
-  IF tracing DO
-  { writef("%i2.input  ", 0); prstate(stateS)
-    writef("%i2.k_sch  ", 0); prstate(Rkey)
-  }
+  IF tracing DO { writef("%i2.input  ", 0); prstate_s() }
+  IF tracing DO { writef("%i2.k_sch  ", 0); prv(Rkey) }
 
   // Add the First round key to the state before starting the rounds.
   AddRoundKey_st(0) 
 
   FOR round = 1 TO Nr-1 DO
-  { IF tracing DO
-    { writef("%i2.start  ", round); prstate(stateT) }
+  {
+    IF tracing DO { writef("%i2.start  ", round); prstate_t() }
 
     SubBytes_ts()
-    IF tracing DO
-    { writef("%i2.s_box  ", round); prstate(stateS) }
+    IF tracing DO { writef("%i2.s_box  ", round); prstate_s() }
 
     ShiftRows_st()
-    IF tracing DO
-    { writef("%i2.s_row  ", round); prstate(stateT) }
+    IF tracing DO { writef("%i2.s_row  ", round); prstate_t() }
 
     MixColumns_ts()
-    IF tracing DO
-    { writef("%i2.s_col  ", round); prstate(stateS) }
+    IF tracing DO { writef("%i2.s_col  ", round); prstate_s() }
 
     AddRoundKey_st(round)
-    IF tracing DO
-    { writef("%i2.k_sch  ", round); prstate(@Rkey!(16*round)) }
+    IF tracing DO { writef("%i2.k_sch  ", round); prv(@Rkey!(4*round)) }
   }
   
   // The last round is given below.
-  IF tracing DO
-  { writef("%i2.start  ", Nr); prstate(stateT) }
+  IF tracing DO { writef("%i2.start  ", Nr); prstate_t() }
 
   SubBytes_ts()
-  IF tracing DO
-  { writef("%i2.s_box  ", Nr); prstate(stateS) }
+  IF tracing DO { writef("%i2.s_box  ", Nr); prstate_s() }
 
   ShiftRows_st()
-  IF tracing DO
-  { writef("%i2.s_row  ", Nr); prstate(stateT) }
+  IF tracing DO { writef("%i2.s_row  ", Nr); prstate_t() }
 
   // Do not mix the columns in the final round
 
   AddRoundKey_ts(Nr)
-  IF tracing DO
-  { writef("%i2.k_sch  ", Nr); prstate(@Rkey!(16*Nr))
-    writef("%i2.output ", Nr); prstate(stateS)
-  }
+  IF tracing DO { writef("%i2.k_sch  ", Nr); prv(@Rkey!(4*Nr)) }
+  IF tracing DO { writef("%i2.output ", Nr); prstate_s() }
 
   // The encryption process is over.
   // Copy the state array to output array.
@@ -285,6 +288,7 @@ LET Cipher(in, out) BE
   out%02, out%06, out%10, out%14 := s20, s21, s22, s23
   out%03, out%07, out%11, out%15 := s30, s31, s32, s33
 
+  //abort(1000)
 }
 
 LET InvCipher(in, out) BE
@@ -294,51 +298,44 @@ LET InvCipher(in, out) BE
   s20, s21, s22, s23 := in%02, in%06, in%10, in%14
   s30, s31, s32, s33 := in%03, in%07, in%11, in%15
 
-  IF tracing DO
-  { writef("%i2.iinput ", 0); prstate(stateS)
-    writef("%i2.ik_sch ", 0); prstate(@Rkey!(16*Nr))
-  }
+  IF tracing DO { writef("%i2.iinput ", 0); prstate_s() }
+  IF tracing DO { writef("%i2.ik_sch ", 0); prv(@Rkey!(4*Nr)) }
 
   // Add the Last round key to the state before starting the rounds.
   AddRoundKey_st(Nr)
 
   FOR round = Nr-1 TO 1 BY -1 DO
-  { IF tracing DO
-    { writef("%i2.istart ", Nr-round); prstate(stateT) }
-
+  { 
+    IF tracing DO { writef("%i2.istart ", Nr-round); prstate_t() }
     InvShiftRows_ts()
-    IF tracing DO
-    { writef("%i2.is_row ", Nr-round); prstate(stateS) }
+
+    IF tracing DO { writef("%i2.is_row ", Nr-round); prstate_s() }
 
     InvSubBytes_st()
-    IF tracing DO
-    { writef("%i2.is_box ", Nr-round); prstate(stateT) }
+    IF tracing DO { writef("%i2.is_box ", Nr-round); prstate_t() }
 
     AddRoundKey_ts(round)
-    IF tracing DO
-    { writef("%i2.ik_sch ", Nr-round); prstate(@Rkey!(16*round))
-      writef("%i2.is_add ", Nr-round); prstate(stateS)
-    }
+    IF tracing DO { writef("%i2.ik_sch ", Nr-round); prv(@Rkey!(4*round)) }
+    IF tracing DO { writef("%i2.is_add ", Nr-round); prstate_s() }
 
     InvMixColumns_st()
+//abort(1000)
   }
 
-  IF tracing DO
-  { writef("%i2.istart ", Nr); prstate(stateT) }
+  IF tracing DO { writef("%i2.istart ", Nr); prstate_t() }
   
   // The final round is given below.
   InvShiftRows_ts()
-  IF tracing DO { writef("%i2.is_row ", Nr); prstate(stateS) }
+  IF tracing DO { writef("%i2.is_row ", Nr); prstate_s() }
 
   InvSubBytes_st()
-  IF tracing DO { writef("%i2.is_box ", Nr); prstate(stateT) }
+  IF tracing DO { writef("%i2.is_box ", Nr); prstate_t() }
 
   // Do not mix the columns in the final round
   AddRoundKey_ts(0)
-  IF tracing DO
-  { writef("%i2.ik_sch ", Nr); prstate(@Rkey!(16*0))
-    writef("%i2.ioutput", Nr); prstate(stateS)
-  }
+  IF tracing DO { writef("%i2.ik_sch ", Nr); prv(@Rkey!(4*0)) }
+
+  IF tracing DO { writef("%i2.ioutput", Nr); prstate_s() }
 
   // The decryption process is over.
   // Copy the state array to output array.
@@ -351,22 +348,23 @@ LET InvCipher(in, out) BE
 LET start() = VALOF
 { LET argv = VEC 50
   LET plain = TABLE #X33221100, #X77665544, #XBBAA9988, #XFFEEDDCC
-  LET key   = TABLE #x03020100, #x07060504, #x0B0A0908, #x0F0E0D0C
+  LET key   = TABLE #x03020100, #x07060504, #x0B0A0908, #x0F0E0D0C,
+                    #x13121110, #x17161514, #x1B1A1918, #x1F1E1D1C
   // The plain text and key are the same as given in the detailed
-  // example in Appendix C.1 in
+  // example in Appendix C.3 in
   // csrc.nist.gov/publications/fips/fips197/fips-197.pdf
   // It provides a useful check that this implementaion is correct.
-  // Just execute: aes128 -t
+  // Just execute: aes256 -t
   LET in  = VEC 63
   LET out = VEC 63
-  LET v   = VEC 10*16+15 // For the key schedule of 11 keys
+  LET v   = VEC 4*15+3 // For the key schedule of 16 keys
+                       // although only 15 are used.
   LET countExpand, countCipher, countInvCipher = 0, 0, 0
 
   Rkey := v
-  stateS, stateT := @s00, @t00
 
   UNLESS rdargs("-t/s", argv, 50) DO
-  { writef("Bad arguments for aes128*n*c")
+  { writef("Bad arguments for aes256*n*c")
     RESULTIS 0
   }
 
@@ -380,15 +378,16 @@ LET start() = VALOF
   IF tracing DO
   { writef("*n*cKey schedule*n*c")
     FOR i = 0 TO Nr DO
-    { LET p = 16*i
+    { LET p = 4*i
       writef("%i2: ", i)
-      prstate(@Rkey!p)
+      prv(@Rkey!p)
     }
   }
   newline()
 
-  writef("plain:          "); prbytes(plain); newline()
-  writef("key:            "); prbytes(key)
+  writef("plain:          "); prv(plain); newline()
+  writef("key:            "); prv(key)
+  writef("                "); prv(key+4)
   newline()
 
   //Cipher(plain, out)
@@ -396,13 +395,13 @@ LET start() = VALOF
 
   newline()
 
-  writef("Cipher text:    "); prbytes(out); newline()
+  writef("Cipher text:    "); prv(out); newline()
 
   //InvCipher(out, in)
   countInvCipher := instrcount(InvCipher, out, in)
   IF tracing DO newline()
 
-  writef("InvCipher text: "); prbytes(in); newline()
+  writef("InvCipher text: "); prv(in); newline()
 
   newline()
   writef("Cintcode instruction counts*n*c*n*c")
@@ -413,22 +412,30 @@ LET start() = VALOF
   RESULTIS 0
 }
 
-AND prstate(m) BE
-{ // For outputting state matrix or keys, column by column.
-  FOR i = 0 TO 3 DO
-  { wrch(' ')
-    FOR j = 0 TO 3 DO
-      writef("%x2", m!(4*j+i))
-  }
+AND prstate_s() BE
+{ // For outputting state s matrix
+  writef(" %x2%x2%x2%x2", s00, s10, s20, s30)
+  writef(" %x2%x2%x2%x2", s01, s11, s21, s31)
+  writef(" %x2%x2%x2%x2", s02, s12, s22, s32)
+  writef(" %x2%x2%x2%x2", s03, s13, s23, s33)
   newline()
 }
 
-AND prbytes(v) BE
-{ // For outputting plain and ciphered text.
-  FOR i = 0 TO 15 DO
-  { IF i MOD 4 = 0 DO wrch(' ')
-    writef("%x2", v%i)
-  }
+AND prstate_t() BE
+{ // For outputting state t matrix
+  writef(" %x2%x2%x2%x2", t00, t10, t20, t30)
+  writef(" %x2%x2%x2%x2", t01, t11, t21, t31)
+  writef(" %x2%x2%x2%x2", t02, t12, t22, t32)
+  writef(" %x2%x2%x2%x2", t03, t13, t23, t33)
+  newline()
+}
+
+AND prv(v) BE
+{ // For outputting plain and ciphered text and keys
+  writef(" %x2%x2%x2%x2", v%00, v%01, v%02, v%03)
+  writef(" %x2%x2%x2%x2", v%04, v%05, v%06, v%07)
+  writef(" %x2%x2%x2%x2", v%08, v%09, v%10, v%11)
+  writef(" %x2%x2%x2%x2", v%12, v%13, v%14, v%15)
   newline()
 }
 

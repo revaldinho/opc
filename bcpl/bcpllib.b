@@ -926,17 +926,17 @@ AND setseed(num) = VALOF {
 // 
 // // muldiv is now implemented in SYSLIB using the MDIV instruction
 // // NO -- MDIV sometimes causes a floating point exception
-// AND muldiv(a, b, c) = sys(Sys_muldiv, a, b, c)
-// 
-// AND unpackstring(s, v) BE FOR i = s%0 TO 0 BY -1 DO v!i := s%i
-// 
-// AND packstring(v, s) = VALOF
-// { LET n = v!0 & 255
-//   LET size = n/bytesperword
-//   FOR i = 0 TO n DO s%i := v!i
-//   FOR i = n+1 TO (size+1)*bytesperword-1 DO s%i := 0
-//   RESULTIS size
-// }
+AND muldiv(a, b, c) = sys(Sys_muldiv, a, b, c)
+ 
+AND unpackstring(s, v) BE FOR i = s%0 TO 0 BY -1 DO v!i := s%i
+
+AND packstring(v, s) = VALOF
+{ LET n = v!0 & 255
+  LET size = n/bytesperword
+  FOR i = 0 TO n DO s%i := v!i
+  FOR i = n+1 TO (size+1)*bytesperword-1 DO s%i := 0
+  RESULTIS size
+}
 
 AND capitalch(ch) = 'a' <= ch <= 'z' -> ch + 'A' - 'a', ch
 
@@ -1308,124 +1308,124 @@ AND rdargs(keys, argv, size) = TRUE               // FIXME - just return TRUE te
 //   RESULTIS -1
 // }
 // 
-// AND createco(fn, size) = VALOF
-// { LET c = getvec(size+6)
-//   UNLESS c RESULTIS 0
-//   FOR i = 6 TO size+6 DO c!i := stackword
-// 
-//   // Using P to denote the current stack frame
-//   // pointer, the following assumptions are made:
-//   //  P!0, P!1, P!2 contain the return link information
-//   //  P!3   is the variable fn
-//   //  P!4   is the variable size
-//   //  P!5   is the variable c
-// 
-//   // Now make the vector c into a valid BCPL
-//   // stack frame containg copies of fn, size
-//   // and c in the same relative positions.
-//   // Other locations in the new stack frame 
-//   // are used for other purposes.
-//   c!0 := c<<B2Wsh // resumption point
-//   c!1 := currco   // parent link
-//   c!2 := colist   // colist chain
-//   c!3 := fn       // the main function
-//   c!4 := size     // the coroutine size
-//   c!5 := c        // the new coroutine pointer
-// 
-//   colist := c  // insert into the list of coroutines
-// 
-//   changeco(0, c)
-// 
-//   // Execution now continues with the P pointer set to c<<B2Wsh,
-//   // and so  the vector c becomes the current stack frame.
-//   // The compiler will have generated code on
-//   // the assumption that fn and c are the third and fifth
-//   // words of the stack frame, and, since c!3 and c!5
-//   // were initialised to fn and c, the following repeated
-//   // statement will have the effect (naively) expected.
-//   // Note that the first call of cowait causes a return
-//   // from createco with result c.
-// 
-//   c := fn(cowait(c)) REPEAT
-// }
-// 
-// AND deleteco(cptr) = VALOF
-// { LET a = @colist
-// 
-//   { LET co = !a
-//     UNLESS co DO
-//     { sawritef("BLIB co=%n: cannot deleteco %n -- not found*n",
-//          currco, cptr)
-//       abort(112)
-//       RESULTIS FALSE
-//     }
-//     IF co=cptr BREAK
-//     a := @ co!co_list
-//   } REPEAT
-// 
-//   IF cptr!co_parent DO
-//   { sawritef("BLIB co=%n: cannot deleteco %n -- has a parent*n",
-//        currco, cptr)
-//     abort(112)
-//     RESULTIS FALSE
-//   }
-// 
-//   !a := cptr!co_list      // Remove the coroutine from colist.
-//   freevec(cptr)           // Free the coroutine stack.
-//   RESULTIS TRUE
-// }
-// 
-// AND callco(cptr, a) = VALOF
-// { IF cptr!co_parent DO abort(110)
-//   cptr!co_parent := currco
-//   RESULTIS changeco(a, cptr)
-// }
-// 
-// AND resumeco(cptr, a) = VALOF
-// { LET parent = currco!co_parent
-//   currco!co_parent := 0
-//   IF cptr!co_parent DO abort(111)
-//   cptr!co_parent := parent
-//   RESULTIS changeco(a, cptr)
-// }
-// 
-// AND cowait(a) = VALOF
-// { LET parent = currco!co_parent
-//   currco!co_parent := 0
-//   RESULTIS changeco(a, parent)
-// }
-// 
-// AND initco(fn, size, a, b, c, d, e, f, g, h, i, j, k) = VALOF
-// { LET cptr = createco(fn, size)
-//   result2 := 0
-//   IF cptr DO result2 := callco(cptr, @a)
-//   RESULTIS cptr
-// }
-// 
-// /*      res := startco(body, arg, stsize)
-// 
-//         The routine 'body' is created as a coroutine with a stacksize 'stsize'
-//         and 'arg' passed as an argument.  The result is the stackbase of
-//         the new coroutine.
-// */
-// 
-// AND startco(body, arg, stsize) = VALOF
-// { LET newco = createco(body, stsize)
-// //sawritef("BLIB: callco(%n,%n)*n", newco, arg)
-//    IF newco DO callco(newco, arg)
-//    RESULTIS newco
-// }
-// 
-// // object making function
-// AND mkobj(upb, fns, a, b, c, d, e, f, g, h, i, j, k) = VALOF
-// { LET obj = getvec(upb)
-//   UNLESS obj=0 DO
-//   { !obj := fns
-//     InitObj#(obj, @a) // Send the InitObj message to the object
-//   }
-//   RESULTIS obj
-// }
-//
+AND createco(fn, size) = VALOF
+{ LET c = getvec(size+6)
+  UNLESS c RESULTIS 0
+  FOR i = 6 TO size+6 DO c!i := stackword
+
+  // Using P to denote the current stack frame
+  // pointer, the following assumptions are made:
+  //  P!0, P!1, P!2 contain the return link information
+  //  P!3   is the variable fn
+  //  P!4   is the variable size
+  //  P!5   is the variable c
+
+  // Now make the vector c into a valid BCPL
+  // stack frame containg copies of fn, size
+  // and c in the same relative positions.
+  // Other locations in the new stack frame 
+  // are used for other purposes.
+  c!0 := c<<B2Wsh // resumption point
+  c!1 := currco   // parent link
+  c!2 := colist   // colist chain
+  c!3 := fn       // the main function
+  c!4 := size     // the coroutine size
+  c!5 := c        // the new coroutine pointer
+
+  colist := c  // insert into the list of coroutines
+
+  changeco(0, c)
+
+  // Execution now continues with the P pointer set to c<<B2Wsh,
+  // and so  the vector c becomes the current stack frame.
+  // The compiler will have generated code on
+  // the assumption that fn and c are the third and fifth
+  // words of the stack frame, and, since c!3 and c!5
+  // were initialised to fn and c, the following repeated
+  // statement will have the effect (naively) expected.
+  // Note that the first call of cowait causes a return
+  // from createco with result c.
+
+  c := fn(cowait(c)) REPEAT
+}
+
+AND deleteco(cptr) = VALOF
+{ LET a = @colist
+
+  { LET co = !a
+    UNLESS co DO
+    { sawritef("BLIB co=%n: cannot deleteco %n -- not found*n",
+         currco, cptr)
+      abort(112)
+      RESULTIS FALSE
+    }
+    IF co=cptr BREAK
+    a := @ co!co_list
+  } REPEAT
+
+  IF cptr!co_parent DO
+  { sawritef("BLIB co=%n: cannot deleteco %n -- has a parent*n",
+       currco, cptr)
+    abort(112)
+    RESULTIS FALSE
+  }
+
+  !a := cptr!co_list      // Remove the coroutine from colist.
+  freevec(cptr)           // Free the coroutine stack.
+  RESULTIS TRUE
+}
+
+AND callco(cptr, a) = VALOF
+{ IF cptr!co_parent DO abort(110)
+  cptr!co_parent := currco
+  RESULTIS changeco(a, cptr)
+}
+
+AND resumeco(cptr, a) = VALOF
+{ LET parent = currco!co_parent
+  currco!co_parent := 0
+  IF cptr!co_parent DO abort(111)
+  cptr!co_parent := parent
+  RESULTIS changeco(a, cptr)
+}
+
+AND cowait(a) = VALOF
+{ LET parent = currco!co_parent
+  currco!co_parent := 0
+  RESULTIS changeco(a, parent)
+}
+
+AND initco(fn, size, a, b, c, d, e, f, g, h, i, j, k) = VALOF
+{ LET cptr = createco(fn, size)
+  result2 := 0
+  IF cptr DO result2 := callco(cptr, @a)
+  RESULTIS cptr
+}
+
+/*      res := startco(body, arg, stsize)
+
+        The routine 'body' is created as a coroutine with a stacksize 'stsize'
+        and 'arg' passed as an argument.  The result is the stackbase of
+        the new coroutine.
+*/
+
+AND startco(body, arg, stsize) = VALOF
+{ LET newco = createco(body, stsize)
+//sawritef("BLIB: callco(%n,%n)*n", newco, arg)
+   IF newco DO callco(newco, arg)
+   RESULTIS newco
+}
+
+// object making function
+AND mkobj(upb, fns, a, b, c, d, e, f, g, h, i, j, k) = VALOF
+{ LET obj = getvec(upb)
+  UNLESS obj=0 DO
+  { !obj := fns
+    InitObj#(obj, @a) // Send the InitObj message to the object
+  }
+  RESULTIS obj
+}
+
 
 AND instrcount(fn, a,b,c,d,e,f,g,h,i,j,k) = VALOF
 { LET res = 0
@@ -1573,32 +1573,32 @@ AND instrcount(fn, a,b,c,d,e,f,g,h,i,j,k) = VALOF
 //                    year MOD   4 = 0 -> TRUE,
 //                                        FALSE
 // 
-// AND testbit(bitno, bitvec) = VALOF
-// // This function returns a non zero value if the specified bit in
-// // bitvec is a one, otherwise it returns zero.
-// // Bits are numbered from zero starting at the least significant bit
-// // of bitvec!0.
-// // bitvec!0 holds bits 0 to bitsperword-1
-// // bitvec!1 holds bits bitsperword to 2*bitsperword-1
-// // etc
-// { LET i = bitno  /  bitsperword
-//   AND s = bitno MOD bitsperword
-//   RESULTIS bitvec!i & (1<<s)
-// }
-// 
-// AND setbit(bitno, bitvec, state) = VALOF
-// // This function sets the specified bit in bitvec to 1 or 0 depending
-// // on whether state is TRUE or FALSE, respectively. It returns a
-// // non-zero value if the previous setting of the bit was a one, otherwise
-// // it returns zero. See testbit above.
-// { LET i = bitno  /  bitsperword
-//   AND s = bitno MOD bitsperword
-//   LET mask = 1 << s
-//   LET oldstate = bitvec!i & mask
-//   TEST state THEN bitvec!i := bitvec!i |  mask
-//              ELSE bitvec!i := bitvec!i & ~mask
-//   RESULTIS oldstate
-// }
+AND testbit(bitno, bitvec) = VALOF
+// This function returns a non zero value if the specified bit in
+// bitvec is a one, otherwise it returns zero.
+// Bits are numbered from zero starting at the least significant bit
+// of bitvec!0.
+// bitvec!0 holds bits 0 to bitsperword-1
+// bitvec!1 holds bits bitsperword to 2*bitsperword-1
+// etc
+{ LET i = bitno  /  bitsperword
+  AND s = bitno MOD bitsperword
+  RESULTIS bitvec!i & (1<<s)
+}
+
+AND setbit(bitno, bitvec, state) = VALOF
+// This function sets the specified bit in bitvec to 1 or 0 depending
+// on whether state is TRUE or FALSE, respectively. It returns a
+// non-zero value if the previous setting of the bit was a one, otherwise
+// it returns zero. See testbit above.
+{ LET i = bitno  /  bitsperword
+  AND s = bitno MOD bitsperword
+  LET mask = 1 << s
+  LET oldstate = bitvec!i & mask
+  TEST state THEN bitvec!i := bitvec!i |  mask
+             ELSE bitvec!i := bitvec!i & ~mask
+  RESULTIS oldstate
+}
 // 
 // AND string_to_number(s) = VALOF
 // // Return TRUE if OK with value in result2
@@ -1660,18 +1660,18 @@ AND instrcount(fn, a,b,c,d,e,f,g,h,i,j,k) = VALOF
 //   RESULTIS 0
 // }
 // 
-// // Get the ith element of vector v of 16-bit unsigned words
-// AND getword(v, i) = VALOF
-// { LET j = i+i
-//   LET res = v%j + (v%(j+1)<<8)  // Assumes little ender m/c ??????????
-//   RESULTIS res
-// }
-// 
-// // Store least sig 16 bits of w in the ith element of vector v of 16-bit words
-// AND putword(v, i, w) BE    // store 16 bit word
-// { LET j = i+i
-//   v%j, v%(j+1) := w, w>>8  // Assumes little ender m/c  ?????????????
-// }
+// Get the ith element of vector v of 16-bit unsigned words
+AND getword(v, i) = VALOF
+{ LET j = i+i
+  LET res = v%j + (v%(j+1)<<8)  // Assumes little ender m/c ??????????
+  RESULTIS res
+}
+
+// Store least sig 16 bits of w in the ith element of vector v of 16-bit words
+AND putword(v, i, w) BE    // store 16 bit word
+{ LET j = i+i
+  v%j, v%(j+1) := w, w>>8  // Assumes little ender m/c  ?????????????
+}
  
 AND copystring(from, to) BE
   FOR i = 0 TO from%0 DO to%i := from%i

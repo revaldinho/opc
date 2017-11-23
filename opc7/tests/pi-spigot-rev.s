@@ -136,7 +136,7 @@ ENDMACRO
 # r3..r5 = local registers
 # r1,r2  = temporary registers, parameters and return registers
 
-        EQU     digits,   32          # 16
+        EQU     digits,   33          # 16
         EQU     cols,     1+(digits*10//3)            # 1 + (digits * 10/3)
 
         mov   r13,r0                  # Initialise r13 to stop PUSH/POP ever loading X's to stack for regression runs
