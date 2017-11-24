@@ -297,7 +297,7 @@ __Sys_EXT:
         PUSH    (r2)
         ld      r1, r11,5         # get parameter1 in r1
         mov     r2, r11,6         # use r2 to point to vector of other parameters
-        jsr     pc, r4            # call user routine
+        JSR     (r4)              # call user routine
         POP     (r2)
         POP     (r13)
         RTS     ()                # return via sys function
