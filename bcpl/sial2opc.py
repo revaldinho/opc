@@ -572,9 +572,9 @@ def process_sial(sialtext):
                 except BaseException as e:
                     if cpu_target == "opc7":
                         code ("",line)
-                        for s in getlongnum(fields[1], False ):
+                        for s in getlongnum(fields[1]):
                             code(s);                        
-                        code("%s %s,r4" % (operation,dest_r) )
+                        code("%s %s,r8" % (operation,dest_r) )
                     else:
                         raise e
             elif opcode == sialop['f_s'] :        
@@ -686,8 +686,9 @@ def process_sial(sialtext):
                         n = getnum20(fields[1])
                         code("lmov r1,%d" % n)
                     except BaseException as e:
-                        n = getlongnum(fields[1])
-                        code("mov r1,r4")                                                
+                        for s in getlongnum(fields[1]):
+                            code(s);                        
+                        code("mov r1,r8")                                                
             elif opcode == sialop['f_atblp'] :    # atblp     Pn         b := a; a := P!n            
                 code("mov r2,r1", line)
                 code("ld r1,r11,%d" % getnum(fields[1]))                        
@@ -821,10 +822,17 @@ def process_sial(sialtext):
             elif opcode in (sialop['f_ikp'],sialop['f_ikg']) :
                 #  ikp       Kk Pn      a := P!n + k; P!n := a
                 #  ikg       Kk Gn      a := G!n + k; G!n := a
-                ptr = "r11" if opcode==sialop['f_ikp'] else "r12"
-                n =  getnum(fields[1])
+                ptr = "r11" if opcode==sialop['f_ikp'] else "r12"                
                 code("ld  r1,%s,%d" % (ptr,getnum(fields[2])), line)
-                code("add r1,r0,%d" % n )
+                if cpu_target=="opc6":
+                    code("add r1,r0,%d" % getnum(fields[1]))
+                else:
+                    try:
+                        code("add r1,r0,%d" % getnum(fields[1]))
+                    except BaseException as e:
+                        for s in getlongnum(fields[1]):
+                            code(s);
+                        code("add r1,r8" )                            
                 code("sto r1,%s,%d" % (ptr,getnum(fields[2])))
             elif opcode == sialop['f_k'] :        #  k         Pn         Call  a(b,...) incrementing P by n and leaving b in A             
                 code("mov r3,r11,%d" % getnum( fields[1]), line)
@@ -938,7 +946,7 @@ def process_sial(sialtext):
                 code("mov r4,r1","Copy A into tmp register")
                 for (vf,l) in zip(value_fields,labels):
                     try:
-                        value = getnum(vf)
+                        v = getnum(vf)
                         code("cmp r4,r0,%d" % v)
                         code("z.mov pc,r0,%s" % l)
                     except BaseException as e:

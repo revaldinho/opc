@@ -6,7 +6,6 @@ STATIC $( board=?; moves=?; dir=? $)
 
 LET solve(m) = VALOF
 $( IF m=31 RESULTIS board!(9*4+4)=Peg
-
    FOR i = 9 TO 7*9 BY 9 DO
    FOR p = i+1 TO i+7 IF board!p=Peg DO
    FOR k = 0 TO 3 DO
@@ -32,14 +31,19 @@ AND print_peg(x) BE writes(x=Out -> "  ",
                            x=Peg -> " **",
                                     " ?")
 
-AND print_board(board) BE
+AND print_board(board) BE {
+    wrch(30)           // Home char on Beeb to provide animated display
     FOR i = 9 TO 8*9 BY 9 DO
     $( FOR p = i TO i+8 DO print_peg (board!p)
        newline()
     $)
+}
 
 AND start() = VALOF
 $( LET v = VEC 31
+
+   wrch( 12 ) // Clear BBC Text Area
+
    moves := v
    board := TABLE
       //  0    1    2    3    4    5    6    7    8
