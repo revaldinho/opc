@@ -13,7 +13,7 @@ set MMB = ../utils/mmb_utils/beeb
 set SSD = OPC7DEMO.ssd
 
 set testlist = ( pi-spigot-rev e-spigot-rev bigsieve sieve nqueens math32 )
-set bcpltestlist = (anseq apfel enigma-m3 epr163 invert modarith reedsolomon sudoku solit2 sphere )
+set bcpltestlist = (anseq apfel enigma-m3 epr163 invert reedsolomon sudoku solit2 sphere beebgfx )
 
 
 pushd disk
