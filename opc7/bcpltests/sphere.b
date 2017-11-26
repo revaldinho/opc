@@ -22,15 +22,19 @@ LET start() = VALOF {
   VDU(VDU_CLRGFX)
   VDU(VDU_CLRTXT)  
   VDU(VDU_MODE, 5)
-  VDU(VDU_GCOL, 0,2)
-  VDU29(640,512)  
-  VDU(VDU_PLOT,GMOVE,0,0)
-  FOR phi= 0 TO 126_000_000 BY 0_250_000 DO {
+
+  VDU29(640,512)
+
+  FOR colour = 1 TO 7 DO {
+    VDU(VDU_GCOL, 0,colour)  
+    VDU(VDU_PLOT,GMOVE,0,0)
+    FOR phi= 0 TO 126_000_000 BY 0_250_000 DO {
       x := muldiv(sine(phi), scale, FIXPOINTSCALE)
       y := muldiv(muldiv(cosine(phi), sine(muldiv(phi,0_950_000, FIXPOINTSCALE)), FIXPOINTSCALE),scale,FIXPOINTSCALE)
       //writef("Drawto (%I ,%I )*n*c", x, y)       
       VDU(VDU_PLOT,GDRAW,x,y)  
-  }  
+    }
+  }
   RESULTIS 0
 }
 
