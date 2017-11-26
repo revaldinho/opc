@@ -6,14 +6,14 @@ OPT ?= -o
 
 
 ALLSRCS    ?= $(wildcard *.b)
-TESTSRCS   ?= $(shell ls -1 *b | egrep -v '(bcpllib|beeb|empty)'  )
+TESTSRCS   ?= $(shell ls -1 *b | egrep -v '(bcpllib|beeb|empty|mandset)'  )
 SIALS      ?= $(patsubst %.b,%.sial,$(ALLSRCS))
 ASMS       ?= $(patsubst %.b,%.s,$(ALLSRCS))
 HEXS       ?= $(patsubst %.b,%.hex,$(ALLSRCS))
 BCPLEXECS  ?= $(patsubst %.b,%,$(TESTSRCS))
 EMUSTDOUTS ?= $(patsubst %.b,%.emu.stdout,$(TESTSRCS))
 
-SIMSRCS     ?= $(shell ls -1 *.b | egrep -v '(bcpllib|beeb|enigma|empty)'  )
+SIMSRCS     ?= $(shell ls -1 *.b | egrep -v '(bcpllib|beeb|enigma|empty|mandset)'  )
 SIMS        ?= $(patsubst %.b,%.sim,${SIMSRCS})
 SIMSTDOUTS  ?= $(patsubst %.b,%.sim.stdout,${SIMSRCS})
 DIFFS       ?= $(patsubst %.b,%.diff,${SIMSRCS})
