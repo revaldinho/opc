@@ -927,7 +927,7 @@ AND setseed(num) = VALOF {
 // 
 // // muldiv is now implemented in SYSLIB using the MDIV instruction
 // // NO -- MDIV sometimes causes a floating point exception
-AND muldiv(a, b, c) = sys(Sys_muldiv, a, b, c)
+AND muldiv(a, b, c) = sys(Sys_muldiv, a, b, c, 0)
  
 AND unpackstring(s, v) BE FOR i = s%0 TO 0 BY -1 DO v!i := s%i
 
