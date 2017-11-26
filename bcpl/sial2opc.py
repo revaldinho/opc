@@ -392,37 +392,38 @@ def optimize_sial( sialtext):
             prev_opcode = opcode
     
     # OPT-3: JZ/JNZ/JGE0/JLE0 instructions which follow a load/arithmetic/logical op do not need an additional compare so swap to f_ext_jne0/eq0
-    prev_line = "000"
-    for i in range (3,len(sialtext)-2):
-        line = sialtext[i]
-        fields = line.split()
-        if len(fields)>0 and fields[0].startswith("F"):
-            prev_opcode = int( (prev_line.split())[0][1:] )
-            opcode = int(fields[0][1:])
-            
-            if opcode in (sialop['f_jne0'],sialop['f_jeq0'], sialop['f_jge0'], sialop['f_jls0']):
-                # OK to skip over a STO which will preserve flags
-                if ( sialop['f_sp'] <= prev_opcode <= sialop['f_sl']) :
-                    try:
-                        prev_opcode = int((sialtext[i-2].split())[0][1:])
-                    except IndexError as e:
-                        pass
-                if ( sialop["f_lp"] <= prev_opcode <= sialop["f_lm"]) or \
-                   ( sialop['f_add'] <= prev_opcode <= sialop['f_sub']) or \
-                   ( sialop['f_and'] <= prev_opcode <= sialop['f_eqv']) or \
-                   ( sialop['f_ap'] <= prev_opcode <= sialop['f_s']) :
-                     #print ("# OPT-3: Found LOAD A; JNE/JEQ/JLS/JGE ")
-                     #print ("#  %s ; %s " % (prev_fields[0], fields[0]))
-                     if opcode == sialop['f_jeq0'] :
-                         newopcode = sialop['f_ext_jeq0'] 
-                     elif opcode == sialop['f_jne0'] :
-                         newopcode = sialop['f_ext_jne0'] 
-                     elif opcode == sialop['f_jls0'] :
-                         newopcode = sialop['f_ext_jls0'] 
-                     elif opcode == sialop['f_jge0'] :
-                         newopcode = sialop['f_ext_jge0'] 
-                     sialtext[i] = ' '.join(["F%d" % newopcode] + fields[1:])
-            prev_line = line
+    if cpu_target == "opc6":      # Temp. disable for OPC7 - some exceptions caused to be investigated ...
+        prev_line = "000"
+        for i in range (3,len(sialtext)-2):
+            line = sialtext[i]
+            fields = line.split()
+            if len(fields)>0 and fields[0].startswith("F"):
+                prev_opcode = int( (prev_line.split())[0][1:] )
+                opcode = int(fields[0][1:])
+                
+                if opcode in (sialop['f_jne0'],sialop['f_jeq0'], sialop['f_jge0'], sialop['f_jls0']):
+                    # OK to skip over a STO which will preserve flags
+                    if ( sialop['f_sp'] <= prev_opcode <= sialop['f_sl']) :
+                        try:
+                            prev_opcode = int((sialtext[i-2].split())[0][1:])
+                        except IndexError as e:
+                            pass
+                    if ( sialop["f_lp"] <= prev_opcode <= sialop["f_lm"]) or \
+                       ( sialop['f_add'] <= prev_opcode <= sialop['f_sub']) or \
+                       ( sialop['f_and'] <= prev_opcode <= sialop['f_eqv']) or \
+                       ( sialop['f_ap'] <= prev_opcode <= sialop['f_s']) :
+                         #print ("# OPT-3: Found LOAD A; JNE/JEQ/JLS/JGE ")
+                         #print ("#  %s ; %s " % (prev_fields[0], fields[0]))
+                         if opcode == sialop['f_jeq0'] :
+                             newopcode = sialop['f_ext_jeq0'] 
+                         elif opcode == sialop['f_jne0'] :
+                             newopcode = sialop['f_ext_jne0'] 
+                         elif opcode == sialop['f_jls0'] :
+                             newopcode = sialop['f_ext_jls0'] 
+                         elif opcode == sialop['f_jge0'] :
+                             newopcode = sialop['f_ext_jge0'] 
+                         sialtext[i] = ' '.join(["F%d" % newopcode] + fields[1:])
+                prev_line = line
   
     # OPT-4 - Swap jump for short jump if target is within N SIAL opcodes, only for OPC6 with short INC/DEC instructions
     if cpu_target == "opc6":

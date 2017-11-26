@@ -10,7 +10,9 @@ GLOBAL {
 }
 
 MANIFEST {
-  One   = 100_000_000 // The number representing 1.00000000
+  //One   = 100_000_000 // The number representing 1.00000000
+  One   = 1<<20         // The number representing 1.00000000  
+
   width = 1024        // BBC plot area
   height= 1024
   
@@ -46,7 +48,11 @@ MANIFEST {
 LET start() = VALOF
 { LET s = 0           // Region selector
   // Default settings
-  a, b, size := -50_000_000, 0, 180_000_000
+  // a, b, size := -50_000_000, 0, 180_000_000
+  a    := -(One >>1 )
+  b    := 0
+  size := muldiv(One,18,10)
+  
   limit := 38
 
   IF 1<=s<=7 DO
@@ -56,7 +62,11 @@ LET start() = VALOF
                        170, 180, 190, 200, 210,  // 15 
                        220                       // 20 
     limit := limtab!s
-    a, b, size := -52_990_000, 66_501_089,  50_000_000
+
+    //a, b, size := -52_990_000, 66_501_089,  50_000_000
+    a    := -muldiv(One, 52_990_000, 100_000_000)
+    b    := muldiv(One, 66_501_089, 100_000_000)
+    size := muldiv(One, 50_000_000, 100_000_000)
     FOR i = 1 TO s DO size := size / 10
   }
 
@@ -106,19 +116,27 @@ AND mandset(a, b, n) = VALOF
   LET x3,y3,t, rsq = 0,0,0,0
   
   FOR i = 0 TO n DO {
-    rsq := muldiv(x3, x3, One) + muldiv(y3, y3, One)
+  //    rsq := muldiv(x3, x3, One) + muldiv(y3, y3, One)
+    rsq := muldiv20(x3, x3) + muldiv20(y3, y3)  
     x3 := x/3 // To avoid possible overflow
     y3 := y/3 
     // Test whether z is diverging, ie is x^2+y^2 > 1
     IF rsq > One RESULTIS i
     // Square z and add c
     // Note that (x + iy)^2 = (x^2-y^2) + i(2xy)
-    t := muldiv(2*x, y, One) + b
-    x := muldiv(x, x, One) - muldiv(y, y, One) + a
+    //    t := muldiv(2*x, y, One) + b
+    //    x := muldiv(x, x, One) - muldiv(y, y, One) + a
+    t := muldiv20(x<<1, y) + b
+    x := muldiv20(x, x) - muldiv20(y, y) + a
     y := t 
   }
   // z did not diverge after n iterations
   RESULTIS -1
+}
+
+
+AND muldiv20(a,b) BE {
+    sys(Sys_muldiv, a, b, 0, 1)
 }
 
 /* -------------------------------------------------------------
