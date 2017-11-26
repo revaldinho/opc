@@ -10,12 +10,8 @@ rm -rf disk
 mkdir -p disk
 set ASM = opc7asm.py
 set MMB = ../utils/mmb_utils/beeb
-set SSD = OPC7DEMO.ssd
-
+set SSD = OPC7DEM1.ssd
 set testlist = ( pi-spigot-rev e-spigot-rev bigsieve sieve nqueens math32 )
-set bcpltestlist = (anseq apfel enigma-m3 epr163 invert reedsolomon sudoku solit2 sphere beebgfx )
-
-
 pushd disk
 foreach test ( $testlist )
     set newname = `echo $test | awk '{gsub("-.*-","");print substr($0,0,7)}'`
@@ -27,7 +23,21 @@ foreach test ( $testlist )
     python3 ../${ASM} -g bin --start_adr 0x1000 --size $size -f ../tests/${test}.s -o ${newname} > ../tests/${test}.lst
     echo $newname | awk '{printf("\$.%s\t1000\t1000",$1)}' > ${newname}.inf
 end
+popd
+# Build the SSD image
+rm -f ${SSD}
+${MMB} blank_ssd ${SSD}
+${MMB} putfile ${SSD} disk/*
+${MMB} title ${SSD} $SSD:r
+${MMB} info ${SSD}
 
+
+rm -rf disk
+mkdir -p disk
+set bcpltestlist = ( ack aes256 anseq apfel beebgfx enigma-m3 epr163 evale mandset sudoku solit2 sphere )
+set SSD = OPC7DEM2.ssd
+
+pushd disk
 foreach test ( $bcpltestlist )
     set newname = `echo $test | awk '{gsub("-.*-","");gsub("-","");print substr($0,0,7)}'`
     echo "Building test $test as $newname"
@@ -37,8 +47,6 @@ foreach test ( $bcpltestlist )
     python3 ../${ASM} -g bin --start_adr 0x1000 --size $size -f ../bcpltests/${test}.s -o ${newname} > ../bcpltests/${test}.lst
     echo $newname | awk '{printf("\$.%s\t1000\t1000",$1)}' > ${newname}.inf
 end
-
-
 popd
 # Build the SSD image
 rm -f ${SSD}
@@ -46,4 +54,7 @@ ${MMB} blank_ssd ${SSD}
 ${MMB} putfile ${SSD} disk/*
 ${MMB} title ${SSD} $SSD:r
 ${MMB} info ${SSD}
+
+
+
 
