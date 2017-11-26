@@ -121,6 +121,7 @@ common_gbyt:
         # - R1 holds A
         # - R2 holds B
         # - R3 holds C
+        # - R4 = 1 for divide by 2^20 ; 0 for divide by C
         # - R13 holds return address
         # - R14 holds global stack pointer
         #
@@ -175,6 +176,7 @@ __muldiv:
         # - R1 holds A
         # - R2 holds B
         # - R3 holds C
+        # - R4=1 divide by 2^20 ; R4=0 divide by C
         # - R13 holds return address
         # - R14 holds global stack pointer
         #
@@ -198,6 +200,7 @@ __muldiv:
 __umuldiv:
         PUSH    (r6)
         PUSH    (r5)
+        PUSH    (r4)
         mov     r6,r3         # Put divider for second part of operation in r6
         lsr     r5,r1         # Shift right multiplicant A into r5, LSB into C
         mov     r3,r2         # Move B into r3 (preserve C)
@@ -215,14 +218,34 @@ umd_l2: ASL     (r3)          # multiply B x 2
         nc.lmov pc,umd_l3     # no carry - go direct to division routine
         add     r1,r3         # add B into acc if carry from final shift
         nc.add  r2,r4         # and then add the upper word of B if no carry
-        c.add   r2,r4,1       # or add upper word with carry (assume that a no carry add above never results in a carry)        
+        c.add   r2,r4,1       # or add upper word with carry (assume that a no carry add above never results in a carry)
         # ------------------------------------------------------------------
         # Division
         #                ____________ ____________
         # Working Set   |____ r2 ____|____ r1 ____| Remainder Quotient (Q shifting in from RHS)
         #               |____ r3 ____|____ r0 ____| Divisor in MSW
-        # ------------------------------------------------------------------
-umd_l3: mov     r3,r6         # restore r3
+        # ------------------------------------------------------------------                
+umd_l3: POP     (r4)          # get divide by 2^20 or C param
+        mov     r3,r6         # restore r3
+        cmp     r4,r0
+        z.lmov  pc, umd_dec   # if zero proceed with decimal division
+        PUSH    (r1)          # save low word before calculating quotient
+        bperm   r1,r1,0x4432  # Shift r1 right by 16 places
+        movt    r1,r2         # put bottom 16bits of R2 in top 16 bits of R1
+        bperm   r2,r2,0x4432  # Shift r2 right by 16 places
+        asr     r2,r2         # Finish off with shift of 4 places r2-> r1
+        ror     r1,r1
+        asr     r2,r2
+        ror     r1,r1
+        asr     r2,r2
+        ror     r1,r1
+        asr     r2,r2
+        ror     r1,r1         # r1 holds quotient now
+        POP     (r2)          #restore low word in R2
+        lmov    r4,0x7FFFF    #mask off low 19 bits to get remainder mod 2^20
+        and     r2,r4        
+        lmov    pc,umd_l4     # And return        
+umd_dec:
         cmp     r3,r0         # Bail out on divide by zero
         z.lmov  pc,umd_div0                
         mov     r4,r0,32      # loop counter
@@ -232,7 +255,8 @@ umd_l1: ASL     (r1)          # Shift RNQ 1 place left
         pl.sub  r2,r3         # Yes, then do subtract for real RNQ = RNQ - D .. and 'plus' flag will be regenerated..
         pl.add  r1,r0,1       # ..and used to selectively increment quotient (no need to propagate a carry to MSW)
         sub     r4,r0,1       # decrement loop counter
-        nz.lmov pc,umd_l1                              
+        nz.lmov pc,umd_l1
+umd_l4: 
         POP     (r5)
         POP     (r6)        
         RTS     ()            # Exit r1 = quotient    ; r2 = remainder
@@ -505,7 +529,7 @@ __Sys_dummy:
         #
         # Call library muldiv function
         #
-        # sys( Sys_muldiv, A, B, C )
+        # sys( Sys_muldiv, A, B, C, div2pow20 )
         #
         # Entry:
         #       r4 - holds first parameter
@@ -518,15 +542,18 @@ __Sys_dummy:
         # ------------------------------------------------------------
 __Sys_muldiv:
         PUSH    (r13)
+        PUSH    (r4)        
         PUSH    (r3)
         PUSH    (r2)
         mov     r1,r4             # put parameter A in r1
         ld      r2,r11,5          # put parameter B in r2
         ld      r3,r11,6          # put parameter C in r3
+        ld      r4,r11,7          # put div2pow20 parameter in  r4
         JSR     (__muldiv)        # On return quotient in R1 and Remainder in R2
         sto     r2,r12,result2    # Need to put second result into global vector variable 'result2'
         POP     (r2)              # restore original r2 = Accumulator B
         POP     (r3)              # restore original r3 = Accumulator C
+        POP     (r4)        
         POP     (r13)
         RTS     ()                # return via sys function
         # ------------------------------------------------------------

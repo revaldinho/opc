@@ -12,6 +12,9 @@ LET start() = VALOF
   t3(31000123, 35000123, 541000123)
   t4()
 
+  // Now test the call with fixed divide by 2^20
+  t5()
+
   TEST fails=0 THEN
        writes("*n*c P A S S - all muldiv() calls match BCPL computed values*n*c")
   ELSE
@@ -48,16 +51,16 @@ AND t2() BE
   LET c = 29000123
   LET t0 = sys(Sys_cputime)
   FOR i = 1 TO 1_00 DO
-  { sys(Sys_muldiv,  a,  b,  c)
-    sys(Sys_muldiv, -a,  b,  c)
-    sys(Sys_muldiv,  a, -b,  c)
-    sys(Sys_muldiv, -a, -b,  c)
-    sys(Sys_muldiv,  a,  b, -c)
-    sys(Sys_muldiv, -a,  b, -c)
-    sys(Sys_muldiv,  a, -b, -c)
-    sys(Sys_muldiv, -a, -b, -c)
-    sys(Sys_muldiv,  a,  b,  c)
-    sys(Sys_muldiv,  a,  b,  c)
+  { sys(Sys_muldiv,  a,  b,  c, 0)
+    sys(Sys_muldiv, -a,  b,  c, 0)
+    sys(Sys_muldiv,  a, -b,  c, 0)
+    sys(Sys_muldiv, -a, -b,  c, 0)
+    sys(Sys_muldiv,  a,  b, -c, 0)
+    sys(Sys_muldiv, -a,  b, -c, 0)
+    sys(Sys_muldiv,  a, -b, -c, 0)
+    sys(Sys_muldiv, -a, -b, -c, 0)
+    sys(Sys_muldiv,  a,  b,  c, 0)
+    sys(Sys_muldiv,  a,  b,  c, 0)
   }
   newline()
   writef("time taken t2 = %d  -- 1,000 calls of sys(Sys_muldiv,...)*n*c",
@@ -67,7 +70,7 @@ AND t2() BE
 AND t3(a, b, c) BE
 { LET a1 = muldiv(a,b,c)
   LET r1 = result2
-  LET a2 = sys(Sys_muldiv, a, b, c)
+  LET a2 = sys(Sys_muldiv, a, b, c, 0)
   LET r2 = result2
   LET a3 = (a*b)/c
   LET r3 = (a*b) MOD c
@@ -128,4 +131,19 @@ AND t4() BE
     t3(minint+i, -1, -110) 
     t3(maxint-i, -1, -110) 
   }
+}
+
+AND t5() BE
+{ LET a = 31001
+  LET b = 25001
+  LET c = 1 << 20    // 2^20
+  LET a1 = (a*b)/c
+  LET r1 = (a*b) MOD c
+  LET a2 =  sys(Sys_muldiv,  a,  b, 0, 1) 
+  LET r2 =  result2
+  UNLESS a1=a2 & r1=r2 DO {
+    writef("muldiv(%n,%n,%n) => %n rem %n  muldiv1 => %n rem %n*n*c",
+            a,b,c, a1, r1, a2, r2)
+    fails := fails + 1
+    }  
 }
