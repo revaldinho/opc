@@ -120,8 +120,12 @@ common_gbyt:
         # Entry
         # - R1 holds A
         # - R2 holds B
-        # - R3 holds C
-        # - R4 = 1 for divide by 2^20 ; 0 for divide by C
+        # - R3 holds C 
+        # - R3 holds D
+        #   If C != 0 then (Q,R) = (A * B ) /C otherwise
+        #      IF D = 0  (Q,R) = (A * B)/2^16  ie 16.16 fixed point
+        #      IF D = 1  (Q,R) = (A * B)/2^20  ie 12.20 fixed point
+        #      IF D = 2+ (Q,R) = (A * B)/2^24  ie  8.24 fixed point        
         # - R13 holds return address
         # - R14 holds global stack pointer
         #
@@ -227,24 +231,45 @@ umd_l2: ASL     (r3)          # multiply B x 2
         # ------------------------------------------------------------------                
 umd_l3: POP     (r4)          # get divide by 2^20 or C param
         mov     r3,r6         # restore r3
-        cmp     r4,r0
-        z.lmov  pc, umd_dec   # if zero proceed with decimal division
+        cmp     r3,r0         # Check if it's zero
+        nz.lmov  pc, umd_dec  # if nonzero proceed with decimal division
         PUSH    (r1)          # save low word before calculating quotient
-        bperm   r1,r1,0x4432  # Shift r1 right by 16 places
-        movt    r1,r2         # put bottom 16bits of R2 in top 16 bits of R1
-        bperm   r2,r2,0x4432  # Shift r2 right by 16 places
-        asr     r2,r2         # Finish off with shift of 4 places r2-> r1
-        ror     r1,r1
-        asr     r2,r2
-        ror     r1,r1
-        asr     r2,r2
-        ror     r1,r1
-        asr     r2,r2
-        ror     r1,r1         # r1 holds quotient now
-        POP     (r2)          #restore low word in R2
-        lmov    r4,0x7FFFF    #mask off low 19 bits to get remainder mod 2^20
-        and     r2,r4        
-        lmov    pc,umd_l4     # And return        
+        cmp    r4,r0,2        # Is d < 2 ?
+        mi.lmov pc, umd_d2p1620  # Yes, then choose 16 or 20 bit division
+umd_d2p24:              
+        bperm  r1,r1,0x4443   # No, then 24 bit shift clearing upper bits in r1
+        bperm  r2,r2,0x2104   # prepare upper bits from r2 and in r2
+        or     r1,r2          # Merge together to complete the shift in r1
+        POP    (r2)           # restore original remainder into2
+        not    r4,r0          # Build 24 bit mask in r4
+        movt   r4,r0,0x00FF   #
+        and    r2,r4          # Compute remainder mod 2^24
+        lmov   pc, umd_l4     # exit via common point     
+umd_d2p1620:    
+        bperm  r1,r1,0x4432   # 16 bit right shift LSW
+        movt   r1,r2          # put lower 16b of MSW into LSW
+        cmp    r4,r0          # is 'd'==0 ?
+        z.lmov pc,umd_rem16    # Yes, then quotient is done so compute 16b remainder
+        bperm  r2,r2,0x4432   # No, then finish 20b shift with shift of MSW
+        lsr    r2,r2          # and then in-line the remaining 4 bit shifts from MSW->LSW
+        ror    r1,r1
+        lsr    r2,r2
+        ror    r1,r1
+        lsr    r2,r2
+        ror    r1,r1
+        lsr    r2,r2
+        ror    r1,r1
+umd_rem20:
+        not    r4,r0          # Compute remainder mod 2^20 ; get 0xF_FFFF mask in r4
+        movt   r4,r0,0x000F
+        POP    (r2)           # Get original remainder
+        and    r2,r4          # Computer remainder mod 2^20
+        lmov   pc,umd_l4      # exit via common point
+umd_rem16:
+        POP    (r2)           # Compute remainder mod 2^16
+        bperm  r2,r2,0x4410   # Mask off lower 16 bits
+        lmov   pc,umd_l4      # exit via common point
+        
 umd_dec:
         cmp     r3,r0         # Bail out on divide by zero
         z.lmov  pc,umd_div0                

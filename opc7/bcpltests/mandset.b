@@ -10,11 +10,10 @@ GLOBAL {
 }
 
 MANIFEST {
-  //One   = 100_000_000 // The number representing 1.00000000
-  One   = 1<<20         // The number representing 1.00000000  
+  One   = 1<<20      // The number representing 1.00000000 in a 12.20b fixed point system
 
-  width = 1024        // BBC plot area
-  height= 1024
+  width = 320        // BBC plot area
+  height= 256
   
   VDU_GCOL   = 18     // Constants for the BBC graphics routines
   VDU_CLRGFX = 16
@@ -34,15 +33,6 @@ MANIFEST {
   GCOL2_MAGENTA= 5
   GCOL2_CYAN   = 6
   GCOL2_WHITE  = 7  
-
-  GCOL15_BLACK  = 0     // Mode 1,5 colours
-  GCOL15_RED    = 1
-  GCOL15_GREEN  = 2
-  GCOL15_YELLOW = 3
-  GCOL15_BLUE   = 4
-  GCOL15_MAGENTA= 5
-  GCOL15_CYAN   = 6
-  GCOL15_WHITE  = 7  
 }
 
 LET start() = VALOF
@@ -83,8 +73,8 @@ AND plotset() BE {
   LET minb = b - size
   LET doublesize = 2 * size
   LET newcolour,colour = 0,0
+  LET screenx,screeny = ?,?
   VDU(VDU_GCOL,0,colour)
-
   FOR x = 0 TO (width-1) DO {
     FOR y = 0 TO (height-1) DO {  
         LET itercount = ?
@@ -104,8 +94,10 @@ AND plotset() BE {
             VDU(VDU_GCOL,0,newcolour)
             colour := newcolour
         }
-        VDU(VDU_PLOT,GMOVE,x,y)  // Plot x,y
-        VDU(VDU_PLOT,GDRAW,x,y)    
+        screenx := x << 2 // BBC coordinate system is 0..1024 all modes
+        screeny := y << 2 
+        VDU(VDU_PLOT,GMOVE,screenx, screeny)  
+        VDU(VDU_PLOT,GDRAW,screenx, screeny)
       }
   }
 }
@@ -116,18 +108,15 @@ AND mandset(a, b, n) = VALOF
   LET x3,y3,t, rsq = 0,0,0,0
   
   FOR i = 0 TO n DO {
-  //    rsq := muldiv(x3, x3, One) + muldiv(y3, y3, One)
-    rsq := muldiv20(x3, x3) + muldiv20(y3, y3)  
+    rsq := muldiv12p20(x3, x3) + muldiv12p20(y3, y3)  
     x3 := x/3 // To avoid possible overflow
     y3 := y/3 
     // Test whether z is diverging, ie is x^2+y^2 > 1
     IF rsq > One RESULTIS i
     // Square z and add c
     // Note that (x + iy)^2 = (x^2-y^2) + i(2xy)
-    //    t := muldiv(2*x, y, One) + b
-    //    x := muldiv(x, x, One) - muldiv(y, y, One) + a
-    t := muldiv20(x<<1, y) + b
-    x := muldiv20(x, x) - muldiv20(y, y) + a
+    t := muldiv12p20(x<<1, y) + b
+    x := muldiv12p20(x, x) - muldiv12p20(y, y) + a
     y := t 
   }
   // z did not diverge after n iterations
@@ -135,8 +124,14 @@ AND mandset(a, b, n) = VALOF
 }
 
 
-AND muldiv20(a,b) BE {
+AND muldiv16p16(a,b) BE {
+    sys(Sys_muldiv, a, b, 0, 0)
+}
+AND muldiv12p20(a,b) BE {
     sys(Sys_muldiv, a, b, 0, 1)
+}
+AND muldiv8p24(a,b) BE {
+    sys(Sys_muldiv, a, b, 0, 2)
 }
 
 /* -------------------------------------------------------------

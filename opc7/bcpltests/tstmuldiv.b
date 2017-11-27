@@ -12,8 +12,10 @@ LET start() = VALOF
   t3(31000123, 35000123, 541000123)
   t4()
 
-  // Now test the call with fixed divide by 2^20
-  t5()
+  // Now test the call with fixed dividers
+  t5()  // div 2^20
+  t6()  // div 2^16
+  t7()  // div 2^24  
 
   TEST fails=0 THEN
        writes("*n*c P A S S - all muldiv() calls match BCPL computed values*n*c")
@@ -28,7 +30,7 @@ AND t1() BE
   LET b = 25000123
   LET c = 29000123
   LET t0 = sys(Sys_cputime)
-  FOR i = 1 TO 1_00 DO
+  FOR i = 1 TO 10 DO
   { muldiv( a,  b,  c)
     muldiv(-a,  b,  c)
     muldiv( a, -b,  c)
@@ -41,7 +43,7 @@ AND t1() BE
     muldiv( a,  b,  c)
   }
   newline()
-  writef("time taken t1 = %d  -- 1,000 calls of muldiv(...)*n*c",
+  writef("time taken t1 = %d  -- 100 calls of muldiv(...)*n*c",
           sys(Sys_cputime)-t0)
 }
 
@@ -50,7 +52,7 @@ AND t2() BE
   LET b = 25000123
   LET c = 29000123
   LET t0 = sys(Sys_cputime)
-  FOR i = 1 TO 1_00 DO
+  FOR i = 1 TO 10 DO
   { sys(Sys_muldiv,  a,  b,  c, 0)
     sys(Sys_muldiv, -a,  b,  c, 0)
     sys(Sys_muldiv,  a, -b,  c, 0)
@@ -63,7 +65,7 @@ AND t2() BE
     sys(Sys_muldiv,  a,  b,  c, 0)
   }
   newline()
-  writef("time taken t2 = %d  -- 1,000 calls of sys(Sys_muldiv,...)*n*c",
+  writef("time taken t2 = %d  -- 100 calls of sys(Sys_muldiv,...)*n*c",
           sys(Sys_cputime)-t0)
 }
 
@@ -140,6 +142,36 @@ AND t5() BE
   LET a1 = (a*b)/c
   LET r1 = (a*b) MOD c
   LET a2 =  sys(Sys_muldiv,  a,  b, 0, 1) 
+  LET r2 =  result2
+  UNLESS a1=a2 & r1=r2 DO {
+    writef("muldiv(%n,%n,%n) => %n rem %n  muldiv1 => %n rem %n*n*c",
+            a,b,c, a1, r1, a2, r2)
+    fails := fails + 1
+    }  
+}
+
+AND t6() BE
+{ LET a = 31001
+  LET b = 25001
+  LET c = 1 << 16    // 2^16
+  LET a1 = (a*b)/c
+  LET r1 = (a*b) MOD c
+  LET a2 =  sys(Sys_muldiv,  a,  b, 0, 0) 
+  LET r2 =  result2
+  UNLESS a1=a2 & r1=r2 DO {
+    writef("muldiv(%n,%n,%n) => %n rem %n  muldiv1 => %n rem %n*n*c",
+            a,b,c, a1, r1, a2, r2)
+    fails := fails + 1
+    }  
+}
+
+AND t7() BE
+{ LET a = 31001
+  LET b = 25001
+  LET c = 1 << 24    // 2^24
+  LET a1 = (a*b)/c
+  LET r1 = (a*b) MOD c
+  LET a2 =  sys(Sys_muldiv,  a,  b, 0, 2) 
   LET r2 =  result2
   UNLESS a1=a2 & r1=r2 DO {
     writef("muldiv(%n,%n,%n) => %n rem %n  muldiv1 => %n rem %n*n*c",
