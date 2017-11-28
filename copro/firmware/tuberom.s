@@ -302,6 +302,11 @@ osCLI_Ack:
     cmp     r1, r0, 0x80
     nc.mov  pc, r0, dontEnterCode
 
+    POP     (r1)
+    PUSH    (r1)
+
+    JSR     (prep_env)
+
     JSR     (enterCode)
 
 dontEnterCode:
@@ -313,6 +318,63 @@ dontEnterCode:
 
 enterCode:
     ld      pc, r0, ADDR
+
+# Find the start of the command string
+#
+# Lots of ways a file can be run:
+# *    filename params
+# * /  filename params
+# *R.  filename params
+# *RU. filename params
+# *RUN filename params
+#   
+#
+# In general you want:
+# - skip leading space or * characters
+# - skip any form of *RUN, followed by trailing spaces
+# - leave the environment point at the first character of filename
+
+prep_env:
+    PUSH    (r13)
+    DEC     (r1, 1)
+prep_env_1:                         # skip leading space or * characters
+    INC     (r1, 1)
+    JSR     (skip_spaces)
+    cmp     r2, r0, 0x2A            # *
+    z.mov   pc, r0, prep_env_1
+
+    cmp     r2, r0, 0x2F            # /
+    z.mov   pc, r0, prep_env_4
+
+    mov     r2, r0, run_string - 1
+    mov     r3, r1, -1
+prep_env_2:                         # skip a possibly abbreviated RUN
+    INC     (r2, 1)
+    ld      r4, r2                  # Read R U N <0>
+    z.mov   pc, r0, prep_env_3
+    INC     (r3, 1)
+    ld      r5, r3
+    cmp     r5, r0, 0x2E            # .
+    z.mov   pc, r0, prep_env_3
+    and     r5, r0, 0xDF            # force upper case
+    cmp     r4, r5                  # match against R U N
+    nz.mov  pc, r0, prep_env_5
+    mov     pc, r0, prep_env_2      # loop back for more characters
+
+prep_env_3:
+    mov     r1, r3
+
+prep_env_4:
+    INC     (r1, 1)
+
+prep_env_5:
+    JSR     (skip_spaces)
+    POP     (r13)
+    RTS     ()
+
+run_string:
+    STRING  "RUN"
+    WORD    0
 
 # --------------------------------------------------------------
 # Local Command Processor
