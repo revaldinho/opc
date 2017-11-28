@@ -327,7 +327,7 @@ enterCode:
 # *R.  filename params
 # *RU. filename params
 # *RUN filename params
-#   
+#
 #
 # In general you want:
 # - skip leading space or * characters
@@ -505,13 +505,187 @@ msgHelp:
 cmdTest:
     PUSH   (r13)
     JSR    (read_hex)
-    mov    r1, r2
+
+    # Save param
+    PUSH   (r2)
+
+    # Set TIME to using OSWORD 2
+    mov    r1, r0, 0x02
+    mov    r2, r0, osword_pblock
+    sto    r0, r2
+    sto    r0, r2, 1
+    sto    r0, r2, 2     # only necessary when word size is 16 bits
+    JSR    (OSWORD)
+
+    # Restore param
+    POP    (r1)
+    PUSH    (r1)
+
+    # Print param
     JSR    (print_hex_word_spc)
     JSR    (print_dec_word)
     JSR    (OSNEWL)
+
+
+    # Restore param
+    POP    (r1)
+
+    # Do some real work
+    JSR    (pi_calc)
+    JSR    (OSNEWL)
+
+    # Read TIME using OSWORD 1
+    mov    r1, r0, 0x01
+    mov    r2, r0, osword_pblock
+    JSR    (OSWORD)
+
+    # Print the LS word in decomal
+    ld     r1, r0, osword_pblock
+    JSR    (print_dec_word)
+    JSR    (OSNEWL)
+
     mov    r1, r0
     POP    (r13)
     RTS    ()
+
+osword_pblock:
+    WORD   0
+    WORD   0
+    WORD   0
+
+# -------------------------------------------------------
+# Pi Test Program
+#
+# On entry, r1 is the number of digits
+# -------------------------------------------------------
+    EQU       p, 0x1000
+
+pi_calc:
+    PUSH   (r13)
+
+    # r1 = ndigits
+    # psize calculated dynamicaly as = 1 + ndigits * 10 / 3
+
+    PUSH   (r1)                # push ndigits
+    mov    r11, r0, 10
+    JSR    (mul)
+
+    mov    r11, r1
+    mov    r1, r0, 3
+    JSR    (div)               # r11 / r1 => quotient in r11, remainder in r1
+    mov    r2, r11, 1
+    PUSH   (r2)                # push psize
+
+    JSR    (init)              # ndigits in r2
+
+    POP    (r3)                # pop psize
+    POP    (r2)                # pop ndigits
+
+    #mov    r2, r0, ndigits    # ldx #359
+    #mov    r3, r0, psize      # ldy #1193
+
+    mov    r7, r2, -1          # r7 = ndigits - 1
+l1:
+    mov    r6, r3              # phy
+    mov    r4, r1              # pha
+    mov    r5, r2              # phx
+    mov    r11, r0             # stz q
+    mov    r1, r3              # tya
+    mov    r2, r1              # tax
+
+l2:
+    mov    r1, r2              # txa
+    JSR    (mul)
+    mov    r9, r1              # sta s
+    mov    r1, r0, 10          # lda #10
+    mov    r11, r1             # sta q
+    ld     r1, r2, p-1         # lda p-1,x
+    JSR    (mul)
+                               # clc
+    add    r1, r9              # adc s
+    mov    r11, r1             # sta q
+    mov    r1, r2              # txa
+    add    r1, r1              # asl
+    mov    r1, r1, -1          # dec
+    JSR    (div)
+    sto    r1, r2, p-1         # sta p-1,x
+    mov    r2, r2, -1          # dex
+    nz.mov pc, r0, l2          # bne l2
+
+    mov    r1, r0, 10          # lda #10
+    JSR    (div)
+    sto    r1, r0, p           # sta p
+    mov    r2, r5              # plx
+    mov    r1, r4              # pla
+    mov    r3, r11             # ldy q
+    cmp    r3, r0, 10          # cpy #10
+    nc.mov pc, r0, l3          # bcc l3
+    mov    r3, r0              # ldy #0
+    mov    r1, r1, 1           # inc
+l3:
+    cmp    r2, r7              # cpx #358
+    nc.mov pc, r0, l4          # bcc l4
+    nz.mov pc, r0, l5          # bne l5
+    JSR    (OSWRCH)
+    mov    r1, r0, 46          # lda #46
+l4:
+    JSR    (OSWRCH)
+l5:
+    mov    r1, r3              # tya
+    xor    r1, r0, 48          # eor #48
+    mov    r3, r6              # ply
+    cmp    r2, r7              # cpx #358
+    c.mov  pc, r0, l6          # bcs l6
+                               # dey
+                               # dey
+    mov    r3, r3, -3          # dey by 3
+l6:
+    mov    r2, r2, -1          # dex
+    nz.mov pc, r0, l1          # bne l1
+    JSR    (OSWRCH)
+    mov    r0, r0, 3142        # RTS()
+    POP    (r13)
+    RTS    ()
+
+init:
+    mov    r1, r0, 2           # lda #2
+    #mov    r2, r0, psize       # was ldx #1192
+i1:
+    sto    r1, r2, p-1         # was sta p,x
+    mov    r2, r2, -1          # dex
+    nz.mov pc, r0, i1          # bne instead of bpl i1
+    RTS    ()
+
+mul:                           # uses y as loop counter
+    mov    r10, r1             # sta r
+    mov    r3, r0, WORD_SIZE   # ldy #16
+m1:
+    add    r1, r1              # asl
+    add    r11, r11            # asl q
+    nc.mov pc, r0, m2          # bcc m2
+                               # clc
+    add    r1, r10             # adc r
+m2:
+    mov    r3, r3, -1          # dey
+    nz.mov pc, r0, m1          # bne m1
+    RTS()
+
+div:                           # uses y as loop counter
+    mov    r10, r1             # sta r
+    mov    r3, r0, WORD_SIZE   # ldy #16
+    mov    r1, r0, 0           # lda #0
+    add    r11, r11            # asl q
+d1:
+    ROL    (r1, r1)            # rol
+    cmp    r1, r10             # cmp r
+    nc.mov pc, r0, d2          # bcc d2
+    sub    r1, r10             # sbc r
+d2:
+    ROL    (r11, r11)          # rol q
+    mov    r3, r3, -1          # dey
+    nz.mov pc, r0, d1          # bne d1
+    RTS    ()
+
 
 # ---------------------------------------------------------
 
@@ -595,15 +769,267 @@ osGBPB:
 
 # --------------------------------------------------------------
 
+
+# On entry:
+#   r1 is the osword number
+#   r2 points to the paramater block in memory
+
 osWORD:
     cmp     r1, r0
     z.mov   pc, r0, RDLINE
 
-    # TODO
+    PUSH    (r13)
+    PUSH    (r1)              # save calling param (osword number)
+    PUSH    (r2)              # save calling param (block)
+    PUSH    (r3)              # r3 used as a scratch register
+    PUSH    (r4)              # r4 used as a scratch register
+
+    mov     r3, r1
+    mov     r4, r2
+    mov     r1, r0, 8
+    JSR     (SendByteR2)      # Send command &08 - OSWORD
+    mov     r1, r3
+    JSR     (SendByteR2)      # Send osword number
+    cmp     r3, r0, 0x15      # Compute index into length table
+    c.mov   r3, r0            # >= OSWORD 0x15, use slot 0
+
+    ld      r1, r3, word_in_len
+    JSR     (SendByteR2)      # Send request block length
+
+    ld      r1, r3, word_in_len
+    mov     r2, r4
+    JSR     (SendBlockR2)     # Send request block
+
+    ld      r1, r3, word_out_len
+    JSR     (SendByteR2)      # Send response block length
+
+    ld      r1, r3, word_out_len
+    mov     r2, r4
+    JSR     (ReceiveBlockR2)  # Receive response block
+
+    POP     (r4)
+    POP     (r3)
+    POP     (r2)
+    POP     (r1)
+    POP     (r13)
     RTS     ()
 
-# --------------------------------------------------------------
+# Send a defined size block to tube FIFO R2
+# r1 is the length
+# r2 is the block address
+# The complexity here is the block needs to be send backwards!
 
+SendBlockR2:
+    PUSH    (r13)
+    PUSH    (r3)
+    PUSH    (r4)
+    mov     r4, r1, -1         # r4 = block length - 1
+    mi.mov  pc, r0, SendBlockDone
+
+##ifdef CPU_OPC7
+
+    mov     r1, r4            # calculate address of word containing last byte
+    lsr     r1, r1
+    lsr     r1, r1
+    add     r2, r1
+    ld      r3, r2            # load the first word from memory
+    mov     r1, r4
+    and     r1, r0, 3         # word out the byte alignment of the last byte in the block (first byte to send)
+    z.mov   pc, r0, SendBlockB0
+    cmp     r1, r0, 1
+    z.mov   pc, r0, SendBlockB1
+    cmp     r1, r0, 2
+    z.mov   pc, r0, SendBlockB2
+SendBlockB3:
+    bperm   r1, r3, 0x4443
+    JSR     (SendByteR2)      # send byte 3
+    DEC     (r4, 1)
+    mi.mov  pc, r0, SendBlockDone
+SendBlockB2:
+    bperm   r1, r3, 0x4442
+    JSR     (SendByteR2)      # send byte 2
+    DEC     (r4, 1)
+    mi.mov  pc, r0, SendBlockDone
+SendBlockB1:
+    bperm   r1, r3, 0x4441
+    JSR     (SendByteR2)      # send byte 1
+    DEC     (r4, 1)
+    mi.mov  pc, r0, SendBlockDone
+SendBlockB0:
+    bperm   r1, r3, 0x4440
+    JSR     (SendByteR2)      # send byte 0
+    DEC     (r4, 1)
+    mi.mov  pc, r0, SendBlockDone
+    DEC     (r2, 1)
+    ld      r3, r2            # load the next word from memory
+    mov     pc, r0, SendBlockB3
+
+##else
+
+    mov     r1, r4            # calculate address of word containing last byte
+    lsr     r1, r1
+    add     r2, r1
+    ld      r3, r2            # load the first word from memory
+    mov     r1, r4
+    and     r1, r0, 1         # word out the byte alignment of the last byte in the block (first byte to send)
+    z.mov   pc, r0, SendBlockB0
+SendBlockB1:
+    bswp    r1, r3
+    JSR     (SendByteR2)      # send byte 1
+    DEC     (r4, 1)
+    mi.mov  pc, r0, SendBlockDone
+SendBlockB0:
+    JSR     (SendByteR2)      # send byte 0
+    DEC     (r4, 1)
+    mi.mov  pc, r0, SendBlockDone
+    DEC     (r2, 1)
+    ld      r3, r2            # load the next word from memory
+    mov     pc, r0, SendBlockB1
+
+##endif
+
+SendBlockDone:
+    POP     (r4)
+    POP     (r3)
+    POP     (r13)
+    RTS     ()
+
+
+# Receive a defined size block from tube FIFO R2
+# r1 is the length
+# r2 is the block address
+
+ReceiveBlockR2:
+    PUSH    (r13)
+    PUSH    (r3)
+    PUSH    (r4)
+    mov     r4, r1, -1         # r4 = block length - 1
+    mi.mov  pc, r0, ReceiveBlockDone
+
+##ifdef CPU_OPC7
+
+    mov     r1, r4            # calculate address of word containing last byte
+    lsr     r1, r1
+    lsr     r1, r1
+    add     r2, r1
+    mov     r3, r0            # clear the receive word
+    mov     r1, r4
+    and     r1, r0, 3         # word out the byte alignment of the last byte in the block (first byte to send)
+    z.mov   pc, r0, ReceiveBlockB0
+    cmp     r1, r0, 1
+    z.mov   pc, r0, ReceiveBlockB1
+    cmp     r1, r0, 2
+    z.mov   pc, r0, ReceiveBlockB2
+ReceiveBlockB3:
+    JSR     (WaitByteR2)      # receive byte 3
+    bperm   r1, r1, 0x0444
+    or      r3, r1
+    DEC     (r4, 1)
+    mi.mov  pc, r0, ReceiveBlockWrite
+ReceiveBlockB2:
+    JSR     (WaitByteR2)      # receive byte 2
+    bperm   r1, r1, 0x4044
+    or      r3, r1
+    DEC     (r4, 1)
+ReceiveBlockB1:
+    mi.mov  pc, r0, ReceiveBlockWrite
+    JSR     (WaitByteR2)      # receive byte 1
+    bperm   r1, r1, 0x4404
+    or      r3, r1
+    DEC     (r4, 1)
+ReceiveBlockB0:
+    mi.mov  pc, r0, ReceiveBlockWrite
+    JSR     (WaitByteR2)      # receive byte 0
+    bperm   r1, r1, 0x4440    # this instruction could probably be skipped
+    or      r3, r1
+ReceiveBlockWrite:
+    sto     r3, r2
+    mov     r3, r0
+    DEC     (r2, 1)
+    DEC     (r4, 1)
+    pl.mov  pc, r0, ReceiveBlockB3
+
+##else
+
+    mov     r1, r4            # calculate address of word containing last byte
+    lsr     r1, r1
+    add     r2, r1
+    mov     r3, r0            # clear the receive word
+    mov     r1, r4
+    and     r1, r0, 1         # word out the byte alignment of the last byte in the block (first byte to send)
+    z.mov   pc, r0, ReceiveBlockB0
+ReceiveBlockB1:
+    mi.mov  pc, r0, ReceiveBlockWrite
+    JSR     (WaitByteR2)      # receive byte 1
+    bswp    r1, r1
+    or      r3, r1
+    DEC     (r4, 1)
+ReceiveBlockB0:
+    mi.mov  pc, r0, ReceiveBlockWrite
+    JSR     (WaitByteR2)      # receive byte 0
+    or      r3, r1
+ReceiveBlockWrite:
+    sto     r3, r2
+    mov     r3, r0
+    DEC     (r2, 1)
+    DEC     (r4, 1)
+    pl.mov  pc, r0, ReceiveBlockB1
+
+##endif
+
+ReceiveBlockDone:
+    POP     (r4)
+    POP     (r3)
+    POP     (r13)
+    RTS     ()
+
+word_in_len:
+    WORD 16   # OSWORD default
+    WORD 0    #  1  =TIME
+    WORD 5    #  2  TIME=
+    WORD 0    #  3  =IntTimer
+    WORD 5    #  4  IntTimer=
+    WORD 4    #  5  =IOMEM   JGH: must send full 4-byte address
+    WORD 5    #  6  IOMEM=
+    WORD 8    #  7  SOUND
+    WORD 14   #  8  ENVELOPE
+    WORD 4    #  9  =POINT()
+    WORD 1    # 10  =CHR$()
+    WORD 1    # 11  =Palette
+    WORD 5    # 12  Pallette=
+    WORD 0    # 13  =Coords
+    WORD 8    # 14  =RTC
+    WORD 25   # 15  RTC=
+    WORD 16   # 16  NetTx
+    WORD 13   # 17  NetRx
+    WORD 0    # 18  NetArgs
+    WORD 8    # 19  NetInfo
+    WORD 128  # 20  NetFSOp
+
+word_out_len:
+    WORD 16   # OSWORD default
+    WORD 5    #  1  =TIME
+    WORD 0    #  2  TIME=
+    WORD 5    #  3  =IntTimer
+    WORD 0    #  4  IntTimer=
+    WORD 5    #  5  =IOMEM
+    WORD 0    #  6  IOMEM=
+    WORD 0    #  7  SOUND
+    WORD 0    #  8  ENVELOPE
+    WORD 5    #  9  =POINT()
+    WORD 9    # 10  =CHR$()
+    WORD 5    # 11  =Palette
+    WORD 0    # 12  Palette=
+    WORD 8    # 13  =Coords
+    WORD 25   # 14  =RTC
+    WORD 1    # 15  RTC=
+    WORD 13   # 16  NetTx
+    WORD 13   # 17  NetRx
+    WORD 128  # 18  NetArgs
+    WORD 8    # 19  NetInfo
+    WORD 128  # 20  NetFSOp
+
+# --------------------------------------------------------------
 
 #
 # RDLINE - Read a line of text
