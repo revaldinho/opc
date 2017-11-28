@@ -24,7 +24,11 @@ ss_print_state:
 
 ss_pad1:
     ld      r1, r0, HPOS
+##ifdef CPU_OPC7
+    cmp     r1, r0, 46             # pad instruction like the emulator does
+##else   
     cmp     r1, r0, 42             # pad instruction like the emulator does
+##endif
     z.mov   pc, r0, ss_pad2
     JSR     (print_spc)
     mov     pc, r0, ss_pad1
