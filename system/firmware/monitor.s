@@ -45,6 +45,7 @@ ORG CODE
 ##include "lib_dumpmem.s"
 ##include "lib_srec.s"
 ##include "lib_disassemble.s"
+##include "lib_singlestep.s"
 
 # ---------------------------------------------------------
 
@@ -226,7 +227,15 @@ spin:
 
 regs:
     JSR     (OSNEWL)
-    JSR     (print_regs)
+    JSR     (ss_print_regs)
+    mov     pc, r0, mon1           # back to the - prompt
+
+# ---------------------------------------------------------
+
+step:
+
+    mov     r1, r5                 # number of instructions to step
+    JSR     (ss_step)
     mov     pc, r0, mon1           # back to the - prompt
 
 # ---------------------------------------------------------
@@ -305,252 +314,6 @@ dis_loop:
     nz.mov  pc, r0, dis_loop
 
     mov     pc, r0, mon6
-
-# ---------------------------------------------------------
-
-# Single Step Command
-#
-# Local registers:
-# r1 is the fetched instruction
-# r2 is the fetched operand
-# r3 is a temporary working register
-# r4 is the program counter
-# r5 is the source register number
-# r6 is the destination register number
-# r7 is the emulated source register
-# r8 is the emulated destination register
-# r9 is the saved pc value, and then the emulated flags
-# r10 is the iteration count
-#
-# TODO: for OPC6
-#
-# - support PUTPSR and GETPSR (not setting SWI)
-#     - "psr" should be r0
-#     - but we re-write src/dst so need to check if values other than r0 are ok
-# - support SWI and RTI (???)
-#     - need to emulate the shadow PC/shadow PSR
-
-step:
-
-##ifdef CPU_OPC7
-    mov     pc, r0, mon1           # back to the - prompt
-##else
-    mov     r10, r5, 1             # iteration count + 1
-
-step_loop:
-    ld      r4, r0, reg_state_pc   # load the program counter
-    mov     r9, r4                 # save the program counter of the current instruction
-    ld      r1, r4                 # fetch the instruction
-    INC     (r4,1)                 # increment the PC
-
-    mov     r5, r1                 # extract the src register num (r5)
-    ror     r5, r5
-    ror     r5, r5
-    ror     r5, r5
-    ror     r5, r5
-    and     r5, r0, 0x000F
-
-    mov     r6, r1                 # extract the dst register num (r6)
-    and     r6, r0, 0x000F
-
-    ld      r2, r0, nop            # by default the operand slot is filled with a nop
-    sto     r2, r0, operand        # store the operand
-
-    mov     r2, r1
-    and     r2, r0, 0x1000         # test for an operand
-    z.mov   pc, r0, no_operand     # r2 zero if no operand, which is correct
-
-    ld      r2, r4                 # fetch the operand
-    sto     r2, r0, operand        # store back the operand, and leave it in r2
-    INC     (r4,1)                 # increment the PC
-
-no_operand:
-    sto     r4, r0, reg_state_pc   # save the updated program counter which
-                                   # will now point to the next instruction
-
-    ld      r7, r5, reg_state      # load the src register value
-    ld      r8, r6, reg_state      # load the dst register value
-
-##ifdef CPU_OPC6
-
-    #
-    # Emulate OPC6 JSR instruction
-
-    # r1 = instruction, r2 = operand
-
-    mov     r3, r1                 # extract the predicate
-    and     r3, r0, 0xe000
-    cmp     r3, r0, 0x2000
-    z.mov   pc, r0, not_jsr        # never predicate present, so not a jsr
-
-    mov     r3, r1                 # extract the opcode
-    and     r3, r0, 0x0f00
-    cmp     r3, r0, 0x0c00         # test for inc
-    z.mov   pc, r0, skip_src_rewrite
-    cmp     r3, r0, 0x0e00         # test for dec
-    z.mov   pc, r0, skip_src_rewrite
-
-    cmp     r3, r0, 0x0900         # test for jsr
-    nz.mov  pc, r0, not_jsr
-
-    or      r1, r0, 0x1000         # patch the instruction to always have an operand
-    mov     r3, r0, jsr_taken
-    sto     r3, r0, operand        # patch the operand to be the jsr_taken routine
-
-    add     r2, r7                 # pass EA to jsr_taken by adding the source register (r7) value to the operand (r2)
-
-not_jsr:
-
-##endif
-
-    and     r1, r0, 0xff0f         # patch the instruction so:
-    or      r1, r0, 0x0070         # src = r7
-
-skip_src_rewrite:
-    and     r1, r0, 0xfff0         # patch the instruction so:
-    or      r1, r0, 0x0008         # dst = r8
-
-    sto     r1, r0, instruction    # write the patched instruction
-
-    mov     r1, r9                 # print state done here to be identical to the emulator
-    PUSH    (r2)
-    JSR     (print_state)
-    POP     (r2)
-
-    ld      r9, r0, reg_state_psr  # load the s (bit 2), c (bit 1) and z (bit 0) flags
-
-    PUTPSR  (r9)                   # load the flags
-
-instruction:
-    WORD    0x0000                 # emulated instruction patched here
-
-operand:
-    WORD    0x0000                 # emulated opcode patched here
-
-    GETPSR  (r9)                   # save the flags
-
-    cmp     r6, r0, 15             # was the destination register r15
-    nz.sto  r9, r0, reg_state_psr  # no, then save the flags
-
-    cmp     r6, r0                 # was the destination register r0
-    nz.sto  r8, r6, reg_state      # no, then save the new dst register value
-
-next_instruction:
-    DEC     (r10, 1)               # decrement the iteration count
-    nz.mov  pc, r0, step_loop      # and loop back for more instructions
-
-    ld      r1, r0, reg_state_pc
-    JSR     (print_state)          # print the final state
-
-    mov     pc, r0, mon1           # back to the - prompt
-
-nop:
-    z.and   r0, r0
-
-##ifdef CPU_OPC6
-
-jsr_taken:
-    sto     r4, r6, reg_state      # store the current PC in the specified link register
-
-    cmp     r2, r0, 0xffee         # EA = oswrch?
-    nz.mov  pc, r0, not_oswrch
-
-    ld      r1, r0, reg_state_r1   # emulate oswrch
-    JSR     (OSWRCH)
-    mov     pc, r0, next_instruction
-
-not_oswrch:
-    mov     r4, r2                 # update the PC to the calculated effective address
-    sto     r4, r0, reg_state_pc   # save the updated PC
-    mov     pc, r0, next_instruction
-
-##endif
-
-print_state:
-    PUSH    (r13)
-    PUSH    (r1)
-    JSR     (OSNEWL)
-    POP     (r1)
-    JSR     (disassemble)
-
-pad1:
-    ld      r1, r0, HPOS
-    cmp     r1, r0, 42             # pad instruction like the emulator does
-    z.mov   pc, r0, pad2
-    JSR     (print_spc)
-    mov     pc, r0, pad1
-
-pad2:
-    JSR     (print_delim)
-    JSR     (print_regs)
-    POP     (r13)
-    RTS     ()
-##endif
-
-# --------------------------------------------------------------
-#
-# Display the registers from single step
-#
-# Entry:
-#
-# Exit:
-# - r1, r2, r3 are trashed
-
-print_regs:
-
-    PUSH    (r13)
-    JSR     (print_spc)
-    ld      r1, r0, reg_state_psr # extract SWI flag
-    ror     r1, r1
-    ror     r1, r1
-    ror     r1, r1
-    ror     r1, r1
-    and     r1, r0, 0x0f
-    JSR     (print_hex_1)
-    JSR     (print_spc)
-    JSR     (print_spc)
-
-    ld      r1, r0, reg_state_psr # extract EI flag
-    ror     r1, r1
-    ror     r1, r1
-    ror     r1, r1
-    JSR     (print_flag)
-
-    ld      r1, r0, reg_state_psr # extract S flag
-    ror     r1, r1
-    ror     r1, r1
-    JSR     (print_flag)
-
-    ld      r1, r0, reg_state_psr # extract C flag
-    ror     r1, r1
-    JSR     (print_flag)
-
-    ld      r1, r0, reg_state_psr # extract Z flag
-    JSR     (print_flag)
-
-    mov     r1, r0, 0x3A          # ":"
-    JSR     (OSWRCH)
-
-    mov     r2, r0
-    mov     r3, r0, 16
-dr_loop:
-    ld      r1, r2, reg_state
-    JSR     (print_spc)
-    JSR     (print_hex_word)      # "1234"
-    INC     (r2,1)
-    DEC     (r3,1)
-    nz.mov  pc, r0, dr_loop
-    POP     (r13)
-    RTS     ()
-
-print_flag:
-    PUSH    (r13)
-    and     r1, r0, 1
-    add     r1, r0, 0x30
-    JSR     (OSWRCH)              # "0" or "1"
-    JSR     (print_spc)           # " "
-    POP     (r13)
-    RTS     ()
 
 # --------------------------------------------------------------
 #
@@ -707,42 +470,6 @@ welcome:
     WORD    0x0D0A
 ##endif
     WORD    0x0000
-
-reg_state:
-    WORD 0x0000
-reg_state_r1:
-    WORD 0x0000
-reg_state_r2:
-    WORD 0x0000
-reg_state_r3:
-    WORD 0x0000
-reg_state_r4:
-    WORD 0x0000
-reg_state_r5:
-    WORD 0x0000
-reg_state_r6:
-    WORD 0x0000
-reg_state_r7:
-    WORD 0x0000
-reg_state_r8:
-    WORD 0x0000
-reg_state_r9:
-    WORD 0x0000
-reg_state_r10:
-    WORD 0x0000
-reg_state_r11:
-    WORD 0x0000
-reg_state_r12:
-    WORD 0x0000
-reg_state_r13:
-    WORD 0x0000
-reg_state_r14:
-    WORD 0x0000
-reg_state_pc:
-    WORD 0x0000
-reg_state_psr:
-    WORD 0x0000
-
 
 # -----------------------------------------------------------------------------
 # MOS interface

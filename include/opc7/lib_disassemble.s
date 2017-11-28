@@ -23,6 +23,7 @@
 disassemble:
 
     PUSH   (r13)
+    PUSH   (r2)
     PUSH   (r3)
     PUSH   (r4)
     PUSH   (r5)
@@ -121,6 +122,7 @@ dis7:
     POP     (r5)
     POP     (r4)
     POP     (r3)
+    POP     (r2)
     POP     (r13)
     RTS     ()
 

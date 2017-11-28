@@ -31,6 +31,11 @@ ROMSTART   = E000
 # Length address (in words) of the ROM (in the assembler output)
 ROMLEN     = 2000
 
+# User Memory
+MEM_BOT   ?= 0100
+MEM_TOP   ?= F7FF
+STACK     ?= F7FF
+
 # Common include files
 include $(ROOT)/common/Makefile.inc
 include $(ROOT)/common/Makefile_xilinx_cable_serial.inc

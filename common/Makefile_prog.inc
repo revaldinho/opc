@@ -10,7 +10,7 @@ PROG        ?= $(basename $(notdir $(PROG_SRC)))
 
 $(PROG).hex: $(ROOT)/$(PROG_SRC)
 	# run the pre-processor to resolve and ##includes
-	filepp $(INC_FLAGS) -D_BASE_=0x$(ROMSTART) -kc '##' $(ROOT)/$(PROG_SRC) > $(PROG).s.tmp
+	filepp $(INC_FLAGS) -D_BASE_=0x$(ROMSTART) -D_MEM_BOT_=0x$(MEM_BOT) -D_MEM_TOP_=0x$(MEM_TOP) -D_STACK_=0x$(STACK) -kc '##' $(ROOT)/$(PROG_SRC) > $(PROG).s.tmp
 	mv $(PROG).s.tmp $(PROG).s
 	# run the assember
 	python $(ROOT)/$(ASM_PATH) $(PROG).s $(PROG).hex | tee ${PROG}.lst
