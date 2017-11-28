@@ -8,12 +8,21 @@ EQU         MOS, 0x000C8
 EQU        WORK, 0x00100
 EQU  END_MARKER, 0x80000000   # makes the end of each command -ve
 ##else
+##ifdef CPU_OPC6
 EQU        BASE, 0xE000
 EQU        CODE, 0xF800
 EQU        TUBE, 0xFEF8
 EQU         MOS, 0xFFC8
 EQU        WORK, 0x0000
 EQU  END_MARKER, 0x8000       # makes the end of each command -ve
+##else
+EQU        BASE, 0xE000
+EQU        CODE, 0xF000
+EQU        TUBE, 0xFEF8
+EQU         MOS, 0xFFC8
+EQU        WORK, 0x0000
+EQU  END_MARKER, 0x8000       # makes the end of each command -ve
+##endif
 ##endif
 
 # These are passed in directly from the makefile
@@ -103,10 +112,7 @@ ORG CODE
 ##include "lib_readhex.s"
 ##include "lib_srec.s"
 ##include "lib_dumpmem.s"
-
-##ifndef CPU_OPC5LS
 ##include "lib_disassemble.s"
-##endif
 
 ResetHandler:
     mov     r14, r0, STACK              # setup the stack
@@ -468,7 +474,6 @@ cmdMem:
 
 # --------------------------------------------------------------
 
-##ifndef CPU_OPC5LS
 cmdDis:
     PUSH    (r13)
     JSR     (read_hex)
@@ -484,7 +489,7 @@ dis_loop:
     mov     r1, r0
     POP     (r13)
     RTS     ()
-##endif
+
 # --------------------------------------------------------------
 
 cmdHelp:
@@ -737,10 +742,8 @@ cmdTable:
     WORD    cmdGo   | END_MARKER
     STRING  "mem"
     WORD    cmdMem  | END_MARKER
-##ifndef CPU_OPC5LS
     STRING  "dis"
     WORD    cmdDis  | END_MARKER
-##endif
     STRING  "help"
     WORD    cmdHelp | END_MARKER
     STRING  "test"
@@ -867,7 +870,7 @@ SendBlockB0:
 ##else
 
     mov     r1, r4            # calculate address of word containing last byte
-    lsr     r1, r1
+    LSR     (r1, r1)
     add     r2, r1
     ld      r3, r2            # load the first word from memory
     mov     r1, r4
@@ -952,7 +955,7 @@ ReceiveBlockWrite:
 ##else
 
     mov     r1, r4            # calculate address of word containing last byte
-    lsr     r1, r1
+    LSR     (r1, r1)
     add     r2, r1
     mov     r3, r0            # clear the receive word
     mov     r1, r4
