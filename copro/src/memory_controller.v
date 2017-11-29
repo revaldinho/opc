@@ -130,7 +130,7 @@ module memory_controller
    // This gives a cycle of address/data setup and
    // Important this is a register so it is glitch free
    always @(posedge clock)
-      if (!cpu_rnw && !ext_cs_b && !count[2])
+      if (!cpu_rnw && !ext_cs_b && !count[1])
          ext_we_b <= 1'b0;
       else
          ext_we_b <= 1'b1;
