@@ -17,11 +17,11 @@
 // -- Data setup from rising edge of write is 9ns
 // -- Address hold from rising edge of write is 0ns
 //
-// To err on the safe side, we allow 2 cycles for each half-word access
+// This version of the memory controller tries to run flat out!!!
 //
-// So a complete external memory access (both 16-bit half-words) takes 4 cycles
+// So a complete external memory access (both 16-bit half-words) takes 2 cycles
 //
-// Which means the memory controller must insert 3 wait states
+// Which means the memory controller must insert 1 wait states
 
 module memory_controller
   (
@@ -71,37 +71,23 @@ module memory_controller
    output                ram_data_oe;
 
    wire                  ext_a_lsb;
-   reg                   ext_we_b;
    reg [15:0]            ram_data_last;
-   reg [1:0]             count;
+   reg                   count;
 
-   // Count 0..3 during external memory cycles
+   // Count 0..1 during external memory cycles
    always @(posedge clock)
-     if (!reset_b)
-       count <= 0;
-     else if (!ext_cs_b || count > 0)
-       count <= count + 1;
+     count <= !ext_cs_b;
 
-   // Drop clken for 7 cycles during an external memory access
-   assign cpu_clken = !(!ext_cs_b && count < 3);
+   // Drop clken for 1 cycle during an external memory access
+   assign cpu_clken = !(!ext_cs_b && !count);
 
-   // A0 = 0 for count 0,1 (low half-word) and A0 = 1 for count 2,3 (high half-word)
-   assign ext_a_lsb = count[1];
-
-   // Generate clean write co-incident with cycles 1 and 3
-   // This gives a cycle of address/data setup and
-   // Important this is a register so it is glitch free
+   // A0 = 0 for count 0 (low half-word) and A0 = 1 for count 1 (high half-word)
+   assign ext_a_lsb = count;
+   
+   // The low byte is registered at the end of cycle 0
+   // The high byte is consumed directly from RAM at the end of cycle 1
    always @(posedge clock)
-      if (!cpu_rnw && !ext_cs_b && !count[0])
-         ext_we_b <= 1'b0;
-      else
-         ext_we_b <= 1'b1;
-
-   // The low byte is registered at the end of cycle 1
-   // The high byte is consumed directly from RAM at the end of cycle 3
-   always @(posedge clock)
-     if (count[0] == 1'b1)
-       ram_data_last <= ram_data_in;
+     ram_data_last <= ram_data_in;
 
    assign ext_dout = { ram_data_in, ram_data_last };
 
@@ -112,7 +98,7 @@ module memory_controller
    assign ram_addr = {cpu_addr[16:0], ext_a_lsb};
    assign ram_cs_b = ext_cs_b;
    assign ram_oe_b = !cpu_rnw;
-   assign ram_we_b = ext_we_b;
+   assign ram_we_b = ext_cs_b | cpu_rnw | (!clock);
 
    assign ram_data_oe = !cpu_rnw;
    assign ram_data_out  = ext_a_lsb == 1 ? cpu_dout[31:16]  :
