@@ -17,13 +17,11 @@
 // -- Data setup from rising edge of write is 9ns
 // -- Address hold from rising edge of write is 0ns
 //
-// To err on the safe side, we allow 4 cycles for each byte access
+// To err on the safe side, we allow 2 cycles for each half-word access
 //
-// TODO: Lots of scope for speeding this up
+// So a complete external memory access (both 16-bit half-words) takes 4 cycles
 //
-// So a complete external memory access (both 16-bit half-words) takes 8 cycles
-//
-// Which means the memory controller must insert 7 wait states
+// Which means the memory controller must insert 3 wait states
 
 module memory_controller
   (
@@ -87,14 +85,14 @@ module memory_controller
    // Drop clken for 7 cycles during an external memory access
    assign cpu_clken = !(!ext_cs_b && count < 3);
 
-   // A0 = 0 for count 0,1,2,3 (low byte) and A0 = 1 for count 4,5,6,7 (high byte)
+   // A0 = 0 for count 0,1 (low half-word) and A0 = 1 for count 2,3 (high half-word)
    assign ext_a_lsb = count[1];
 
-   // Generate clean write co-incident with cycles 1,2 and 5,6
+   // Generate clean write co-incident with cycles 1 and 3
    // This gives a cycle of address/data setup and
    // Important this is a register so it is glitch free
    always @(posedge clock)
-      if (!cpu_rnw && !ext_cs_b && !count[1])
+      if (!cpu_rnw && !ext_cs_b && !count[0])
          ext_we_b <= 1'b0;
       else
          ext_we_b <= 1'b1;
