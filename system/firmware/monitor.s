@@ -10,33 +10,46 @@
 ##ifdef CPU_OPC7
 # Currently fixed addresses on opc7
 EQU        BASE, 0x0000
-EQU        CODE, 0x0800
+EQU        CODE, 0x0100
 EQU   UART_ADDR, 0xFFFFFE08
+EQU         MOS, 0x00C8
+EQU     EXAMPLE, 0x0800
+EQU     MEM_BOT, 0x0800
+EQU     MEM_TOP, 0x0DFF
+EQU       STACK, 0x0DFF
 ##else
 # Inject _BASE_from the build script (C000 on Xilinx, F000 on ICE40)
 EQU        BASE, _BASE_
 EQU        CODE, 0xF800
 EQU   UART_ADDR, 0xFE08
+EQU         MOS, 0xFFC8
+EQU     EXAMPLE, BASE + 0x0100
+EQU     MEM_BOT, 0x0100
+EQU     MEM_TOP, CODE - 1
+EQU       STACK, CODE - 1
 ##endif
 
 EQU UART_STATUS, UART_ADDR
 EQU   UART_DATA, UART_ADDR + 1
 
-EQU     MEM_BOT, 0x0100
-EQU     MEM_TOP, CODE - 1
-
 # This is the main stack, used by the monitor and by programs that are run with GO
-EQU       STACK, CODE - 1
+EQU  MAIN_STACK, STACK - 0x100
 
 # This is second stack, used by the single step emulation
-EQU    SS_STACK, STACK - 0x100  # Second stack
+EQU    SS_STACK, STACK    # Second stack
 
-EQU      INPBUF, 0x0030
-EQU      INPEND, 0x00F6
-EQU        HPOS, 0x00FE
+EQU      INPBUF, 0x0008
+EQU      INPEND, 0x00C0
+EQU        HPOS, 0x0006
 
 ORG BASE
     mov     pc, r0, monitor
+
+ORG BASE + 2
+    rti    pc, pc
+
+ORG BASE + 4
+    rti    pc, pc
 
 ORG CODE
 
@@ -50,7 +63,7 @@ ORG CODE
 # ---------------------------------------------------------
 
 monitor:
-    mov     r14, r0, STACK
+    mov     r14, r0, MAIN_STACK
 
     mov     r1, r0, welcome
     JSR     (print_bstring)
@@ -59,7 +72,7 @@ monitor:
 
 mon1:
 
-    mov     r14, r0, STACK
+    mov     r14, r0, MAIN_STACK
 
     and     r11, r11       # don't output prompt if echo off
     nz.mov  pc, r0, mon2
@@ -480,91 +493,94 @@ welcome:
 
 ##ifndef CPU_OPC7
 Limit2:
-    EQU dummy, 0 if (Limit2 < 0xFFC8) else limit2_error
-
-ORG 0xFFC8
+    EQU dummy, 0 if (Limit2 < MOS) else limit2_error
 ##endif
+
+ORG MOS
 
 NVRDCH:                      # &FFC8
     mov     pc, r0, osRDCH
-    WORD    0x0000
+
+ORG MOS + (0xCB-0xC8)
 
 NVWRCH:                      # &FFCB
     mov     pc, r0, osWRCH
-    WORD    0x0000
+
+ORG MOS + (0xCE-0xC8)
 
 OSFIND:                      # &FFCE
     RTS     ()
-    WORD    0x0000
-    WORD    0x0000
+
+ORG MOS + (0xD1-0xC8)
 
 OSGBPB:                      # &FFD1
     RTS     ()
-    WORD    0x0000
-    WORD    0x0000
+
+ORG MOS + (0xD4-0xC8)
 
 OSBPUT:                      # &FFD4
     RTS     ()
-    WORD    0x0000
-    WORD    0x0000
+
+ORG MOS + (0xD7-0xC8)
 
 OSBGET:                      # &FFD7
     RTS     ()
-    WORD    0x0000
-    WORD    0x0000
+
+ORG MOS + (0xDA-0xC8)
 
 OSARGS:                      # &FFDA
     RTS     ()
-    WORD    0x0000
-    WORD    0x0000
+
+ORG MOS + (0xDD-0xC8)
 
 OSFILE:                      # &FFDD
     RTS     ()
-    WORD    0x0000
-    WORD    0x0000
+
+ORG MOS + (0xE0-0xC8)
 
 OSRDCH:                      # &FFE0
     mov     pc, r0, osRDCH
-    WORD    0x0000
+
+ORG MOS + (0xE3-0xC8)
 
 OSASCI:                      # &FFE3
     cmp     r1, r0, 0x0d
     nz.mov  pc, r0, OSWRCH
 
+ORG MOS + (0xE7-0xC8)
+
 OSNEWL:                      # &FFE7
     mov     pc, r0, osNEWL
-    WORD    0x0000
-    WORD    0x0000
-    WORD    0x0000
+
+ORG MOS + (0xEC-0xC8)
 
 OSWRCR:                      # &FFEC
     mov     r1, r0, 0x0D
 
+ORG MOS + (0xEE-0xC8)
+
 OSWRCH:                      # &FFEE
     mov     pc, r0, osWRCH
-    WORD    0x0000
+
+ORG MOS + (0xF1-0xC8)
 
 OSWORD:                      # &FFF1
     mov     pc, r0, osWORD
-    WORD    0x0000
-    WORD    0x0000
+
+ORG MOS + (0xF4-0xC8)
 
 OSBYTE:                      # &FFF4
     RTS     ()
-    WORD    0x0000
-    WORD    0x0000
+
+ORG MOS + (0xF7-0xC8)
 
 OS_CLI:                      # &FFF7
     RTS     ()
-    WORD    0x0000
-    WORD    0x0000
-
-
 
 # ----------------------------------------------------
 # Some test code (fastfib)
 
-        ORG     BASE + 0x100
+        ORG     EXAMPLE
 
 fib:
         mov     r4, r0, fibRes
@@ -588,7 +604,7 @@ fibLoop:
 fibEnd:
         RTS     ()
 
-        ORG     BASE + 0x180
+        ORG     EXAMPLE + 0x80
 
 fibRes:
 
@@ -625,7 +641,7 @@ fibRes:
         EQU ndigits,  6 # Original target 359 digits
         EQU   psize, 21 # Should be 1+ndigits*10/3
 
-        ORG BASE + 0x200
+        ORG EXAMPLE + 0x100
 start:
         PUSH(r13)
         ;; trivial banner
