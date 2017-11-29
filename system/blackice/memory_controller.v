@@ -75,9 +75,9 @@ module memory_controller
    wire                  ext_a_lsb;
    reg                   ext_we_b;
    reg [15:0]            ram_data_last;
-   reg [2:0]             count;
+   reg [1:0]             count;
 
-   // Count 0..7 during external memory cycles
+   // Count 0..3 during external memory cycles
    always @(posedge clock)
      if (!reset_b)
        count <= 0;
@@ -85,24 +85,24 @@ module memory_controller
        count <= count + 1;
 
    // Drop clken for 7 cycles during an external memory access
-   assign cpu_clken = !(!ext_cs_b && count < 7);
+   assign cpu_clken = !(!ext_cs_b && count < 3);
 
    // A0 = 0 for count 0,1,2,3 (low byte) and A0 = 1 for count 4,5,6,7 (high byte)
-   assign ext_a_lsb = count[2];
+   assign ext_a_lsb = count[1];
 
    // Generate clean write co-incident with cycles 1,2 and 5,6
    // This gives a cycle of address/data setup and
    // Important this is a register so it is glitch free
    always @(posedge clock)
-      if (!cpu_rnw && !ext_cs_b && !count[2])
+      if (!cpu_rnw && !ext_cs_b && !count[1])
          ext_we_b <= 1'b0;
       else
          ext_we_b <= 1'b1;
 
-   // The low byte is registered at the end of cycle 3
-   // The high byte is consumed directly from RAM at the end of cycle 7
+   // The low byte is registered at the end of cycle 1
+   // The high byte is consumed directly from RAM at the end of cycle 3
    always @(posedge clock)
-     if (count[1:0] == 2'b11)
+     if (count[0] == 1'b1)
        ram_data_last <= ram_data_in;
 
    assign ext_dout = { ram_data_in, ram_data_last };
