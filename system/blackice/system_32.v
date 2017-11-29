@@ -19,7 +19,7 @@ module system (
                output        txd);
 
    // CLKSPEED is the main clock speed
-   parameter CLKSPEED = 25000000;
+   parameter CLKSPEED = 50000000;
 
    // BAUD is the desired serial baud rate
    parameter BAUD = 115200;
@@ -83,7 +83,7 @@ module system (
      begin
         clkdiv <= clkdiv + 1;
      end
-   assign clk = clkdiv[1];
+   assign clk = clkdiv[0];
 
    always @(posedge clk)
      begin
@@ -122,14 +122,12 @@ module system (
    memory_controller #
      (
       .DSIZE(32),
-      .ASIZE(20),
-      .INDEX_BITS(4) // 16 entry cache
+      .ASIZE(20)
      )
    MEMC
      (
       .clock         (clk),
       .reset_b       (reset_b),
-      .vpa           (vpa),
       .ext_cs_b      (ext_cs_b),
       .cpu_rnw       (rnw),
       .cpu_clken     (extclken),

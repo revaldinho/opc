@@ -32,7 +32,6 @@ module memory_controller
 
    // CPU Signals
    ext_cs_b,
-   vpa,
    cpu_rnw,
    cpu_clken,
    cpu_addr,
@@ -51,18 +50,12 @@ module memory_controller
 
    parameter DSIZE        = 32;
    parameter ASIZE        = 20;
-   parameter INDEX_BITS   = 4;    // Cache size is 2 ** INDEX_BITS
-
-   localparam TAG_BITS    = ASIZE - INDEX_BITS;
-   localparam CACHE_WIDTH = DSIZE + 1 + TAG_BITS;
-   localparam CACHE_SIZE  = 2 ** INDEX_BITS;
 
    input                 clock;
    input                 reset_b;
 
    // CPU Signals
    input                 ext_cs_b;
-   input                 vpa;
    input                 cpu_rnw;
    output                cpu_clken;
    input [ASIZE-1:0]     cpu_addr;
@@ -79,54 +72,20 @@ module memory_controller
    output [15:0]         ram_data_out;
    output                ram_data_oe;
 
-   wire               ext_a_lsb;
-   reg                ext_we_b;
-   reg [15:0]         ram_data_last;
-   reg [2:0]          count;
-
-   // Simple 2^N-entry direct mapped instruction cache:
-   // bits 15..0  == data (16 bits)
-   // bits 16     == valid
-   // bits 33-N..17 == tag (16 - N bits)
-   reg [CACHE_WIDTH-1:0] cache [0:CACHE_SIZE - 1];  (* RAM_STYLE="DISTRIBUTED" *)
-   wire [INDEX_BITS-1:0]  addr_index = cpu_addr[INDEX_BITS-1:0];
-   wire [TAG_BITS-1:0]      addr_tag = cpu_addr[ASIZE-1:INDEX_BITS];
-
-   wire [CACHE_WIDTH-1:0]  cache_out = cache[addr_index];
-
-   wire [DSIZE-1:0]       cache_dout = cache_out[DSIZE-1:0];
-   wire                  cache_valid = cache_out[DSIZE];
-   wire [TAG_BITS-1:0]     cache_tag = cache_out[CACHE_WIDTH-1:DSIZE+1];
-   wire                    tag_match = cache_valid & (cache_tag == addr_tag);
-   wire                    cache_hit = vpa & tag_match;
-
-   integer i;
-
-   initial
-     for (i = 0; i < CACHE_SIZE; i = i + 1)
-       cache[i] <= 0;
-
-   always @(posedge clock)
-      if (count == 7)
-         if (cpu_rnw) begin
-            // Populate the cache at end of an instruction fetch from external memory
-            if (vpa)
-               cache[addr_index] <= {addr_tag, 1'b1, ext_dout};
-         end else begin
-            // Update the cache for consistecy if a cached instruction is overwritten
-            if (tag_match)
-               cache[addr_index] <= {addr_tag, 1'b1, cpu_dout};
-         end
+   wire                  ext_a_lsb;
+   reg                   ext_we_b;
+   reg [15:0]            ram_data_last;
+   reg [2:0]             count;
 
    // Count 0..7 during external memory cycles
    always @(posedge clock)
      if (!reset_b)
        count <= 0;
-     else if (!ext_cs_b && !cache_hit || count > 0)
+     else if (!ext_cs_b || count > 0)
        count <= count + 1;
 
    // Drop clken for 7 cycles during an external memory access
-   assign cpu_clken = !(!ext_cs_b && !cache_hit && count < 7);
+   assign cpu_clken = !(!ext_cs_b && count < 7);
 
    // A0 = 0 for count 0,1,2,3 (low byte) and A0 = 1 for count 4,5,6,7 (high byte)
    assign ext_a_lsb = count[2];
@@ -146,11 +105,11 @@ module memory_controller
      if (count[1:0] == 2'b11)
        ram_data_last <= ram_data_in;
 
-   assign ext_dout = cache_hit ? cache_dout : { ram_data_in, ram_data_last };
+   assign ext_dout = { ram_data_in, ram_data_last };
 
-// ---------------------------------------------
-// external RAM
-// ---------------------------------------------
+   // ---------------------------------------------
+   // external RAM
+   // ---------------------------------------------
 
    assign ram_addr = {cpu_addr[16:0], ext_a_lsb};
    assign ram_cs_b = ext_cs_b;
