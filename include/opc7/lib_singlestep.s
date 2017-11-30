@@ -106,6 +106,7 @@ ss_rewrite_jsr:
     mov     r1, r0, (ss_jsr_taken & 0xffff)
     movt    r1, r0, ((ss_jsr_taken >> 16) & 0x000f)
     add     r1, r3                 # add back in the predicate and opcode
+    mov     pc, r0, ss_skip_src_rewrite
 
 ss_not_jsr:
 
