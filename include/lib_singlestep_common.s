@@ -6,6 +6,19 @@
 
 # --------------------------------------------------------------
 #
+# Set the trace flag, to control output diring single stepping
+#
+# Entry:
+# - r1 contains the new value of the trace flag
+# - bit 0 = 1 to disasseble the instruction
+# - bit 1 = 1 to display register state
+
+ss_trace:
+    sto     r1, r0, ss_trace_flag
+    RTS     ()
+
+# --------------------------------------------------------------
+#
 # Print a disassembly of the current instruction, plus presrved
 # register state. Used by the single stepper
 #
@@ -17,25 +30,41 @@
 
 ss_print_state:
     PUSH    (r13)
-    PUSH    (r1)
+
+    ld      r2, r0, ss_trace_flag  # read the trace flag
+    and     r2, r0, 3              # just look at bits 0 and 1
+    z.mov   pc, r0, ss_skip_state
+
+    PUSH    (r1)                   # something will be output, so start with a new line
     JSR     (OSNEWL)
     POP     (r1)
-    JSR     (disassemble)
 
+    ror     r2, r2
+    nc.mov  pc, r0, ss_skip_disassemble
+
+    # Display disassembly of current instruction
+    JSR     (disassemble)
 ss_pad1:
     ld      r1, r0, HPOS
 ##ifdef CPU_OPC7
     cmp     r1, r0, 46             # pad instruction like the emulator does
-##else   
+##else
     cmp     r1, r0, 42             # pad instruction like the emulator does
 ##endif
     z.mov   pc, r0, ss_pad2
     JSR     (print_spc)
     mov     pc, r0, ss_pad1
-
 ss_pad2:
     JSR     (print_delim)
+ss_skip_disassemble:
+
+    ror     r2, r2
+    nc.mov  pc, r0, ss_skip_state
+
+    # Display register state
     JSR     (ss_print_regs)
+ss_skip_state:
+
     POP     (r13)
     RTS     ()
 
@@ -152,5 +181,8 @@ reg_state_pc:
     WORD 0x0000
 reg_state_psr:
     WORD 0x0000
+
+ss_trace_flag:
+    WORD 0x0003
 
 ##endif

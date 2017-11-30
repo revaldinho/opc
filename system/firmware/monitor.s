@@ -163,6 +163,9 @@ echo_off:
     cmp     r1, r0, 0xffec-0x10000   # s
     z.mov   pc, r0, step
 
+    cmp     r1, r0, 0xffed-0x10000   # t
+    z.mov   pc, r0, trace
+
     cmp     r1, r0, 0x0005           # l
     z.mov   pc, r0, srec
 
@@ -249,6 +252,14 @@ step:
 
     mov     r1, r5                 # number of instructions to step
     JSR     (ss_step)
+    mov     pc, r0, mon1           # back to the - prompt
+
+# ---------------------------------------------------------
+
+trace:
+
+    mov     r1, r5                 # value for the trace flag
+    JSR     (ss_trace)
     mov     pc, r0, mon1           # back to the - prompt
 
 # ---------------------------------------------------------
