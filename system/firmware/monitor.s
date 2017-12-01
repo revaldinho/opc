@@ -14,9 +14,6 @@ EQU        CODE, 0x0100
 EQU   UART_ADDR, 0xFFFFFE08
 EQU         MOS, 0x00C8
 EQU     EXAMPLE, 0x0800
-EQU     MEM_BOT, 0x0800
-EQU     MEM_TOP, 0x0DFF
-EQU       STACK, 0x0DFF
 ##else
 # Inject _BASE_from the build script (C000 on Xilinx, F000 on ICE40)
 EQU        BASE, _BASE_
@@ -24,10 +21,12 @@ EQU        CODE, 0xF800
 EQU   UART_ADDR, 0xFE08
 EQU         MOS, 0xFFC8
 EQU     EXAMPLE, BASE + 0x0100
-EQU     MEM_BOT, 0x0100
-EQU     MEM_TOP, CODE - 1
-EQU       STACK, CODE - 1
 ##endif
+
+# These are passed in directly from the makefile
+EQU     MEM_BOT, _MEM_BOT_
+EQU     MEM_TOP, _MEM_TOP_
+EQU       STACK, _STACK_
 
 EQU UART_STATUS, UART_ADDR
 EQU   UART_DATA, UART_ADDR + 1
@@ -163,6 +162,9 @@ echo_off:
     cmp     r1, r0, 0xffec-0x10000   # s
     z.mov   pc, r0, step
 
+    cmp     r1, r0, 0xffed-0x10000   # t
+    z.mov   pc, r0, trace
+
     cmp     r1, r0, 0x0005           # l
     z.mov   pc, r0, srec
 
@@ -174,7 +176,7 @@ echo_off:
 dump:
     mov     r1, r5
     JSR     (dump_mem)
-    add     r5, r0, 0x80
+    mov     r5, r1
     mov     pc, r0, mon6
 
 # ---------------------------------------------------------
@@ -249,6 +251,14 @@ step:
 
     mov     r1, r5                 # number of instructions to step
     JSR     (ss_step)
+    mov     pc, r0, mon1           # back to the - prompt
+
+# ---------------------------------------------------------
+
+trace:
+
+    mov     r1, r5                 # value for the trace flag
+    JSR     (ss_trace)
     mov     pc, r0, mon1           # back to the - prompt
 
 # ---------------------------------------------------------

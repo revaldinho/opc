@@ -67,8 +67,9 @@ dump_mem_4:
     mov     pc, r0, dump_mem_0
 
 dump_mem_5:
+    mov    r1, r4
+    add    r1, r3
     POP    (r13)
     RTS    ()
-
 
 ##endif

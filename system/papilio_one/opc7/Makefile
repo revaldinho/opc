@@ -30,6 +30,11 @@ ROMSTART   = 0000
 ROMLEN     = 0E00
 ROMWIDTH   = 4
 
+# User Memory
+MEM_BOT   ?= 0800
+MEM_TOP   ?= 1FFF
+STACK     ?= 1FFF
+
 # Common include files
 include $(ROOT)/common/Makefile.inc
 include $(ROOT)/common/Makefile_papilio_cable.inc

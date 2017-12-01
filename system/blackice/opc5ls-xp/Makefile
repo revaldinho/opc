@@ -5,7 +5,7 @@ ROOT       = ../../..
 TARGET     = system
 
 # CPU Name, for include paths
-CPU_NAME   = opc5ls
+CPU_NAME   = opc5ls-xp
 
 # CPU Architecture, for tweaks in the verilog file
 CPU_ARCH   = opc5ls
@@ -22,6 +22,11 @@ PROG_SRC   = system/firmware/monitor.s
 # Extract a smaller ROM
 ROMSTART   = F000
 ROMLEN     = 1000
+
+# User Memory
+MEM_BOT   ?= 0100
+MEM_TOP   ?= EFFF
+STACK     ?= EFFF
 
 # Verilog sources
 SRCS       = ../system.v  ../ram_4k_16.v $(ROOT)/$(CPU_PATH) ../../src/uart.v

@@ -33,8 +33,8 @@ ROMLEN     = 2000
 
 # User Memory
 MEM_BOT   ?= 0100
-MEM_TOP   ?= F7FF
-STACK     ?= F7FF
+MEM_TOP   ?= EFFF
+STACK     ?= EFFF
 
 # Common include files
 include $(ROOT)/common/Makefile.inc

@@ -30,9 +30,12 @@ $(PROG).c: $(PROG).hex
 ifeq ($(CPU_NAME), opc7)
 	echo 'uint32_t $(PROG)_$(CPU_NAME)[0x800] = {' >> $(PROG).c.tmp
 	xxd -r -p < $(PROG).hex | dd ibs=$(ROMWIDTH) count=$$((16#0800)) | xxd -p -c$(ROMWIDTH) | awk '{print "0x" $$1 ","}' >> $(PROG).c.tmp
-else
+else ifeq ($(CPU_NAME), opc6)
 	echo 'uint16_t $(PROG)_$(CPU_NAME)[0x800] = {' >> $(PROG).c.tmp
 	xxd -r -p < $(PROG).hex | dd ibs=$(ROMWIDTH) skip=$$((16#F800)) count=$$((16#0800)) | xxd -p -c$(ROMWIDTH) | awk '{print "0x" $$1 ","}' >> $(PROG).c.tmp
+else
+	echo 'uint16_t $(PROG)_$(CPU_NAME)[0x1000] = {' >> $(PROG).c.tmp
+	xxd -r -p < $(PROG).hex | dd ibs=$(ROMWIDTH) skip=$$((16#F000)) count=$$((16#1000)) | xxd -p -c$(ROMWIDTH) | awk '{print "0x" $$1 ","}' >> $(PROG).c.tmp
 endif
 	echo '};' >> $(PROG).c.tmp
 	mv $(PROG).c.tmp $(PROG).c

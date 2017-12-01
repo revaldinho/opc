@@ -27,8 +27,8 @@ rm -f ${SSD}
 
 ${MMB} blank_ssd ${SSD}
 
-rm -rf disk
-mkdir -p disk
+rm -rf disk_opc6
+mkdir -p disk_opc6
 
 declare -A ndmap
 ndmap[A]=6
@@ -43,7 +43,7 @@ do
     for key in "${!ndmap[@]}"
     do
 
-        name=disk/PI${load}${key}
+        name=disk_opc6/PI${load}${key}
 
         sed "s/#LOAD#/0x${load}/;s/#NDIGITS#/${ndmap[${key}]}/"<  main.s > tmp1.s
 
@@ -55,6 +55,6 @@ do
     done
 done
 
-${MMB} putfile ${SSD} disk/*
+${MMB} putfile ${SSD} disk_opc6/*
 ${MMB} info ${SSD}
 
