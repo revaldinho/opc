@@ -167,7 +167,7 @@ remain:  WORD 2                         # Array space for remainder date
          WORD 2
 
 
-        ORG  0xFFEE
+        ORG  0x00EE
         # --------------------------------------------------------------
         #
         # oswrch

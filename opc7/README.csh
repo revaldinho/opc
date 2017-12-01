@@ -2,10 +2,16 @@
 # Remove non primary data files
 pushd tests
 
+set njobs = 4
+ 
 if ( $#argv > 0 ) then
     if ( $argv[1] == "clean" ) then
         make clean
         exit
+    endif
+    if ( $argv[1] >0  && $argv[1] < 16 ) then
+        echo "Setting parallel jobs to $argv[1]"
+        set njobs = $argv[1]
     endif
 endif
 
@@ -24,11 +30,12 @@ set fails = 0
 
 ## Make all the emulation traces
 
-make -j 4 all_emulation
+make -j $njobs all_emulation
 
-make all_simulation -j 2
+make all_simulation -j $njobs
 
-make all_diff -j 4
+make all_diff -j $njobs
+
 
 foreach test ( `ls -1 *diff` )
     @ numtests ++ 

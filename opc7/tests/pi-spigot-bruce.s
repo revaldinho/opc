@@ -77,7 +77,7 @@ ENDMACRO
 # 7 digits in 42589 instructions, 108368 cycles
 # 8 digits in 52659 instructions, 133981 cycles
 
-        EQU     ndigits,   16              # Original target 359 digits
+        EQU     ndigits,   33             # Original target 359 digits
         EQU     psize,     1+ndigits*10//3 #
 
         ORG 0x1000
@@ -199,7 +199,7 @@ d2:     ROL(r11, r11)           # rol q
 p:      WORD 0  # needs 1193 words but there's nothing beyond
 
 
-        ORG 0xFFEE
+        ORG 0x00EE
 # --------------------------------------------------------------
 #
 # oswrch

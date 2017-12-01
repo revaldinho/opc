@@ -283,7 +283,7 @@ pd32_table:
 results: WORD   0       # results will go here
 
 
-        ORG 0xFFEE
+        ORG 0x00EE
         # --------------------------------------------------------------
         #
         # oswrch

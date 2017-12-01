@@ -140,7 +140,7 @@ def assemble( filename, listingon=True):
                         wordstr =  string_len + string_data + chr(0) + chr(0) + chr(0)
                         words = [(ord(wordstr[i])|(ord(wordstr[i+1])<<8)|(ord(wordstr[i+2])<<16)|(ord(wordstr[i+3])<<24)) for  i in range(0,len(wordstr)-3,4) ]
                     else:
-                        wordstr = string_len + string_data
+                        wordstr = string_len + string_data              
                         words = [ord(wordstr[i]) for  i in range(0,len(wordstr))]
                 else:
                     if ((len(opfields)==2 and not reg_re.match(opfields[1])) and inst not in "ljsr lmov lsto lld WORD HALF BYTE".split()):
@@ -164,7 +164,7 @@ def assemble( filename, listingon=True):
                             (dst,src,val) = (words + [0])[:3]
                             ##i.e. the valid range of 16-bit IMM would be 0x0000->0x7FFF and 0xFFFF8000->0xFFFFFFFF.
                             val = val & 0xFFFFFFFF
-                            if ( (inst not in ("in","out", "bperm")) and (0x7FFF < val < 0x0FFFF8000)):
+                            if ( (inst not in ("in","out", "bperm", "movt")) and (0x7FFF < val < 0x0FFFF8000)):
                                 errors.append("Error: 16b constant out of range in ...\n         %s" % (line.strip()))
                             elif (inst=="lmov" and dst!=0xF and (0x7FFFF < val < 0x0FFF80000)):
                                 errors.append("Error: 20b constant out of range in ...\n         %s" % (line.strip()))

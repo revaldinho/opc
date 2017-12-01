@@ -287,7 +287,7 @@ bitmask:
         WORD 0x10000000,0x20000000,0x40000000,0x80000000
 results: WORD   0       # results will go here
 
-        ORG 0xFFEE
+        ORG 0x00EE
         # --------------------------------------------------------------
         #
         # oswrch
