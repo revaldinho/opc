@@ -23,6 +23,7 @@
 disassemble:
 
     PUSH   (r13)
+    PUSH   (r2)
     PUSH   (r3)
     PUSH   (r4)
     PUSH   (r5)
@@ -121,6 +122,7 @@ dis7:
     POP     (r5)
     POP     (r4)
     POP     (r3)
+    POP     (r2)
     POP     (r13)
     RTS     ()
 
@@ -144,7 +146,7 @@ opcodes:
     BSTRING "mov"    #  00000
     WORD    0x0000
     BSTRING "movt"   #  00001
-    # WORD    0x0000
+    WORD    0x0000
     BSTRING "xor"    #  00010
     WORD    0x0000
     BSTRING "and"    #  00011
@@ -174,13 +176,13 @@ opcodes:
     BSTRING "---"    #  01111
     WORD    0x0000
     BSTRING "halt"   #  10000
-    # WORD    0x0000
+    WORD    0x0000
     BSTRING "rti"    #  10001
     WORD    0x0000
     BSTRING "putp"   #  10010
-    # WORD    0x0000
+    WORD    0x0000
     BSTRING "getp"   #  10011
-    # WORD    0x0000
+    WORD    0x0000
     BSTRING "---"    #  10100
     WORD    0x0000
     BSTRING "---"    #  10101
@@ -198,12 +200,12 @@ opcodes:
     BSTRING "ld"     #  11011
     WORD    0x0000
     BSTRING "ljsr"   #  11100
-    # WORD    0x0000
+    WORD    0x0000
     BSTRING "lmov"   #  11101
-    # WORD    0x0000
+    WORD    0x0000
     BSTRING "lsto"   #  11110
-    # WORD    0x0000
+    WORD    0x0000
     BSTRING "lld"    #  11111
-    # WORD    0x0000
+    WORD    0x0000
 
 ##endif

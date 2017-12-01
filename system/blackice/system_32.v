@@ -32,6 +32,7 @@ module system (
    wire [31:0] cpu_din;
    wire [31:0] cpu_dout;
    wire [31:0] ram_dout;
+   wire [31:0] ext_dout;
    wire [15:0] uart_dout;
    wire [19:0] address;
    wire        rnw;
@@ -39,48 +40,45 @@ module system (
    wire        vda;
    wire        vio;
 
-   reg         cpuclken_old = 0;
+   wire        ramclken;  // clken signal for a internal ram access
+   wire        extclken;  // clken signal for a external ram access
+   reg         ramclken_old = 0;
    wire        cpuclken;
    reg         sw4_sync;
-   wire        reset_b;
+   reg         reset_b;
 
    // Map the RAM everywhere in IO space (for performance)
    wire        uart_cs_b = !(vio);
 
-   // Map the RAM at both the top and bottom of memory (uart_cs_b takes priority)
-   wire         ram_cs_b = !((vpa || vda) && ((|address[15:RAMSIZE] == 1'b0)  || (&address[15:RAMSIZE] == 1'b1)));
+   // Map the RAM at both the bottom of memory (uart_cs_b takes priority)
+   wire        ram_cs_b = !((vpa || vda) && (address[19:8] < 12'h00E));
+   // wire     ram_cs_b = !((vpa || vda) && (|address[19:RAMSIZE] == 1'b0));
+
+   // Everywhere else is external RAM
+   wire        ext_cs_b = !((vpa || vda) && (address[19:8] >= 12'h00E));
+   // wire     ext_cs_b = !((vpa || vda) && (|address[19:RAMSIZE] == 1'b1));
 
    // External RAM signals
-   wire         wegate;
-   assign RAMCS_b = 1'b0;
-   assign RAMOE_b = !rnw;
-   assign RAMWE_b = rnw  | wegate;
-   assign ADR = address[17:0] ;
-
-   // This doesn't work yet...
-   // assign DAT = rnw ? 'bz : cpu_dout;
-
-   // So instead we must instantiate a SB_IO block
-   wire [15:0]  data_pins_in;
-   wire [15:0]  data_pins_out = cpu_dout[15:0];
-   wire         data_pins_out_en = !(rnw | wegate); // Added wegate to avoid bus conflicts
+   wire [15:0]  ext_data_in;
+   wire [15:0]  ext_data_out;
+   wire         ext_data_oe;
 
 `ifdef simulate
-   assign data_pins_in = DAT;
-   assign DAT = data_pins_out_en ? data_pins_out : 16'hZZZZ;
+   assign ext_data_in = DAT;
+   assign DAT = ext_data_oe ? ext_data_out : 16'hZZZZ;
 `else
    SB_IO #(
            .PIN_TYPE(6'b 1010_01),
            ) sram_data_pins [15:0] (
            .PACKAGE_PIN(DAT),
-           .OUTPUT_ENABLE(data_pins_out_en),
-           .D_OUT_0(data_pins_out),
-           .D_IN_0(data_pins_in),
+           .OUTPUT_ENABLE(ext_data_oe),
+           .D_OUT_0(ext_data_out),
+           .D_IN_0(ext_data_in),
    );
 `endif
 
    // Data Multiplexor
-   assign cpu_din = uart_cs_b ? (ram_cs_b ? {16'b0, data_pins_in} : ram_dout) : {16'b0, uart_dout};
+   assign cpu_din = uart_cs_b ? (ram_cs_b ? ext_dout : ram_dout) : {16'b0, uart_dout};
 
    reg [1:0] clkdiv = 2'b00;
    always @(posedge clk100)
@@ -88,23 +86,28 @@ module system (
         clkdiv <= clkdiv + 1;
      end
    assign clk = clkdiv[0];
-   assign wegate = 1'b1;
+
+   // Reset generation
+   reg [9:0] pwr_up_reset_counter = 0; // hold reset low for ~1000 cycles
+   wire      pwr_up_reset_b = &pwr_up_reset_counter;
 
    always @(posedge clk)
      begin
+        ramclken_old <= ramclken;
+        if (!pwr_up_reset_b)
+          pwr_up_reset_counter <= pwr_up_reset_counter + 1;
         sw4_sync <= sw4;
-        cpuclken_old <= cpuclken;
+        reset_b <= sw4_sync & pwr_up_reset_b;
      end
 
-   assign cpuclken = !reset_b | !cpuclken_old | !(vda | vpa);
+   assign ramclken = !ramclken_old | ram_cs_b;
 
-   assign reset_b = sw4_sync;
+   assign cpuclken = !reset_b | (ext_cs_b ? ramclken : extclken);
 
    assign led1 = 0;        // blue
    assign led2 = 1;        // green
    assign led3 = !rxd;     // yellow
    assign led4 = !txd;     // red
-
 
    // The CPU
    opc7cpu CPU
@@ -121,6 +124,30 @@ module system (
       .address(address),
       .rnw(rnw)
     );
+
+   memory_controller #
+     (
+      .DSIZE(32),
+      .ASIZE(20)
+     )
+   MEMC
+     (
+      .clock         (clk),
+      .reset_b       (reset_b),
+      .ext_cs_b      (ext_cs_b),
+      .cpu_rnw       (rnw),
+      .cpu_clken     (extclken),
+      .cpu_addr      (address),
+      .cpu_dout      (cpu_dout),
+      .ext_dout      (ext_dout),
+      .ram_cs_b      (RAMCS_b),
+      .ram_oe_b      (RAMOE_b),
+      .ram_we_b      (RAMWE_b),
+      .ram_data_in   (ext_data_in),
+      .ram_data_out  (ext_data_out),
+      .ram_data_oe   (ext_data_oe),
+      .ram_addr      (ADR)
+      );
 
    // A block RAM - clocked off negative edge to mask output register
    ram RAM

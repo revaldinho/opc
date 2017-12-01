@@ -25,8 +25,13 @@ ROMSTART   = 0000
 ROMLEN     = 0E00
 ROMWIDTH   = 4
 
+# User Memory
+MEM_BOT   ?= 01000
+MEM_TOP   ?= FFFFFFFF
+STACK     ?= FFFFFFFF
+
 # Verilog sources
-SRCS       = ../system_32.v  ../ram_3584_32.v $(ROOT)/$(CPU_PATH) ../../src/uart.v
+SRCS       = ../system_32.v  ../memory_controller_2_wait_states.v ../ram_3584_32.v $(ROOT)/$(CPU_PATH) ../../src/uart.v
 
 # Common include files
 include $(ROOT)/common/Makefile_ice40.inc

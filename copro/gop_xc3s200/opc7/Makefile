@@ -11,30 +11,39 @@ TARGET     = copro
 PROM       = xcf01s
 
 # CPU Name, for include paths
-CPU_NAME = opc5ls-xp
+CPU_NAME = opc7
 
 # CPU Architecture, for tweaks in the verilog file
-CPU_ARCH = opc5ls
+CPU_ARCH = opc7
 
 # CPU File Path, relative to the root directory
-CPU_PATH   = opc5ls-xp/opc5lscpu.v
+CPU_PATH   = opc7/opc7cpu.v
 
 # Assembler File Path, relative to the root directory
-ASM_PATH   = opc5ls/opc5lsasm.py
+ASM_PATH   = opc7/opc7asm.py
 
 # Program Source Path, relative to the root directory
 PROG_SRC   = copro/firmware/tuberom.s
 
 # Start address (in words) of the ROM (in the assembler output)
-ROMSTART   = E000
+ROMSTART   = 0000
 
 # Length address (in words) of the ROM (in the assembler output)
-ROMLEN     = 2000
+ROMLEN     = 0800
+
+# Width of the ROM (in bytes)
+ROMWIDTH   = 4
 
 # User Memory
-MEM_BOT   ?= 0100
-MEM_TOP   ?= EFFF
-STACK     ?= EFFF
+ifeq ($(PITUBEDIRECT),1)
+MEM_BOT   ?= 00000800
+MEM_TOP   ?= FFFFFFFF
+STACK     ?= FFFFFFFF
+else
+MEM_BOT   ?= 00000600
+MEM_TOP   ?= 00000FFF
+STACK     ?= 00000FFF
+endif
 
 # Common include files
 include $(ROOT)/common/Makefile.inc

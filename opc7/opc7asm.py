@@ -140,7 +140,7 @@ def assemble( filename, listingon=True):
                         wordstr =  string_len + string_data + chr(0) + chr(0) + chr(0)
                         words = [(ord(wordstr[i])|(ord(wordstr[i+1])<<8)|(ord(wordstr[i+2])<<16)|(ord(wordstr[i+3])<<24)) for  i in range(0,len(wordstr)-3,4) ]
                     else:
-                        wordstr = string_len + string_data              
+                        wordstr = string_len + string_data
                         words = [ord(wordstr[i]) for  i in range(0,len(wordstr))]
                 else:
                     if ((len(opfields)==2 and not reg_re.match(opfields[1])) and inst not in "ljsr lmov lsto lld WORD HALF BYTE".split()):
