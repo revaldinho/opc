@@ -53,11 +53,11 @@ AND VDU(n,a,b,c,d,e) BE {
   s%6 := highbyte(c)
 
   SWITCHON n INTO {
-    DEFAULT:         s%0 := 6
-    CASE VDU_CLRGFX: s%0 := 1 
-    CASE VDU_MODE:   s%0 := 2 
-    CASE VDU_GCOL:   s%0 := 3     
-    CASE VDU_PLOT:   s%0 := 6 
+    DEFAULT:         s%0 := 6; ENDCASE
+    CASE VDU_CLRGFX: s%0 := 1; ENDCASE 
+    CASE VDU_MODE:   s%0 := 2; ENDCASE 
+    CASE VDU_GCOL:   s%0 := 3; ENDCASE     
+    CASE VDU_PLOT:   s%0 := 6; ENDCASE 
   }
 
   writes(s)

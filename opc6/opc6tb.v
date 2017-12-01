@@ -47,11 +47,18 @@ module opc6tb();
     always @ (negedge clk) begin
 `endif
       if (!rnw && !ceb && oeb && reset_b)
-        if ( !mreq_b)
+        if ( !mreq_b) begin
           mem[addr] <= data1;
-        else 
-          iomem[addr]<= data1;      
-      data0 <= (!mreq_b) ? mem[addr]: iomem[addr]; 
+          $display(" STORE:  Address : 0x%04x ( %d )  : Data : 0x%04x ( %d)",addr,addr,data1,data1);
+        end
+        else begin  
+          iomem[addr]<= data1;    
+          $display("   OUT:  Address : 0x%04x ( %6d )       :        Data : 0x%04x ( %6d) %c ",addr,addr,data1,data1,data1);
+      end
+      data0 <= (!mreq_b) ? mem[addr]: iomem[addr];
+      if ( dut0_u.FSM_q == dut0_u.RDM )
+        $display("  LOAD:  Address : 0x%04x ( %d )  : Data : 0x%04x ( %d)",addr,addr,data0,data0);       
+      
     end
   always @ (posedge int_clk)
     if ( (($random(seed) %100)> 85) && interrupt_b ==1'b1)
@@ -67,10 +74,20 @@ module opc6tb();
   end
   // Always stop simulation on encountering the halt pseudo instruction
   
-  always @ (negedge clk)
+  always @ (negedge clk)    begin
+    if ( dut0_u.FSM_q == dut0_u.EXEC ) begin
+      $write("0x%04x : ", addr );      
+      $write(" : %04x %04x %04x %04x", dut0_u.RF_q[0],dut0_u.RF_q[1],dut0_u.RF_q[2],dut0_u.RF_q[3]);
+      $write(" %04x %04x %04x %04x", dut0_u.RF_q[4],dut0_u.RF_q[5],dut0_u.RF_q[6],dut0_u.RF_q[7]);
+      $write(" %04x %04x %04x %04x", dut0_u.RF_q[8],dut0_u.RF_q[9],dut0_u.RF_q[10],dut0_u.RF_q[11]);    
+      $write(" %04x %04x %04x %04x", dut0_u.RF_q[12],dut0_u.RF_q[13],dut0_u.RF_q[14],dut0_u.PC_q);        
+      $display("");
+    end
+    
     if (dut0_u.IR_q[10:0]== `HALT && dut0_u.FSM_q==`EXEC) begin
       $display("Simulation terminated with halt instruction at time", $time);       
       $writememh("test.vdump",mem);
       $finish;
     end
+  end
 endmodule

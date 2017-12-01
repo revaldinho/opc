@@ -120,7 +120,7 @@ divmod:
         mov     r5, r0, -16         # Setup a loop counter
 udiv16_loop:
         ASL     (r1)                # shift left the quotient/dividend
-        ROL     (r2)                #
+        ROL     (r2,r2)             #
         cmp     r2, r4              # check if quotient is larger than divisor
         c.sub   r2, r4              # if yes then do the subtraction for real
         c.adc   r1, r0              # ... set LSB of quotient using (new) carry
