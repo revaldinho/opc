@@ -51,12 +51,12 @@ module system (
    wire        uart_cs_b = !(vio);
 
    // Map the RAM at both the bottom of memory (uart_cs_b takes priority)
-   // wire     ram_cs_b = !((vpa || vda) && (address[19:8] < 12'h00E));
-   wire        ram_cs_b = !((vpa || vda) && (|address[19:RAMSIZE] == 1'b0));
+   wire        ram_cs_b = !((vpa || vda) && (address[19:8] < 12'h00E));
+   // wire     ram_cs_b = !((vpa || vda) && (|address[19:RAMSIZE] == 1'b0));
 
    // Everywhere else is external RAM
-   // wire     ext_cs_b = !((vpa || vda) && (address[19:8] >= 12'h00E));
-   wire        ext_cs_b = !((vpa || vda) && (|address[19:RAMSIZE] == 1'b1));
+   wire        ext_cs_b = !((vpa || vda) && (address[19:8] >= 12'h00E));
+   // wire     ext_cs_b = !((vpa || vda) && (|address[19:RAMSIZE] == 1'b1));
 
    // External RAM signals
    wire [15:0]  ext_data_in;
