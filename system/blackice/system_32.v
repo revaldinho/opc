@@ -50,10 +50,12 @@ module system (
    // Map the RAM everywhere in IO space (for performance)
    wire        uart_cs_b = !(vio);
 
-   // Map the RAM at both the top and bottom of memory (uart_cs_b takes priority)
+   // Map the RAM at both the bottom of memory (uart_cs_b takes priority)
+   // wire     ram_cs_b = !((vpa || vda) && (address[19:8] < 12'h00E));
    wire        ram_cs_b = !((vpa || vda) && (|address[19:RAMSIZE] == 1'b0));
 
    // Everywhere else is external RAM
+   // wire     ext_cs_b = !((vpa || vda) && (address[19:8] >= 12'h00E));
    wire        ext_cs_b = !((vpa || vda) && (|address[19:RAMSIZE] == 1'b1));
 
    // External RAM signals
@@ -91,7 +93,7 @@ module system (
         ramclken_old <= ramclken;
      end
 
-   assign ramclken = !ramclken_old | !(vda | vpa);
+   assign ramclken = !ramclken_old | ram_cs_b;
 
    assign cpuclken = !reset_b | (ext_cs_b ? ramclken : extclken);
 
