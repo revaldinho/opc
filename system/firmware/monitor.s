@@ -177,7 +177,7 @@ echo_off:
 dump:
     mov     r1, r5
     JSR     (dump_mem)
-    add     r5, r0, 0x80
+    mov     r5, r1
     mov     pc, r0, mon6
 
 # ---------------------------------------------------------
