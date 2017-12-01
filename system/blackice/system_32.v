@@ -45,7 +45,7 @@ module system (
    reg         ramclken_old = 0;
    wire        cpuclken;
    reg         sw4_sync;
-   wire        reset_b;
+   reg         reset_b;
 
    // Map the RAM everywhere in IO space (for performance)
    wire        uart_cs_b = !(vio);
@@ -87,23 +87,27 @@ module system (
      end
    assign clk = clkdiv[0];
 
+   // Reset generation
+   reg [9:0] pwr_up_reset_counter = 0; // hold reset low for ~1000 cycles
+   wire      pwr_up_reset_b = &pwr_up_reset_counter;
+
    always @(posedge clk)
      begin
-        sw4_sync <= sw4;
         ramclken_old <= ramclken;
+        if (!pwr_up_reset_b)
+          pwr_up_reset_counter <= pwr_up_reset_counter + 1;
+        sw4_sync <= sw4;
+        reset_b <= sw4_sync & pwr_up_reset_b;
      end
 
    assign ramclken = !ramclken_old | ram_cs_b;
 
    assign cpuclken = !reset_b | (ext_cs_b ? ramclken : extclken);
 
-   assign reset_b = sw4_sync;
-
    assign led1 = 0;        // blue
    assign led2 = 1;        // green
    assign led3 = !rxd;     // yellow
    assign led4 = !txd;     // red
-
 
    // The CPU
    opc7cpu CPU
