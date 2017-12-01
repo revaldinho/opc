@@ -28,16 +28,16 @@ set bcpltestlist = (  \
 	growth  \
 	hello  \
 	invert  \
-	kext  \
 	kperms  \
-	lambda  \
 	modarith  \
 	monbfns  \
 	pi-spigot-bcpl  \
 	queens  \
 	shell23  )
 
-# too many tests for 1 SSD image!        
+# too many tests for 1 SSD image!
+#	kext  \
+#       lambda \        
 # 	empty  \           
 #	splay  \
 #	tag  )
