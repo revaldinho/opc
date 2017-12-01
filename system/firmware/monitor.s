@@ -14,9 +14,6 @@ EQU        CODE, 0x0100
 EQU   UART_ADDR, 0xFFFFFE08
 EQU         MOS, 0x00C8
 EQU     EXAMPLE, 0x0800
-EQU     MEM_BOT, 0x0800
-EQU     MEM_TOP, 0x0DFF
-EQU       STACK, 0x0DFF
 ##else
 # Inject _BASE_from the build script (C000 on Xilinx, F000 on ICE40)
 EQU        BASE, _BASE_
@@ -24,10 +21,12 @@ EQU        CODE, 0xF800
 EQU   UART_ADDR, 0xFE08
 EQU         MOS, 0xFFC8
 EQU     EXAMPLE, BASE + 0x0100
-EQU     MEM_BOT, 0x0100
-EQU     MEM_TOP, CODE - 1
-EQU       STACK, CODE - 1
 ##endif
+
+# These are passed in directly from the makefile
+EQU     MEM_BOT, _MEM_BOT_
+EQU     MEM_TOP, _MEM_TOP_
+EQU       STACK, _STACK_
 
 EQU UART_STATUS, UART_ADDR
 EQU   UART_DATA, UART_ADDR + 1

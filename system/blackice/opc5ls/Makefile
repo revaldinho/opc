@@ -23,6 +23,11 @@ PROG_SRC   = system/firmware/monitor.s
 ROMSTART   = F000
 ROMLEN     = 1000
 
+# User Memory
+MEM_BOT   ?= 0100
+MEM_TOP   ?= EFFF
+STACK     ?= EFFF
+
 # Verilog sources
 SRCS       = ../system.v  ../ram_4k_16.v $(ROOT)/$(CPU_PATH) ../../src/uart.v
 

@@ -25,6 +25,11 @@ ASM_PATH   = opc6/opc6asm.py
 # Program Source Path, relative to the root directory
 PROG_SRC   = system/firmware/monitor.s
 
+# User Memory
+MEM_BOT   ?= 0100
+MEM_TOP   ?= 37FF
+STACK     ?= 37FF
+
 # Common include files
 include $(ROOT)/common/Makefile.inc
 include $(ROOT)/common/Makefile_xilinx_cable_spi.inc

@@ -27,8 +27,13 @@ PROG_SRC   = system/firmware/monitor.s
 
 # Extract a smaller ROM
 ROMSTART   = 0000
-ROMLEN     = 0E00
+ROMLEN     = 1000
 ROMWIDTH   = 4
+
+# User Memory
+MEM_BOT   ?= 0800
+MEM_TOP   ?= 1FFF
+STACK     ?= 1FFF
 
 # Common include files
 include $(ROOT)/common/Makefile.inc
