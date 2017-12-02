@@ -81,7 +81,7 @@ __get_byte_1:
         #       all other registers preserved (inc. r2)
         # --------------------------------------------------------------
 __mulu:
-        push    r2,r14
+        PUSH    (r2)
         lsr     r4,r1                  # shift right multiplier into r4
         mov     r1,r0
 mul16s_loop0:
@@ -90,7 +90,7 @@ mul16s_loop0:
         lsr     r4, r4                 # shift right multiplier
         nz.dec  pc,PC-mul16s_loop0     # no need for loop counter - just stop when r1 is empty
         c.add   r1,r2                  # add last copy of multiplicand into accumulator if carry
-        pop     r2,r14
+        POP     (r2)
         RTS     ()
         
 # --------------------------------------------------------------
@@ -114,7 +114,7 @@ mul16s_loop0:
 __divu:
 
 divmod:
-        push    r5, r14
+        PUSH    (r5)
         mov     r4, r2              # Get divisor into r3
         mov     r2, r0              # Get dividend/quotient into double word r1,2
         mov     r5, r0, -16         # Setup a loop counter
@@ -126,7 +126,7 @@ udiv16_loop:
         c.adc   r1, r0              # ... set LSB of quotient using (new) carry
         inc     r5, 1               # increment loop counter zeroing carry
         nz.inc  pc,udiv16_loop-PC   # loop again if not finished 
-        pop     r5, r14
+        POP     (r5)
         mov     pc,r13              # and return with quotient/remainder in r1/r2
 
 # --------------------------------------------------------------
@@ -152,7 +152,7 @@ l1_@:
       NEG     (r2)
       dec     r5, 1
 l2_@:
-      jsr     r13, r0, _sub_
+      JSR     (_sub_)
       cmp     r5, r0
       z.inc   pc, l3_@ - PC
       NEG2    (r2, r1)
@@ -172,42 +172,44 @@ __div:
 
 __mod:  ## Find signed modulus of b MOD a
         ## NB division by zero should abort !! ABORT 5: Division by zero
-        push    r13, r14        # save return address
-        push    r2,  r14        # save r2 (b)
+        PUSH    (r13)           # save return address
+        PUSH    (r2)            # save r2 (b)
         mov     r4,r2           # swap over r1 and r2
         not     r2,r1,-1        # r2 <- -r1
         mi.mov  r2,r1           # if negative then r2 <- r1
         not     r1,r4,-1        # r1 <- -r4
         mi.mov  r1,r4           # if negative then r1 <- r4
-        jsr     r13,r0,__divu   # do a unsigned divide/mod operation        
+        JSR     (__divu)        # do a unsigned divide/mod operation        
                                 # result is quo in r1, rem in r2
                                 # now adjust based on sign of original r2
         not     r1,r2,-1        # put -remainder in r1
-        pop     r4,r14          # get original 'b'
+        POP     (r4)            # get original 'b'
         pl.mov  r1,r2           # if was +ve then put rem in r1 instead
-        mov     r2,r4           # restore r2 = 'b' 
-        pop     pc,r14          # pop return address into pc to return
+        mov     r2,r4           # restore r2 = 'b'
+        POP     (r13)
+        RTS     ()              # pop return address into pc to return
         
 __xmod: ## Find signed modulus of a MOD b
         ## NB division by zero should abort !! ABORT 5: Division by zero
-        push    r13, r14        # save return address
-        push    r2,  r14        # save r2 (b)
-        push    r1,  r14        # save r1 (a) for inspection of sign later
+        PUSH    (r13)           # save return address
+        PUSH    (r2)            # save r2 (b)
+        PUSH    (r1)            # save r1 (a) for inspection of sign later
         not     r3,r1,-1        # r1 <- -r1
         mi.mov  r3,r1           # if negative then r1 <- r1 ie A = ABS(A)
         mov     r1, r3
         not     r3,r2,-1        # r2 <- -r2
         mi.mov  r3,r2           # if negative then r2 <- r2 is A = ABS(B)
         mov     r2,r3
-        jsr     r13,r0,__divu   # do a unsigned divide/mod operation        
+        JSR     (__divu)        # do a unsigned divide/mod operation        
                                 # result is quo in r1, rem in r2
                                 # now adjust based on sign of original r2
         not     r1,r2,-1        # put -remainder in r1
-        pop     r4,r14          # get original 'a'
+        POP     (r4)            # get original 'a'
         cmp     r4,r0
         pl.mov  r1,r2           # if was +ve then put rem in r1 instead
-        pop     r2,r14          # restore original b
-        pop     pc,r14          # pop return address into pc to return
+        POP     (r2)            # restore original b
+        POP     (r13)
+        RTS     ()              # pop return address into pc to return
 
         # ------------------------------------------------------------
         # sys()
@@ -297,7 +299,7 @@ __Sys_EXT:
         PUSH    (r2)
         ld      r1, r11,5         # get parameter1 in r1
         mov     r2, r11,6         # use r2 to point to vector of other parameters
-        JSR     (r4)              # call user routine
+        jsr     r13, r4           # call user routine
         POP     (r2)
         POP     (r13)
         RTS     ()                # return via sys function

@@ -53,6 +53,7 @@ OPTIONAL SWITCHES ::
   
   -7  --opc7                Select target CPU. Default is OPC6.
   -6  --opc6 
+  -5  --opc5ls                
 
 All output is sent to stdout.
 
@@ -115,7 +116,7 @@ def getnum( str, ignore_errors=False ):
     # Convert literal of form K<n> to number
     num = int(str[1:])
     if not ignore_errors:
-        if cpu_target == "opc6" and (num & 0xFFFF0000) and num > 0:
+        if cpu_target in("opc6","opc5ls") and (num & 0xFFFF0000) and num > 0:
             raise BaseException("Error - getnum - found constant larger than 16bits: 0x%08X" % num)
         elif cpu_target == "opc7" and (0x7FFF < num < 0x0FFFF8000):
             raise BaseException("Error - getnum - found constant in illegal range: 0x%08X (%s)" % (num,str) )
@@ -184,7 +185,7 @@ def code ( codestring, source=""):
     newcodestring = re.sub('((?:\w*\.)?\w*)\s*(r\d*|pc|psr)\s?,\s?(r\d+|pc|psr)\s?,\s?0($|\s+)', r'\1 \2,\3', codestring)
     if cpu_target == "opc6":        
         newcodestring = addsubtoincdec(newcodestring)
-    else:
+    elif cpu_target == "opc7":
         newcodestring = opc6to7(newcodestring)
         
     words = newcodestring.split()
@@ -198,9 +199,9 @@ def code ( codestring, source=""):
     print( "%s%-48s%s # %s" % (leading,newcodestring,trailing,source))
 
 def print_wrapper():
-    stack_setup             = "mov r14,r0,0x07FF" if cpu_target=="opc6" else "lmov r14,0xFFFFFFFF"
+    stack_setup             = "mov r14,r0,0x07FF" if cpu_target in("opc6","opc5ls") else "lmov r14,0xFFFFFFFF"
     ## Need to allow space for TUBE ROM at top of address map for OPC6
-    initial_free_memory_ptr = "mov r10,r0,0xF7FF" if cpu_target=="opc6" else "lmov r10,0xFFFFEFFF"
+    initial_free_memory_ptr = "mov r10,r0,0xF7FF" if cpu_target in("opc6","opc5ls") else "lmov r10,0xFFFFEFFF"
     print('''
         ## --------------------------------------------------------------
         ## OPC assembly code generated from SIAL using sial2opc.py
@@ -543,7 +544,7 @@ def process_sial(sialtext):
                     else:
                         raise e
             elif opcode == sialop['f_lm'] :       # lm        Kn         a := - n
-                if cpu_target == "opc6":
+                if cpu_target in("opc6","opc5ls"):
                     code("mov %s,r0,%d" % (dest_r, -getnum(fields[1])), line)
                 else:
                     try:
@@ -651,7 +652,7 @@ def process_sial(sialtext):
             elif opcode in (sialop['f_lsh'],sialop['f_rsh']):
                 # lsh                  a := b << a            
                 # rsh                  a := b >> a
-                codestring = "add r1,r1" if opcode==sialop['f_lsh'] else "lsr r1,r1"
+                codestring = "add r1,r1" if opcode==sialop['f_lsh'] else "LSR (r1,r1)"
                 code("mov r4,r1",line) # Get the number of places to shift in r4 + 1
                 code("mov r1,r2")      # r2 preserved so shift in r1
                 code("cmp r4,r0")      # is r4 ==0 (ie shift dist==0)?
@@ -672,13 +673,13 @@ def process_sial(sialtext):
                 code("mov r1,r2", line)
                 code("add r1,r1")
             elif opcode == sialop['f_ext_lsr']: # f_ext_asl=      175    //  a := b >> 1
-                code("lsr r1,r2")
+                code("LSR (r1,r2)")
             elif opcode == sialop['f_ext_asl_a']: # f_ext_asl_a=      177    //  a := a << 1
                 code("add r1,r1", line)
             elif opcode == sialop['f_ext_lsr_a']: # f_ext_lsr_a=      178    //  a := a >> 1
-                code("lsr r1,r1", line)
+                code("LSR (r1,r1)", line)
             elif opcode == sialop['f_atbl'] :     # atbl      Kk         b := a; a := k
-                if cpu_target == "opc6":
+                if cpu_target in("opc6","opc5ls"):
                     n = getnum(fields[1])
                     code("mov r2,r1", line)
                     code("mov r1,r0,%d" % n)
@@ -826,7 +827,7 @@ def process_sial(sialtext):
                 #  ikg       Kk Gn      a := G!n + k; G!n := a
                 ptr = "r11" if opcode==sialop['f_ikp'] else "r12"                
                 code("ld  r1,%s,%d" % (ptr,getnum(fields[2])), line)
-                if cpu_target=="opc6":
+                if cpu_target in("opc6","opc5ls"):
                     code("add r1,r0,%d" % getnum(fields[1]))
                 else:
                     try:
@@ -1005,7 +1006,7 @@ if __name__ == "__main__" :
     noheader = False
 
     try:
-        opts, args = getopt.getopt( sys.argv[1:], "f:g:s:no67h", ["filename=","sialhdr=","syslib=","noheader", "opt","opc6","opc7","help"])
+        opts, args = getopt.getopt( sys.argv[1:], "f:g:s:no567h", ["filename=","sialhdr=","syslib=","noheader", "opt","opc5", "opc5ls","opc6","opc7","help"])
     except getopt.GetoptError:
         showUsageAndExit()
     for opt, arg in opts:
@@ -1019,6 +1020,8 @@ if __name__ == "__main__" :
             noheader = True
         elif ( opt in ("-o", "--opt")):
             optimize = True            
+        elif ( opt in ("-5", "--opc5", "--opc5ls")):
+            cpu_target = "opc5ls"
         elif ( opt in ("-6", "--opc6")):
             cpu_target = "opc6"
         elif ( opt in ("-7", "--opc7")):
