@@ -17,7 +17,7 @@ with open(sys.argv[1],"r") as f:
 print ("PC   : Mem       : Instruction            : SWI I S C Z : %s\n%s" % (''.join([" r%2d " % d for d in range(0,16)]), '-'*130))
 while True:
     (pc_save,flag_save,regfile[0],preserve_flag) = (regfile[pcreg],(swiid,ei,s,c,z),0,False)    # always overwrite regfile location 0 and then dont care about assignments
-    instr_word = wordmem[regfile[pcreg]] &  0xFFFF
+    instr_word = wordmem[regfile[pcreg] & 0xFFFF ] &  0xFFFF
     (p0, p1, p2) = ( (instr_word & 0x8000) >> 15, (instr_word & 0x4000) >> 14, (instr_word & 0x2000)>>13)
     (opcode, source, dest) = (((instr_word & 0xF00) >> 8) | (0x10 if (p0,p1,p2)==(0,0,1) else 0x00), (instr_word & 0xF0) >>4, instr_word & 0xF)
     (instr_len, rdmem, preserve_flag) = (2 if (instr_word & 0x1000) else 1, (opcode in(op["ld"],op["in"],op["pop"])), (dest==pcreg))

@@ -111,3 +111,19 @@ ENDMACRO
 MACRO  BROT(_reg1_, _reg2_)
     bperm _reg1_, _reg2_, 0x0321
 ENDMACRO
+
+MACRO   ASL( _reg_ )
+        add     _reg_, _reg_
+ENDMACRO
+
+MACRO   NEG( _reg_)
+        not _reg_,_reg_, -1
+ENDMACRO
+
+MACRO   NEG2( _regmsw_, _reglsw_)
+        not _reglsw_,_reglsw_
+        not _regmsw_,_regmsw_
+        inc _reglsw_, 1
+        adc _regmsw_, r0
+ENDMACRO
+
