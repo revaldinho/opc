@@ -199,7 +199,8 @@ def code ( codestring, source=""):
 
 def print_wrapper():
     stack_setup             = "mov r14,r0,0x07FF" if cpu_target=="opc6" else "lmov r14,0xFFFFFFFF"
-    initial_free_memory_ptr = "mov r10,r0,0xFFFF" if cpu_target=="opc6" else "lmov r10,0xFFFFEFFF"
+    ## Need to allow space for TUBE ROM at top of address map for OPC6
+    initial_free_memory_ptr = "mov r10,r0,0xF7FF" if cpu_target=="opc6" else "lmov r10,0xFFFFEFFF"
     print('''
         ## --------------------------------------------------------------
         ## OPC assembly code generated from SIAL using sial2opc.py
