@@ -37,6 +37,12 @@ MANIFEST {
 
 LET start() = VALOF
 { LET s = 0           // Region selector
+
+  IF ~istubeplatform(1) DO {
+    writes("Sorry - this program only works in the Acorn BBC Microcomputer Tube environment*n")
+    RESULTIS 0
+  }
+
   // Default settings
   // a, b, size := -50_000_000, 0, 180_000_000
   a    := -(One >>1 )
@@ -139,6 +145,28 @@ AND muldiv8p24(a,b) BE {
  * BBC Graphics routines - to be split into a new library later
  *
  * ------------------------------------------------------------- */
+
+AND istubeplatform(verbose) = VALOF {
+  LET platform_str = ?
+  LET platform_id = sys(Sys_platform)
+  platform_id := platform_id - 32
+  SWITCHON ( platform_id ) INTO {
+    DEFAULT: platform_str := 0; ENDCASE  
+    CASE 0 : platform_str := "Electron"; ENDCASE
+    CASE 1 : platform_str := "BBC Micro"; ENDCASE
+    CASE 2 : platform_str := "BBC B+"; ENDCASE
+    CASE 3 : platform_str := "Master 128"; ENDCASE
+    CASE 4 : platform_str := "Master ET"; ENDCASE
+    CASE 5 : platform_str := "Master Compact"; ENDCASE
+    CASE 6 : platform_str := "RISC OS"; ENDCASE
+  }
+  TEST (platform_str & verbose) DO {
+     writef("Detected Acorn Tube host as %s (%I )*n*c", platform_str, platform_id)
+     RESULTIS 1
+  } ELSE {
+     RESULTIS 0  
+  }       
+}
 
 AND lowbyte(n) = VALOF {
   RESULTIS (n & #x00FF)

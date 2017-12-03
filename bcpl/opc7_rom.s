@@ -112,3 +112,12 @@ oswrch:
 OSWRCH:                      # &07EE
         lmov    pc,WRITECHAR
 
+ORG MOS + (0xF1-0xC8)
+
+OSWORD:                      # &FFF1
+        RTS     ()
+
+ORG MOS + (0xF4-0xC8)
+
+OSBYTE:                      # &FFF4
+        RTS     ()

@@ -1,4 +1,7 @@
 
+        # BBC Tube Environment
+__osword_pblk:
+        WORD    0x00, 0x00           # Reserve 8 bytes for OSWORD calls
         #
         # Standard global variables (see libhdr.h) offset from the global pointer
         #
@@ -487,6 +490,7 @@ __xmod: ## Find signed modulus of a MOD b
         #     Other registers dependent on system call
         # ------------------------------------------------------------
         EQU     K_Sys_EXT,       68
+        EQU     K_Sys_platform,  54
         EQU     K_Sys_cputime,   30
         EQU     K_Sys_muldiv,    26 
         EQU     K_Sys_getvec,    21
@@ -520,12 +524,14 @@ __sys:
         z.lmov  pc,__Sys_sardch
         cmp     r1,r0,K_Sys_muldiv
         z.lmov  pc,__Sys_muldiv
+        cmp     r1,r0,K_Sys_cputime    
+        z.lmov  pc,__Sys_cputime
+        cmp     r1,r0,K_Sys_platform
+        z.lmov  pc,__Sys_platform
         
                                         # Small subset of codes for unimplemented calls which use a dummy function
                                         # rather than causing a system quite
         cmp     r1,r0,K_Sys_setcount    
-        z.lmov  pc,__Sys_dummy
-        cmp     r1,r0,K_Sys_cputime    
         z.lmov  pc,__Sys_dummy
         ## Any other undecoded calls result in system exit
         lmov    pc,__Sys_quit
@@ -580,6 +586,85 @@ __Sys_muldiv:
         POP     (r3)              # restore original r3 = Accumulator C
         POP     (r4)        
         POP     (r13)
+        RTS     ()                # return via sys function
+
+        # ------------------------------------------------------------
+        # Sys_platform()
+        #
+        # Return ID number of platform after query to OSBYTE
+        #
+        # sys( Sys_platform )
+        #
+        # Entry:
+        #       r13 - hold return address (to clean up stack in main sys fn)
+        #
+        # Exit:
+        #       r1  - platformid
+        #       all other registers preserved
+        #
+        # On return from OSBYTE on a BBC system,  R2=host/OS type:
+        #    0 Electron                   8 UNIX or UNIX-type system
+        #    1 BBC                        9 6809/6309 system with "dir/file.ext"
+        #    2 BBC B+                    17 6809/6309 system with "dir.file/ext"
+        #    3 Master 128
+        #    4 Master ET                 28 Commodore 64/128
+        #    5 Master Compact            29 Texas Instruments calculator
+        #    6 Arthur or RISC OS         30 Amstrad CPC
+        #    7 Springboard               31 Sinclair ZX Spectrum
+        #    32+ IBM PC-type system (DOS, Windows, etc.)
+        #
+        # ... but on a non-BBC system the returned value in R2 is unchanged
+        #
+        # Need to add 32 to each of these to avoid already allocated BCPL
+        # platform IDs
+        # ------------------------------------------------------------
+__Sys_platform:
+        PUSH    (r13)
+        PUSH    (r12)             # OSBYTE trashes r12
+        PUSH    (r3)
+        PUSH    (r2)
+        mov     r1, r0            # OSBYTE call 0
+        mov     r2, r0, 0x00FF    # Dummy value in R2
+        JSR     (OSBYTE)          # 
+        mov     r1, r2            # transfer return value into r1
+        cmp     r1, r0, 0x00FF    # is it the dummy value taken in ?
+        nz.add  r1, r0, 0x0020    # if not then add 32 to get the BCPL ID
+        POP     (r2)              # restore original r2 = Accumulator B
+        POP     (r3)              # restore original r3 = Accumulator C
+        POP     (r12)             # restore r12
+        POP     (r13)             # restore return address        
+        RTS     ()                # return via sys function
+        # ------------------------------------------------------------
+        # Sys_cputime()
+        #
+        # Return number of ms since system ON time
+        #
+        # sys( Sys_cputime )
+        #
+        # Entry:
+        #       r13 - hold return address (to clean up stack in main sys fn)
+        #
+        # Exit:
+        #       r1  - cpu time in ms
+        #       all other registers preserved
+        # ------------------------------------------------------------
+__Sys_cputime:
+        PUSH    (r13)
+        PUSH    (r12)             # OSWORD trashes r12
+        PUSH    (r3)
+        PUSH    (r2)
+        mov     r1, r0, 1         # OSWORD call 1 = GETTIME
+        lmov    r2, __osword_pblk # r2 points at memory for return data
+        JSR     (OSWORD)          # get time in first word of __osword_pblk in 100ths of s
+        lld     r1, __osword_pblk # get value in r1
+        mov     r2,r0,10          # divider is 10
+        JSR     (__divu)          # unsigned division, quotient in r1, remainder r2
+        cmp     r2,r0,5
+        pl.add  r1,r0,1           # Round up R1 if remainder >=5
+        POP     (r2)              # restore original r2 = Accumulator B
+        POP     (r3)              # restore original r3 = Accumulator C
+        POP     (r12)             # restore r12
+        POP     (r13)             # restore return address        
         RTS     ()                # return via sys function
         # ------------------------------------------------------------
         # Sys_EXT()

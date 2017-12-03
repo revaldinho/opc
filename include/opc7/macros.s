@@ -67,7 +67,7 @@ MACRO   DI()
 ENDMACRO
 
 MACRO JSR( _address_)
-    jsr     r13, r0, _address_
+    ljsr     r13, _address_
 ENDMACRO
 
 MACRO RTS()

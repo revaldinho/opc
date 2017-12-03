@@ -121,7 +121,11 @@ def assemble( filename, listingon=True):
             (pred, opfields,words, memptr) = ("1" if pred==None else pred, [ x.strip() for x in operands.split(",")],[], nextmem)
             if (iteration==0 and (label and label != "None") or (inst=="EQU")):
                 errors = (errors + ["Error: Symbol %16s redefined in ...\n         %s" % (label,line.strip())]) if label in symtab else errors
-                exec ("%s= int(%s)" % ((label,str(nextmem)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
+                try:
+                    exec ("%s= int(%s)" % ((label,str(nextmem)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
+                except:
+                    errors += [ "Syntax error on:\n  %s" % line.strip() ]
+                    continue
             if (inst in("WORD","HALF","BYTE") or inst in op) and iteration < 1:
                 if inst=="WORD":
                     nextmem += len(opfields)
