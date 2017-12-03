@@ -201,7 +201,6 @@ def code ( codestring, source=""):
 def print_wrapper():
     ## OPC6 STACK at F7FF
     ## Allow 512 words of stack = 200h
-    
     stack_setup             = "mov r14,r0,0xF7FF" if cpu_target in("opc6","opc5ls") else "lmov r14,0xFFFFFFFF"
     ## Need to allow space for TUBE ROM at top of address map for OPC6
     initial_free_memory_ptr = "mov r10,r0,0xF5FF" if cpu_target in("opc6","opc5ls") else "lmov r10,0xFFFFEFFF"
@@ -980,7 +979,7 @@ def process_sial(sialtext):
                     code("z.mov pc,r0,%s" % l)            
                     code("sub r4,r0,1")
                 code("z.mov pc,r0,%s" % labels[-1])
-                code("z.mov pc,r0,%s" % default, "default jump target")
+                code("mov pc,r0,%s" % default, "default jump target")
             elif opcode == sialop['f_global'] :   # global    Kn G1 L1 ... Gn Ln   Global initialisation data
                 code("", "# Global Resources: %s" % line)
                 for i in range (2,len(fields)-1,2):
