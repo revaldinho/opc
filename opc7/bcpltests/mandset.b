@@ -146,24 +146,27 @@ AND muldiv8p24(a,b) BE {
  *
  * ------------------------------------------------------------- */
 
+
 AND istubeplatform(verbose) = VALOF {
   LET platform_str = ?
   LET platform_id = sys(Sys_platform)
-  platform_id := platform_id - 32
-  SWITCHON ( platform_id ) INTO {
-    DEFAULT: platform_str := 0; ENDCASE  
-    CASE 0 : platform_str := "Electron"; ENDCASE
-    CASE 1 : platform_str := "BBC Micro"; ENDCASE
-    CASE 2 : platform_str := "BBC B+"; ENDCASE
-    CASE 3 : platform_str := "Master 128"; ENDCASE
-    CASE 4 : platform_str := "Master ET"; ENDCASE
+  IF platform_id \= 255 DO platform_id := platform_id - 32
+  SWITCHON platform_id INTO {
+    DEFAULT: platform_str := 0               ; ENDCASE  
+    CASE 0 : platform_str := "Electron"      ; ENDCASE
+    CASE 1 : platform_str := "BBC Micro"     ; ENDCASE
+    CASE 2 : platform_str := "BBC B+"        ; ENDCASE
+    CASE 3 : platform_str := "Master 128"    ; ENDCASE
+    CASE 4 : platform_str := "Master ET"     ; ENDCASE
     CASE 5 : platform_str := "Master Compact"; ENDCASE
-    CASE 6 : platform_str := "RISC OS"; ENDCASE
+    CASE 6 : platform_str := "RISC OS"       ; ENDCASE
   }
+  
   TEST (platform_str & verbose) DO {
      writef("Detected Acorn Tube host as %s (%I )*n*c", platform_str, platform_id)
      RESULTIS 1
   } ELSE {
+     IF verbose DO writef("Detected Non-Acorn Tube host as ID %I *n*c", platform_id)  
      RESULTIS 0  
   }       
 }
