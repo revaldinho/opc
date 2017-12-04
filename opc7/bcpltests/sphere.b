@@ -1,22 +1,35 @@
 GET "libhdr"
 
+GET "beeblib.b"
+
+
 MANIFEST {  
   FIXPOINTSCALE = 1_000_000
   PI            = 3_141_593
   MAXTERMS      = 22
-
-  VDU_GCOL   = 18
-  VDU_CLRGFX = 16
-  VDU_CLRTXT = 12
-  VDA_GRAORG = 29
-  VDU_PLOT   = 25
-  VDU_MODE   = 22
-  GMOVE      =  4
-  GDRAW      =  5
-  GTRI       = 85  
 }
 
-LET start() = VALOF { 
+LET start() = VALOF {
+  TEST istubeplatform(1) THEN {
+    bbcsphere()
+  } ELSE {
+    testsphere()
+  }
+}
+
+
+AND testsphere() BE {
+  LET x,y = ?,?
+  LET scale = 400
+  FOR phi= 0 TO 126_000_000 BY 1_000_000 DO {
+    x := muldiv(sine(phi), scale, FIXPOINTSCALE)
+    y := muldiv(muldiv(cosine(phi), sine(muldiv(phi,0_950_000, FIXPOINTSCALE)), FIXPOINTSCALE),scale,FIXPOINTSCALE)
+    writef("Drawto (%I ,%I )*n*c", x, y)       
+  }
+}
+
+
+AND bbcsphere() BE {
   LET x,y = ?,?
   LET scale = 400
   VDU(VDU_CLRGFX)
@@ -35,8 +48,9 @@ LET start() = VALOF {
       VDU(VDU_PLOT,GDRAW,x,y)  
     }
   }
-  RESULTIS 0
 }
+
+
 
 AND cosine(phi) = VALOF {
   LET sum, n, negt2, term = 0, 2, ?, FIXPOINTSCALE  // Term starts at 1 for cos
@@ -74,49 +88,6 @@ AND print(num) BE {
     writef("%s%Z .%Z6", sign, integer, decimal)    
 }
 
-AND lowbyte(n) = VALOF {
-  RESULTIS (n & #x00FF)
-}
-
-AND highbyte(n) = VALOF {
-  RESULTIS ((n & #xFF00) >> 8)
-}
-
-AND VDU29(x,y) BE {  
-  LET s = VEC 6
-  s%0 := 5
-  s%1 := 29    
-  s%2 := lowbyte(x)
-  s%3 := highbyte(x)                
-  s%4 := lowbyte(y)
-  s%5 := highbyte(y)            
-  writes(s)
-}
-    
-AND VDU(n,a,b,c,d,e) BE {
-  LET s = VEC 8
-    
-  s%0 := 6
-  s%1 := lowbyte(n)    
-  s%2 := lowbyte(a)
-  s%3 := lowbyte(b)
-  s%4 := highbyte(b)        
-  s%5 := lowbyte(c)
-  s%6 := highbyte(c)
-
-  SWITCHON n INTO {
-    DEFAULT:         s%0 := 6 ; ENDCASE
-    CASE VDU_CLRGFX: s%0 := 1 ; ENDCASE
-    CASE VDU_CLRTXT: s%0 := 1 ; ENDCASE    
-    CASE VDU_MODE:   s%0 := 2 ; ENDCASE
-    CASE VDU_GCOL:   s%0 := 3 ; ENDCASE
-    CASE VDU_PLOT:   s%0 := 6 ; ENDCASE        
-  }
-  TEST s%0 = 1 THEN
-    wrch( s%1)
-  ELSE
-    writes(s)
-}
 
 
 
