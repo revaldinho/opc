@@ -223,7 +223,7 @@ osBYTE:
     PUSH    (r1)
     JSR     (SendByteR2)        # Send function
     JSR     (WaitByteR2)        # Get return value
-    mov     r1, r2
+    mov     r2, r1
     POP     (r1)
     POP     (r13)
     RTS     ()
@@ -256,9 +256,9 @@ ByteHigh:
     JSR     (WaitByteR2)        # Get carry - from bit 7
     add     r1, r0, -0x80
     JSR     (WaitByteR2)        # Get high byte
-    mov     r1, r3
+    mov     r3, r1
     JSR     (WaitByteR2)        # Get low byte
-    mov     r1, r2
+    mov     r2, r1
 FastReturn:
     POP     (r1)                # restore original r1
     POP     (r13)
