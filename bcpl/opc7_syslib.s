@@ -657,9 +657,11 @@ __Sys_cputime:
         lmov    r2, __osword_pblk # r2 points at memory for return data
         JSR     (OSWORD)          # get time in first word of __osword_pblk in 100ths of s
         lld     r1, __osword_pblk # get value in r1
-        mov     r2,r0,10          # divider is 10
-        JSR     (__divu)          # unsigned division, quotient in r1, remainder r2
-        cmp     r2,r0,5
+        CLC     ()
+        rol     r1,r1             # multiply by 10 to get 1000ths
+        rol     r2,r1
+        rol     r2,r2        
+        add     r1,r2 
         pl.add  r1,r0,1           # Round up R1 if remainder >=5
         POP     (r2)              # restore original r2 = Accumulator B
         POP     (r3)              # restore original r3 = Accumulator C

@@ -34,7 +34,7 @@ ${MMB} info ${SSD}
 
 rm -rf disk
 mkdir -p disk
-set bcpltestlist = ( ack aes256 anseq apfel beebgfx enigma-m3 epr163 evale mandset sudoku solit2 sphere )
+set bcpltestlist = ( ack aes256 anseq apfel beebgfx bbctest divmod enigma-m3 evale mandset sudoku solit2 sphere )
 set SSD = OPC7DEM2.ssd
 
 pushd disk
