@@ -491,6 +491,8 @@ __xmod: ## Find signed modulus of a MOD b
         # ------------------------------------------------------------
         EQU     K_Sys_EXT,       68
         EQU     K_Sys_platform,  54
+        EQU     K_Sys_getsysval, 48
+        EQU     K_Sys_putsysval, 49
         EQU     K_Sys_cputime,   30
         EQU     K_Sys_muldiv,    26 
         EQU     K_Sys_getvec,    21
@@ -528,6 +530,10 @@ __sys:
         z.lmov  pc,__Sys_cputime
         cmp     r1,r0,K_Sys_platform
         z.lmov  pc,__Sys_platform
+        cmp     r1,r0,K_Sys_getsysval
+        z.lmov  pc,__Sys_getsysval
+        cmp     r1,r0,K_Sys_putsysval
+        z.lmov  pc,__Sys_putsysval
         
                                         # Small subset of codes for unimplemented calls which use a dummy function
                                         # rather than causing a system quite
@@ -587,7 +593,43 @@ __Sys_muldiv:
         POP     (r4)        
         POP     (r13)
         RTS     ()                # return via sys function
-
+        # ------------------------------------------------------------
+        # Sys_getsysval
+        #
+        # Return a word from an absolute system memory address
+        #
+        # sys( Sys_getsysval, <addr> )
+        #
+        # Entry:
+        #       r4  - holds address 
+        #       r13 - hold return address (to clean up stack in main sys fn)
+        #
+        # Exit:
+        #       r1  - return value
+        #       all other registers preserved
+        # ------------------------------------------------------------
+__Sys_getsysval:
+        ld      r1, r4            # Read address directly
+        RTS     ()                # return via sys function
+        # ------------------------------------------------------------
+        # Sys_putsysval
+        #
+        # write a data word to an absolute system memory address
+        #
+        # sys( Sys_putsysval, <addr>, <data> )
+        #
+        # Entry:
+        #       r4  - holds address 
+        #       r13 - hold return address (to clean up stack in main sys fn)
+        #       Mem[r11+5] points to data parameter
+        # Exit:
+        #       r1  - return value
+        #       all other registers preserved
+        # ------------------------------------------------------------
+__Sys_putsysval:
+        ld      r1,r11,5          # Get data parameter
+        sto     r1, r4            # Write to address directly
+        RTS     ()                # return via sys function
         # ------------------------------------------------------------
         # Sys_platform()
         #
