@@ -490,6 +490,7 @@ __xmod: ## Find signed modulus of a MOD b
         #     Other registers dependent on system call
         # ------------------------------------------------------------
         EQU     K_Sys_EXT,       68
+        EQU     K_Sys_delay,     57
         EQU     K_Sys_platform,  54
         EQU     K_Sys_getsysval, 48
         EQU     K_Sys_putsysval, 49
@@ -503,7 +504,6 @@ __xmod: ## Find signed modulus of a MOD b
         EQU     K_Sys_rdch,      10
         EQU     K_Sys_quit,       0
         EQU     K_Sys_setcount,  -1
-
 __sys:
                                         # BCPL routine entry boilerplate:
         sto     r11,r3                  # Save old stack pointer into new frame
@@ -516,6 +516,8 @@ __sys:
 
         cmp     r1,r0,K_Sys_EXT         # look for Sys_EXT first - like time critical code
         z.lmov  pc,__Sys_EXT
+        cmp     r1,r0,K_Sys_delay
+        z.lmov  pc,__Sys_delay        
         cmp     r1,r0,K_Sys_getvec
         z.lmov  pc,__Sys_getvec
         cmp     r1,r0,K_Sys_freevec
@@ -711,6 +713,33 @@ __Sys_cputime:
         POP     (r13)             # restore return address        
         RTS     ()                # return via sys function
         # ------------------------------------------------------------
+        # Sys_delay()
+        #
+        # Wait given number of ms
+        #
+        # sys( Sys_delay, delay_ms )
+        #
+        # Entry:
+        #       r4  - holds delay in ms
+        #       r13 - hold return address (to clean up stack in main sys fn)
+        #
+        # Exit:
+        #       r6 used as workspace and trashed, all registers preserved
+        # ------------------------------------------------------------
+__Sys_delay:
+        PUSH    (r13)
+        PUSH    (r1)
+        JSR     (__Sys_cputime)   # get time now
+        mov     r6,r1             # move time into r6
+__Sys_delay_l0: 
+        JSR     (__Sys_cputime)   # get time now
+        sub     r1,r6             # get difference from first call
+        cmp     r1,r4             # > required time?
+        mi.lmov pc, __Sys_delay_l0 # no, try again
+        POP     (r1)
+        POP     (r13)             # restore return address        
+        RTS     ()                # return via sys function
+        # ------------------------------------------------------------
         # Sys_EXT()
         #
         # Call a user function written in assembler
@@ -734,7 +763,6 @@ __Sys_EXT:
         POP     (r2)
         POP     (r13)
         RTS     ()                # return via sys function
-
         # ------------------------------------------------------------
         # Sys_getvec()
         #
@@ -752,7 +780,6 @@ __Sys_getvec:
         mov     r1,r10            # return free pointer in r1
         POP     (r13)
         RTS()
-
         # ------------------------------------------------------------
         # Sys_freevec()
         #
@@ -767,7 +794,6 @@ __Sys_getvec:
         # ------------------------------------------------------------
 __Sys_freevec:
         RTS()
-
         # ------------------------------------------------------------
         # Sys_quit()
         #

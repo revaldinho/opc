@@ -44,7 +44,7 @@ LET istubeplatform(verbose) = VALOF {
   }
   
   TEST (platform_str & verbose) DO {
-     writef("Detected Acorn Tube host as %s (%I )*n*c", platform_str, platform_id)
+     writef("Detected Acorn Tube host as %s *n*c", platform_str)
      RESULTIS 1
   } ELSE {
      IF verbose DO writef("Detected Non-Acorn Tube host as ID %I *n*c", platform_id)  
