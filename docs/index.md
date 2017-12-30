@@ -43,7 +43,9 @@ Implementations:-
  7.  OPC-6 - an extended version of OPC-5 adding more instructions but retaining the overall architecture of OPC-5LS.
       *   [OPC6 spec](/opc/opc6spec.html)
       *   [OPC6 source code](https://github.com/revaldinho/opc/tree/master/opc6)
+      *   [BCPL (and Enigma) on OPC6](http://anycpu.org/forum/viewtopic.php?t=462)
 
  8.  OPC-7 - a 32 bit wide, simplified version of OPC-6, with all instructions a single word, and with 20 bit addressing.
       *   [OPC7 spec](/opc/opc7spec.html)
       *   [OPC7 source code](https://github.com/revaldinho/opc/tree/master/opc7)
+      *   [OPC7 - a 32 bit machine in One Page Computing](http://anycpu.org/forum/viewtopic.php?t=480)
