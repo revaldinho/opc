@@ -11,50 +11,58 @@ GLOBAL {
 
 MANIFEST {
   One   = 1<<20      // The number representing 1.00000000 in a 12.20b fixed point system
-
   width = 320        // BBC plot area
   height= 256  
 }
 
 LET start() = VALOF
-{ LET s = 0           // Region selector
+{ LET region = 0           // Region selector
+  LET runagain = 1
+
   IF ~istubeplatform(1) DO {
     writes("Sorry - this program only works in the Acorn BBC Microcomputer Tube environment*n")
     RESULTIS 0
   }
 
   // Default settings
-  // a, b, size := -50_000_000, 0, 180_000_000
-  a    := -(One >>1 )
-  b    := 0
-  size := muldiv(One,18,10)
+  // a, region, size := -50_000_000, 0, 180_000_000
+  a      := -(One >>1 )
+  b      := 0
+  size   := muldiv(One,18,10)
+
+  WHILE runagain DO {
+    VDU(VDU_MODE,2)       // Get colours rather than resolution
+    writes("Mandelbrot")
+
+    newline()
+    writes("Choose region to plot (0-9)*n*c")
+    region := nummenu(9)
   
-  limit := 38
+    limit := 38
 
-  IF 1<=s<=7 DO
-  { LET limtab = TABLE  38,  38,  38,  54,  70,  //  0 
-                        80,  90, 100, 100, 110,  //  5 
-                       120, 130, 140, 150, 160,  // 10 
-                       170, 180, 190, 200, 210,  // 15 
-                       220                       // 20 
-    limit := limtab!s
+    IF 1<=region<=7 DO {
+       LET limtab = TABLE  38,  38,  38,  54,  70,  //  0 
+                           80,  90, 100, 100, 110,  //  5 
+                          120, 130, 140, 150, 160,  // 10 
+                          170, 180, 190, 200, 210,  // 15 
+                          220                       // 20 
+      limit := limtab!region
+      //a, b, size := -52_990_000, 66_501_089,  50_000_000
+      a     := -muldiv(One, 52_990_000, 100_000_000)
+      b     := muldiv(One, 66_501_089, 100_000_000)
+      size  := muldiv(One, 50_000_000, 100_000_000)
+      FOR i = 1 TO region DO size := size / 10
+    }  
 
-    //a, b, size := -52_990_000, 66_501_089,  50_000_000
-    a    := -muldiv(One, 52_990_000, 100_000_000)
-    b    := muldiv(One, 66_501_089, 100_000_000)
-    size := muldiv(One, 50_000_000, 100_000_000)
-    FOR i = 1 TO s DO size := size / 10
+    plotset()
+
+    writes("Run again ? (Y/N)*n*c")
+    runagain := ynchoice()    
   }
-
-  VDU(VDU_MODE,2)       // Get colours rather than resolution
-  writes("Mandelbrot")
-
-  plotset()
-
   RESULTIS 0
 }
 
-AND plotset() BE {
+AND plotset(b) BE {
   LET mina = a - size
   LET minb = b - size
   LET doublesize = 2 * size
@@ -118,6 +126,32 @@ AND muldiv12p20(a,b) BE {
 AND muldiv8p24(a,b) BE {
     sys(Sys_muldiv, a, b, 0, 2)
 }
+
+AND nummenu(max) = VALOF {
+    WHILE 1 DO {
+        LET choice = 0
+        LET c = rdch()
+        choice := c - '0'
+        IF choice >= 0 DO {
+           IF choice <= max {
+              RESULTIS choice
+           }
+        }
+     sys(Sys_delay, 100)
+   }
+}
+
+AND ynchoice() = VALOF {
+    LET choice = 0
+    WHILE 1 DO {
+        LET c = capitalch(rdch())
+        IF c = 'Y' THEN RESULTIS 1
+        IF c = 'N' THEN RESULTIS 0
+        sys(Sys_delay, 100)
+   }
+}
+
+
 
 
 

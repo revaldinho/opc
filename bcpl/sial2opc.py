@@ -394,89 +394,6 @@ def optimize_sial( sialtext):
             prev_line = line
             prev_fields = fields
             prev_opcode = opcode
-    
-    # OPT-3: JZ/JNZ/JGE0/JLE0 instructions which follow a load/arithmetic/logical op do not need an additional compare so swap to f_ext_jne0/eq0
-    if cpu_target == "opc6":      # Temp. disable for OPC7 - some exceptions caused to be investigated ...
-        prev_line = "000"
-        for i in range (3,len(sialtext)-2):
-            line = sialtext[i]
-            fields = line.split()
-            if len(fields)>0 and fields[0].startswith("F"):
-                prev_opcode = int( (prev_line.split())[0][1:] )
-                opcode = int(fields[0][1:])
-                
-                if opcode in (sialop['f_jne0'],sialop['f_jeq0'], sialop['f_jge0'], sialop['f_jls0']):
-                    # OK to skip over a STO which will preserve flags
-                    if ( sialop['f_sp'] <= prev_opcode <= sialop['f_sl']) :
-                        try:
-                            prev_opcode = int((sialtext[i-2].split())[0][1:])
-                        except IndexError as e:
-                            pass
-                    if ( sialop["f_lp"] <= prev_opcode <= sialop["f_lm"]) or \
-                       ( sialop['f_add'] <= prev_opcode <= sialop['f_sub']) or \
-                       ( sialop['f_and'] <= prev_opcode <= sialop['f_eqv']) or \
-                       ( sialop['f_ap'] <= prev_opcode <= sialop['f_s']) :
-                         #print ("# OPT-3: Found LOAD A; JNE/JEQ/JLS/JGE ")
-                         #print ("#  %s ; %s " % (prev_fields[0], fields[0]))
-                         if opcode == sialop['f_jeq0'] :
-                             newopcode = sialop['f_ext_jeq0'] 
-                         elif opcode == sialop['f_jne0'] :
-                             newopcode = sialop['f_ext_jne0'] 
-                         elif opcode == sialop['f_jls0'] :
-                             newopcode = sialop['f_ext_jls0'] 
-                         elif opcode == sialop['f_jge0'] :
-                             newopcode = sialop['f_ext_jge0'] 
-                         sialtext[i] = ' '.join(["F%d" % newopcode] + fields[1:])
-                prev_line = line
-  
-    # OPT-4 - Swap jump for short jump if target is within N SIAL opcodes, only for OPC6 with short INC/DEC instructions
-    if cpu_target == "opc6":
-        for i in range (0,len(sialtext)-1):
-            line = sialtext[i]
-            fields = line.split()
-            intervening_opcodes = set()
-            if len(fields)>0 and fields[0].startswith("F"):
-                opcode = int(fields[0][1:])
-                if ( sialop['f_ext_jeq0'] <= opcode <= sialop['f_ext_jls0']) or \
-                   ( sialop['f_jeq'] <= opcode <= sialop['f_jge0']) or opcode==sialop['f_j'] :               
-                    target = fields[1]
-                    for dist in range (max(-5, -i),10):
-                        if i+dist >= len(sialtext):
-                            dist = 10                    
-                        else:
-                            f = sialtext[i+dist].split()
-                            if dist == 0:
-                                intervening_opcode= set()
-                            if len(f)>1 :
-                                intervening_opcode= int(f[0][1:])
-                                intervening_opcodes.add( intervening_opcode )                            
-                                if intervening_opcode == sialop['f_lab'] and f[1]==target:
-                                    break;
-                            
-                    for o in intervening_opcodes:
-                        # Known opcodes which generate many words - dont straddle these
-                        if ( o in [ sialop[x] for x in 'f_swl f_swb f_string'.split()] ):
-                            dist = -100
-        
-                    short = ( -4 <= dist <= 5)
-                    if short :
-                        #print ("# OPT-4: Changing jump to short jump, distance %d SIAL opcodes" % dist)
-                        if opcode == sialop['f_ext_jeq0'] :
-                            newopcode = sialop['f_ext_sjeq0'] 
-                        elif opcode == sialop['f_ext_jne0'] :
-                            newopcode = sialop['f_ext_sjne0'] 
-                        elif opcode == sialop['f_ext_jls0'] :
-                            newopcode = sialop['f_ext_sjls0'] 
-                        elif opcode == sialop['f_ext_jge0'] :
-                            newopcode = sialop['f_ext_sjge0']
-                        elif sialop['f_jeq'] <= opcode <= sialop['f_jge0']:
-                            newopcode = opcode + sialop['sj_offset']
-                        elif sialop['f_j'] == opcode:
-                            newopcode = opcode + sialop['sj_offset']                                
-                        sialtext[i] = ' '.join(["F%d" % newopcode] + fields[1:])
-                    else:
-                        #print ("# OPT-4: Failed to Change jump to short jump, distance %d SIAL opcodes out of range" % dist)
-                        pass
                               
     newtext = []
     for i in sialtext:
@@ -722,96 +639,42 @@ def process_sial(sialtext):
                 firstlabel = True
             elif opcode == sialop['f_j'] :       # j        Ln         Jump to Ln 
                 code("mov pc,r0,%s" % fields[1], line)
-            elif opcode == sialop['f_sj'] :       # sj        Ln         Jump to Ln (near PC)
-                code("inc pc,%s-PC" % fields[1], line)
             elif opcode == sialop['f_jeq'] :     # jeq      Ln         Jump to Ln if a == b
                 code("cmp r1,r2",line)
                 code("z.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_sjeq'] :     # jeq      Ln         Jump to Ln if a == b
-                code("cmp r1,r2",line)
-                code("z.inc pc,%s-PC" % fields[1])
             elif opcode == sialop['f_jne'] :     # jne      Ln         Jump to Ln if a != b
                 code("cmp r1,r2",line)
                 code("nz.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_sjne'] :     # jne      Ln         Jump to Ln if a != b
-                code("cmp r1,r2",line)
-                code("nz.inc pc,%s-PC" % fields[1])
             elif opcode == sialop['f_jge'] :     # jge      Ln         Jump to Ln if b >= a 
                 code("cmp r2,r1",line)
                 code("pl.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_sjge'] :     # jge      Ln         Jump to Ln if b >= a 
-                code("cmp r2,r1",line)
-                code("pl.inc pc,%s-PC" % fields[1])
             elif opcode == sialop['f_jgr'] :     # jgr      Ln         Jump to Ln if b > a [ ie a < b ] 
                 code("cmp r1,r2",line)
                 code("mi.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_sjgr'] :     # jgr      Ln         Jump to Ln if b > a [ ie a < b ] 
-                code("cmp r1,r2",line)
-                code("mi.inc pc,%s-PC" % fields[1])
             elif opcode == sialop['f_jgr0'] :     # jgr0      Ln       Jump to Ln if a > 0  [ie if 0 < a]
                 code("cmp r0,r1",line)
                 code("mi.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_sjgr0'] :     # jgr0      Ln       Jump to Ln if a > 0  [ie if 0 < a]
-                code("cmp r0,r1",line)
-                code("mi.inc pc,%s-PC" % fields[1])
             elif opcode == sialop['f_jle'] :     # jle      Ln         Jump to Ln if b <= a [ie a >= b]
                 code("cmp r1,r2",line)
                 code("pl.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_sjle'] :     # jle      Ln         Jump to Ln if b <= a [ie a >= b]
-                code("cmp r1,r2",line)
-                code("pl.inc pc,%s-PC" % fields[1])
             elif opcode == sialop['f_jls'] :     # jls      Ln         Jump to Ln if b < a 
                 code("cmp r2,r1",line)
                 code("mi.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_sjls'] :     # jls      Ln         Jump to Ln if b < a 
-                code("cmp r2,r1",line)
-                code("mi.inc pc,%s-PC" % fields[1])
             elif opcode == sialop['f_jeq0'] :     # jeq0      Ln         Jump to Ln if a == 0
                 code("cmp r1,r0",line)
                 code("z.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_sjeq0'] :     # jeq0      Ln         Jump to Ln if a == 0
-                code("cmp r1,r0",line)
-                code("z.inc pc,%s-PC" % fields[1])
-            elif opcode == sialop['f_ext_jeq0'] :     # jeq0      Ln         Jump to Ln if a == 0
-                code("z.mov pc,r0,%s" % fields[1], line)
-            elif opcode == sialop['f_ext_sjeq0'] :     # jeq0      Ln         Jump to Ln if a == 0
-                code("z.inc pc,%s-PC" % fields[1], line)
             elif opcode == sialop['f_jne0'] :     # jne0      Ln         Jump to Ln if a != 0
                 code("cmp r1,r0",line)
                 code("nz.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_sjne0'] :     # jne0      Ln         Jump to Ln if a != 0
-                code("cmp r1,r0",line)
-                code("nz.inc pc,%s-PC" % fields[1])
-            elif opcode == sialop['f_ext_jne0'] :     # jne0      Ln         Jump to Ln if a != 0
-                code("nz.mov pc,r0,%s" % fields[1], line)
-            elif opcode == sialop['f_ext_sjne0'] :     # jne0      Ln         Jump to Ln if a != 0
-                code("nz.inc pc,%s-PC" % fields[1], line)
             elif opcode == sialop['f_jge0'] :     # jge0      Ln         Jump to Ln if a >= 0
                 code("cmp r1,r0",line)
                 code("pl.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_sjge0'] :     # jge0      Ln         Jump to Ln if a >= 0
-                code("cmp r1,r0",line)
-                code("pl.inc pc,%s-PC" % fields[1])
-            elif opcode == sialop['f_ext_jge0'] :     # jge0      Ln         Jump to Ln if a >= 0
-                code("pl.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_ext_sjge0'] :     # jge0      Ln         Jump to Ln if a >= 0
-                code("pl.inc pc,%s-PC" % fields[1])
             elif opcode == sialop['f_jls0'] :     # jls0      Ln         Jump to Ln if a < 0
                 code("cmp r1,r0",line)
                 code("mi.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_sjls0'] :     # jls0      Ln         Jump to Ln if a < 0
-                code("cmp r1,r0",line)
-                code("mi.inc pc,%s-PC" % fields[1])
-            elif opcode == sialop['f_ext_jls0'] :     # jls0      Ln         Jump to Ln if a < 0
-                code("mi.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_ext_sjls0'] :     # jls0      Ln         Jump to Ln if a < 0
-                code("mi.inc pc,%s-PC" % fields[1])
             elif opcode == sialop['f_jle0'] :     # jle0      Ln         Jump to Ln if a <= 0 [or 0>=a]
                 code("cmp r0,r1",line)
                 code("pl.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_sjle0'] :     # jle0      Ln         Jump to Ln if a <= 0 [or 0>=a]
-                code("cmp r0,r1",line)
-                code("pl.inc pc,%s-PC" % fields[1])
             elif opcode == sialop['f_ip'] :      # ip        Pn           a := P!n + a; P!n := a
                 code("ld r4,r11,%d" % getnum(fields[1]) ,line)
                 code("add r1,r4")

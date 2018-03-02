@@ -183,30 +183,30 @@ f_ext_lsr=        156    //  a := b >> 1
 f_ext_asl_a=      157    //  a := a << 1
 f_ext_lsr_a=      158    //  a := a >> 1
 
-f_ext_jeq0=      159    //   as f_jeq0 but no need for compare as Z flag set by prev. instruction
-f_ext_jne0=     160    //   as f_jne0 but no need for compare as Z flag set by prev. instruction
-f_ext_jge0=     161    //   as f_jge0 but no need for compare as S flag set by prev. instruction
-f_ext_jls0=     162    //   as f_jls0 but no need for compare as S flag set by prev. instruction
-f_ext_sjeq0= 163
-f_ext_sjne0= 164
-f_ext_sjge0= 165
-f_ext_sjls0= 166  
-
-sj_offset= 100
-f_sj=      176  
-f_sjeq=    185
-f_sjne=    186
-f_sjls=    187
-f_sjgr=    188
-f_sjle=    189
-f_sjge=    190
-
-f_sjeq0=   191
-f_sjne0=   192
-f_sjls0=   193
-f_sjgr0=   194
-f_sjle0=   195
-f_sjge0=   196
+// _ext_jeq0=      159    //   as f_jeq0 but no need for compare as Z flag set by prev. instruction
+// _ext_jne0=     160    //   as f_jne0 but no need for compare as Z flag set by prev. instruction
+// _ext_jge0=     161    //   as f_jge0 but no need for compare as S flag set by prev. instruction
+// _ext_jls0=     162    //   as f_jls0 but no need for compare as S flag set by prev. instruction
+// _ext_sjeq0= 163
+// _ext_sjne0= 164
+// _ext_sjge0= 165
+// _ext_sjls0= 166  
+// 
+// sj_offset= 100
+// f_sj=      176  
+// f_sjeq=    185
+// f_sjne=    186
+// f_sjls=    187
+// f_sjgr=    188
+// f_sjle=    189
+// f_sjge=    190
+// 
+// f_sjeq0=   191
+// f_sjne0=   192
+// f_sjls0=   193
+// f_sjgr0=   194
+// f_sjle0=   195
+// f_sjge0=   196
 
 
 // Alternatives which swap use of A and B or C reg but otherwise identical to originals

@@ -7,7 +7,7 @@ OPT ?= -o
 
 ALLSRCS    ?= $(wildcard *.b)
 TESTSRCS   ?= $(shell ls -1 *b | egrep -v '(bcpllib|beeb|empty|mandset)'  )
-SIALS      ?= $(patsubst %.b,%.sial,$(ALLSRCS))
+SIALS      ?= $(patsubst %.b,%.sial,$(TESTSRCS))
 ASMS       ?= $(patsubst %.b,%.s,$(TESTSRCS))
 HEXS       ?= $(patsubst %.b,%.hex,$(TESTSRCS))
 BCPLEXECS  ?= $(patsubst %.b,%,$(TESTSRCS))

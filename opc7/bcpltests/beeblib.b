@@ -3,8 +3,6 @@
  * 
  * BBC Tube toolbox routines for use with OPC6/7 coprocessors
  *
- *
- *
  */
 
 MANIFEST {

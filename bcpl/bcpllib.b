@@ -1355,7 +1355,7 @@ AND deleteco(cptr) = VALOF
 
   { LET co = !a
     UNLESS co DO
-    { sawritef("BLIB co=%n: cannot deleteco %n -- not found*n",
+    { writef("BLIB co=%n: cannot deleteco %n -- not found*n",
          currco, cptr)
       abort(112)
       RESULTIS FALSE
@@ -1365,7 +1365,7 @@ AND deleteco(cptr) = VALOF
   } REPEAT
 
   IF cptr!co_parent DO
-  { sawritef("BLIB co=%n: cannot deleteco %n -- has a parent*n",
+  { writef("BLIB co=%n: cannot deleteco %n -- has a parent*n",
        currco, cptr)
     abort(112)
     RESULTIS FALSE
@@ -1412,7 +1412,7 @@ AND initco(fn, size, a, b, c, d, e, f, g, h, i, j, k) = VALOF
 
 AND startco(body, arg, stsize) = VALOF
 { LET newco = createco(body, stsize)
-//sawritef("BLIB: callco(%n,%n)*n", newco, arg)
+//writef("BLIB: callco(%n,%n)*n", newco, arg)
    IF newco DO callco(newco, arg)
    RESULTIS newco
 }
