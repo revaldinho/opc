@@ -8,11 +8,11 @@ MANIFEST {
 }
 
 LET start() = VALOF {
-  TEST istubeplatform(1) THEN {
+//  TEST istubeplatform(1) THEN {
     bbcsphere()
-  } ELSE {
-    testsphere()
-  }
+//  } ELSE {
+//    testsphere()
+//  }
 }
 
 AND testsphere() BE {
@@ -36,7 +36,8 @@ AND bbcsphere() BE {
   VDU29(640,512)
 
   FOR colour = 1 TO 7 DO {
-    timenow := sys(Sys_cputime)  
+//    timenow := sys(Sys_cputime)
+    timenow := 0
     VDU(VDU_GCOL, 0,colour)  
     VDU(VDU_PLOT,GMOVE,0,0)
     FOR phi= 0 TO 126_000_000 BY 0_250_000 DO {
@@ -46,7 +47,7 @@ AND bbcsphere() BE {
       VDU(VDU_PLOT,GDRAW,x,y)  
     }
     wrch(30)
-    showtimestr( sys(Sys_cputime) - timenow )
+//    showtimestr( sys(Sys_cputime) - timenow )
   }  
 }
 
