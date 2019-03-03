@@ -18,10 +18,9 @@ module opc8cpu(input[23:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   always @( * ) begin
     case (IR_q)
       AND,OR      :{carry,result} = {PSR_q[C],(IR_q==AND)?(RF_pipe_q & OR_q):(RF_pipe_q | OR_q)};
-      ROL         :{carry,result} = {OR_q, PSR_q[C]};      
+      ROL,NOT     :{carry,result} = (IR_q==NOT)? {PSR_q[C], ~OR_q} : {OR_q, PSR_q[C]};      
       ADD,SUB,CMP :{carry,result} = RF_pipe_q + OR_q + subnotadd_q; // OR_q negated in EAD if required for sub/cmp
       XOR,GPSR    :{carry,result} = (IR_q==GPSR)?{PSR_q[C],8'b0,PSR_q}:{PSR_q[C],RF_pipe_q ^ OR_q};
-      NOT         :{result,carry} = {~OR_q,PSR_q[C]};      
       ROR,ASR,LSR :{result,carry} = {(IR_q==ROR)?PSR_q[C]:(IR_q==ASR)?OR_q[23]:1'b0,OR_q};
       default     :{carry,result} = {PSR_q[C],OR_q} ;
     endcase // case ( IR_q )
@@ -30,7 +29,7 @@ module opc8cpu(input[23:0] din,input clk,input reset_b,input[1:0] int_b,input cl
       FET    : FSM_d = (din[20:19]==2'b11)? FET1 : EAD;
       FET1   : FSM_d = (!pred) ? FET : EAD;      
       EAD    : FSM_d = (!pred) ? FET : (IR_q==LD) ? RDM : (IR_q==STO) ? WRM : EXEC;
-      EXEC   : FSM_d = ((!(&int_b) & PSR_q[EI])||(IR_q==PPSR&&(|swiid)))?INT:(dst_q==4'hF)?FET:EAD;
+      EXEC   : FSM_d = ((!(&int_b) & PSR_q[EI])||(IR_q==PPSR&&(|swiid)))?INT:(dst_q==4'hF)?FET:(din[20:19]==2'b11)? FET1 : EAD;
       WRM    : FSM_d = (!(&int_b) & PSR_q[EI])?INT:FET;
       default: FSM_d = (FSM_q==RDM)? EXEC : FET;
     endcase
@@ -49,8 +48,7 @@ module opc8cpu(input[23:0] din,input clk,input reset_b,input[1:0] int_b,input cl
         {FSM_q, rnw_q} <= {FSM_d, !(FSM_d==WRM) } ;
         {vpa_q, vda_q} <= {FSM_d==FET||FSM_d==EXEC,FSM_d==RDM||FSM_d==WRM};        
         if ((FSM_q==FET)||(FSM_q==EXEC))
-          // Munge long instructions to same opcode as short equiv
-          {IR_q, dst_q, src_q} <= { (din[20:19]==2'b11)?2'b10: din[20:19], din[18:8]} ; 
+          {IR_q, dst_q, src_q} <= { (din[20:19]==2'b11)?2'b10: din[20:19], din[18:8]}; // Alias 'long' opcodes to short equivalent 
         else if (FSM_q==EAD & IR_q==CMP )
           dst_q <= 4'b0; // Zero dest address after reading it in EAD for CMP operations
         if ( FSM_q == INT )

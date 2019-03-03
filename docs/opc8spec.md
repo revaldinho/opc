@@ -4,7 +4,7 @@ OPC-8 Definition
 OPC-8 is a pure 24 bit [One Page Computer](.) with a 16 entry register file based very largely on the earlier
 OPC-7 and OPC-6 machines.
 
-All memory accesses are 24 bits wide and instructions are encoded in either one or two words ::
+All memory accesses are 24 bits wide and instructions are encoded in either one or two words
 
     ppp ooooo dddd ssss iiiiiiii    nnnnnnnnnnnnnnnn
      \    \     \    \       \           \____________ 24b optional long immediate
@@ -23,8 +23,6 @@ and destination using the two 4 bit fields in the encoding. Two of the registers
   * R15 is the program counter. This can be written or read like any other register.
   
 The address bus and program counter are both 24 bits wide.
-
-Short immediates and Sign Extension
 
 All intructions can use an 8 bit short immediate value. This value will be sign extended to 24 bits.
 
