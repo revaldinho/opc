@@ -49,3 +49,7 @@ Implementations:-
       *   [OPC7 spec](/opc/opc7spec.html)
       *   [OPC7 source code](https://github.com/revaldinho/opc/tree/master/opc7)
       *   [OPC7 - a 32 bit machine in One Page Computing](http://anycpu.org/forum/viewtopic.php?t=480)
+
+ 8.  OPC-8 - a first attempt to explore a 24 bit wide machine using the familiar OPC6/7 pipeline and general arrangement
+      *   [OPC8 spec](/opc/opc8spec.html)
+      *   [OPC8 source code](https://github.com/revaldinho/opc/tree/master/opc8)
