@@ -1,6 +1,6 @@
 module opc8cpu(input[23:0] din,input clk,input reset_b,input[1:0] int_b,input clken,output vpa,output vda,output[23:0] dout,output[23:0] address,output rnw);
-  parameter HALT=5'h00,NOT=5'h01,OR=5'h02,BPERM=5'h03,ROR=5'h04,LSR=5'h05,ASR=5'h06,ROL=5'h07,RTI=5'h08,PPSR=5'h09,GPSR=5'h0A;
-  parameter MOV=5'h10,XOR=5'h11,CMP=5'h12,SUB=5'h13,ADD=5'h14,AND=5'h15,STO=5'h16,LD=5'h17;
+  parameter HALT=5'h00,NOT=5'h01,OR=5'h02,XOR=5'h03,BPERM=5'h04,ROR=5'h05,LSR=5'h06,ASR=5'h07,ROL=5'h08,RTI=5'h09,PPSR=5'h0A,GPSR=5'h0B;
+  parameter MOV=5'h10,JSR=5'h11,CMP=5'h12,SUB=5'h13,ADD=5'h14,AND=5'h15,STO=5'h16,LD=5'h17;
   parameter FET=3'h0,FET1=3'h1,EAD=3'h2,RDM=3'h3,EXEC=3'h4,WRM=3'h5,INT=3'h6,EI=3,S=2,C=1,Z=0,INT_VECTOR0=24'h2,INT_VECTOR1=24'h4;
   reg [7:0]   PSR_q; (* RAM_STYLE="DISTRIBUTED" *)
   reg [23:0]  PC_q,PCI_q, RF_q[14:0], RF_pipe_q, OR_q, result; 
@@ -29,7 +29,7 @@ module opc8cpu(input[23:0] din,input clk,input reset_b,input[1:0] int_b,input cl
       FET    : FSM_d = (din[20:19]==2'b11)? FET1 : EAD;
       FET1   : FSM_d = (!pred) ? FET : EAD;      
       EAD    : FSM_d = (!pred) ? FET : (IR_q==LD) ? RDM : (IR_q==STO) ? WRM : EXEC;
-      EXEC   : FSM_d = ((!(&int_b) & PSR_q[EI])||(IR_q==PPSR&&(|swiid)))?INT:(dst_q==4'hF)?FET:(din[20:19]==2'b11)? FET1 : EAD;
+      EXEC   : FSM_d = ((!(&int_b) & PSR_q[EI])||(IR_q==PPSR&&(|swiid)))?INT:(dst_q==4'hF)?FET:(din[20:19]==2'b11)? FET1 : (dst_q==4'hF||IR_q==JSR)?FET:EAD;
       WRM    : FSM_d = (!(&int_b) & PSR_q[EI])?INT:FET;
       default: FSM_d = (FSM_q==RDM)? EXEC : FET;
     endcase
@@ -56,10 +56,11 @@ module opc8cpu(input[23:0] din,input clk,input reset_b,input[1:0] int_b,input cl
         else if (FSM_q==FET)
           PC_q  <= PC_q + 1;
         else if ( FSM_q == EXEC) begin
-          PC_q <= (IR_q==RTI)?PCI_q: (dst_q==4'hF) ? result[23:0] : ((!(&int_b)&&PSR_q[EI])||(IR_q==PPSR&&(|swiid)))?PC_q:PC_q + 1;
+          PC_q <= (IR_q==RTI)?PCI_q: (dst_q==4'hF) ? result[23:0] : (IR_q==JSR)?OR_q:((!(&int_b)&&PSR_q[EI])||(IR_q==PPSR&&(|swiid)))?PC_q:PC_q + 1;
           PSR_q <= (IR_q==RTI)?{4'b0,PSRI_q}:{swiid,enable_int,sign,carry,zero};
           RF_q[dst_q] <= result;
         end
       end
     end
 endmodule // opc8cpu
+
