@@ -14,7 +14,7 @@ def print_memory_access( type, address, data):
 with open(sys.argv[1],"r") as f: 
     wordmem  = [ (int(x,16) & 0xFFFFFF) for x in f.read().split() ]
 (regfile, acc, c, z, pcreg, c_save, s, ei, swiid, interrupt) = ([0]*16,0,0,0,15,0,0,0,0,0) # initialise machine state inc PC = reg[15]
-print ("PC     : Mem           : Instruction            : SWI I S C Z : %s\n%s" % (''.join(["  r%2d  " % d for d in range(0,16)]), '-'*176))
+print ("PC     : Mem           : Instruction              : SWI I S C Z : %s\n%s" % (''.join(["  r%2d  " % d for d in range(0,16)]), '-'*176))
 while True:
     (pc_save,flag_save,regfile[0],preserve_flag) = (regfile[pcreg],(swiid,ei,s,c,z),0,False)    # always overwrite regfile location 0 and then dont care about assignments
     instr_word = wordmem[regfile[pcreg] & 0xFFFFFF ] &  0xFFFFFF
@@ -42,7 +42,7 @@ while True:
     if interrupt : # software interrupts dont care about EI bit
         (interrupt, regfile[pcreg], pc_int, psr_int , ei) = (0, 0x0002, pc_save, (swiid,ei,s,c,z), 0)
     else:
-        print ("%06x :%s: %-22s :  %1X  %d %d %d %d : %s" % (pc_save, mem_str, instr_str, swiid ,ei, s, c, z, ' '.join(["%06x" % i for i in regfile])))
+        print ("%06x :%s: %-24s :  %1X  %d %d %d %d : %s" % (pc_save, mem_str, instr_str, swiid ,ei, s, c, z, ' '.join(["%06x" % i for i in regfile])))
         if ( ( (p0,p1,p2)==(0,0,1) )  or  (bool(p2) ^ (bool(s if p0==1 else z) if p1==1 else bool(c if p0==1 else 1)))):
             if opcode == op["halt"]:
                 print("Stopped on halt instruction at %06x with halt number 0x%06x" % (regfile[15]-(instr_len), operand) )
@@ -50,11 +50,11 @@ while True:
             elif opcode == op["rti"] and (dest==15):
                 (regfile[pcreg], flag_save, preserve_flag ) = (pc_int, (0,psr_int[1],psr_int[2],psr_int[3],psr_int[4]), True )
             elif opcode in (op["and"], op["or"]):
-                regfile[dest] = ((regfile[dest] & ea_ed) if opcode==op["and"] else (regfile[dest] | ea_ed))& 0xFFFF
+                regfile[dest] = ((regfile[dest] & ea_ed) if opcode==op["and"] else (regfile[dest] | ea_ed))& 0xFFFFFF
             elif opcode == op["xor"]:
                 regfile[dest] = (regfile[dest] ^ ea_ed) & 0xFFFFFF
             elif opcode in (op["ror"],op["asr"],op["lsr"]):
-                (c, regfile[dest]) = (ea_ed & 0x1, ( ((c<<15) if opcode==op["ror"] else (ea_ed&0x8000 if opcode==op["asr"] else 0)) | ((ea_ed&0xFFFFFF) >> 1)))
+                (c, regfile[dest]) = (ea_ed & 0x1, ( ((c<<23) if opcode==op["ror"] else (ea_ed&0x800000 if opcode==op["asr"] else 0)) | ((ea_ed&0xFFFFFF) >> 1)))
             elif opcode == op["add"] :
                 res = (regfile[dest] + ea_ed)  & 0x1FFFFFF
                 (c, regfile[dest])  = ( (res>>24) & 1, res & 0xFFFFFF)
@@ -80,11 +80,11 @@ while True:
             elif opcode == op["sto"]:
                 print (regfile[source], regfile[dest], hex(ea_ed))
                 (regfile[source],preserve_flag,wordmem[ea_ed]) = (regfile[source], True,regfile[dest])
-                print_memory_access("STORE",ea_ed,regfile[dest])
-#            elif opcode == op[ "out"]:
-#                (preserve_flag,iomem[ea_ed], ch) = (True, regfile[dest], '%s' % chr(regfile[dest]) if ( 0x1F < regfile[dest] < 0x7F) else '.')
-#                print_memory_access("OUT",ea_ed,regfile[dest])           
-            (swiid,ei,s,c,z) = flag_save if (preserve_flag or dest==0xF ) else (swiid,ei, (regfile[dest]>>15) & 1, c, 1 if (regfile[dest]==0) else 0)
+                if ea_ed == 0xfffe09:
+                    print_memory_access("STDOUT",ea_ed,regfile[dest])
+                else:
+                    print_memory_access("STORE",ea_ed,regfile[dest])            
+            (swiid,ei,s,c,z) = flag_save if (preserve_flag or dest==0xF ) else (swiid, ei, (regfile[dest]>>23) & 1, c, 1 if (regfile[dest]==0) else 0)
 if len(sys.argv) > 2:  # Dump memory for inspection if required
     with open(sys.argv[2],"w" ) as f:
         f.write( '\n'.join([''.join("%06x " % d for d in wordmem[j:j+16]) for j in [i for i in range(0,len(wordmem),16)]]))

@@ -42,26 +42,26 @@ MACRO   SINGLE_DIGIT_CORRECTION()
         # r1 = temp store/predigit value
         cmp     r11,r0,10               # check if Q==10 and needing correction?
         nz.sto  r11,r8                  # Save digit if Q <10
-        nz.add  pc,r0,SDCL5-PC             # if no correction needed then continue else start corrections
+        nz.lmov pc,r0,SDCL5             # if no correction needed then continue else start corrections
         sto     r0,r8                   # overwrite 0 if Q=10
         ld      r1,r8,-1                # get predigit
-        sub     r1,r0,9                    # need to add 1 and set to 0 if overflow to 10, so sub 9 first
+        sub     r1,r0,9                 # need to add 1 and set to 0 if overflow to 10, so sub 9 first
         z.sub   r1,10                   # subtract another 10 if zero
-        add     r1,r0,10                   # and add 10 to get final value
+        add     r1,r0,10                # and add 10 to get final value
         sto     r1,r8,-1                # store it
 
-SDCL5:  add     r8,r0,1                    # incr pi digit pointer
-        lcmp     r8,r0,mypi+1            #
-        z.add   pc,r0,SDCL6-PC             # if first digit nothing to print yet
+SDCL5:  add     r8,r0,1                 # incr pi digit pointer
+        lcmp    r8,r0,mypi+1            #
+        z.lmov  pc,r0,SDCL6             # if first digit nothing to print yet
 SDCL8:
         ld      r1,r8,-2                # Get digit 2 places back from latest
-        jsr     r13,r0,wrdecdig           # Print it
+        jsr     r13,r0,wrdecdig         # Print it
         mov     r1,r0,46                # get '.' into r1 in case...
-        lcmp     r8,r0,mypi+2            # is this the first digit ?
-        z.jsr     r13,r0,oswrch         #  ..yes, print the '.'
+        lcmp    r8,r0,mypi+2            # is this the first digit ?
+        z.jsr   r13,r0,oswrch           #  ..yes, print the '.'
 
-SDCL6:  sub     r9,r0,1                    # dec loop counter
-        nz.mov  pc,pc,PC-L3                # jump back into main program
+SDCL6:  sub     r9,r0,1                 # dec loop counter
+        nz.lmov pc,r0,L3                # jump back into main program
         # empty the buffer
 SDCL7:  ld      r1,r8,-1
         jsr     r13,r0,wrdecdig
@@ -76,30 +76,30 @@ MACRO   MULTI_DIGIT_CORRECTION()
         #
         cmp     r11,r0,10               # check if Q==10 and needing correction?
         nz.sto  r11,r8                  # Save digit if Q <10
-        nz.add  pc,r0,MDCL5-PC            # if no correction needed then continue else start corrections
+        nz.lmov pc,r0,MDCL5             # if no correction needed then continue else start corrections
         sto     r0,r8                   # overwrite 0 if Q=10
         mov     r2,r8                   # r2 is predigit pointer, start at current digit
 pdcloop:
-        sub     r2,r0,1                    # update pointer to next predigit
+        sub     r2,r0,1                 # update pointer to next predigit
         ld      r1,r2                   # get next predigit
         cmp     r1,r0,9                 # is predigit=9 (ie would it overflow if incremented?)
         z.sto   r0,r2                   # store 0 to predigit if yes (preserve Z)
-        z.sub   pc,r0,PC-pdcloop           # loop again to correct next predigit
-        add     r1,r0,1                    # if predigit wasnt 9 fall thru to here and add 1
+        z.lmov  pc,r0,pdcloop           # loop again to correct next predigit
+        add     r1,r0,1                 # if predigit wasnt 9 fall thru to here and add 1
         sto     r1,r2                   # store it and return to execution
 
-MDCL5:  add     r8,r0,1                    # incr pi digit pointer
-        lcmp     r8,r0,4+mypi            # allow buffer of 4 chars for corrections
-        nc.add  pc,r0,MDCL6-PC
+MDCL5:  add     r8,r0,1                 # incr pi digit pointer
+        lcmp    r8,r0,4+mypi            # allow buffer of 4 chars for corrections
+        nc.lmov pc,r0,MDCL6
         ld      r1,r8,-4                # Get digit 3 places back from latest
         jsr     r13,r0,wrdecdig
         mov     r1,r0,46                # get '.' into r1 in case...
-        lcmp     r8,r0,mypi+4            # is this the first digit ?
+        lcmp    r8,r0,mypi+4            # is this the first digit ?
         z.jsr   r13,r0,oswrch           #  ..yes, print the '.'
 
 MDCL6:
-        sub     r9,r0,1                    # dec loop counter
-        nz.mov  pc,pc,PC-L3                # jump back into main program        
+        sub     r9,r0,1                 # dec loop counter
+        nz.lmov pc,r0,L3                # jump back into main program        
 
         # empty the buffer
         mov     r9,r8,-3
@@ -107,7 +107,7 @@ MDCL7:  ld      r1,r9
         jsr     r13,r0,wrdecdig
         add     r9,r0,1
         cmp     r9,r8
-        nz.sub  pc,r0,PC-MDCL7
+        nz.lmov pc,r0,MDCL7
 ENDMACRO
 
 
@@ -122,10 +122,10 @@ ENDMACRO
 # r3..r5 = local registers
 # r1,r2  = temporary registers, parameters and return registers
 
-        EQU     digits,   32          # 16
-        EQU     cols,     1+(digits*10//3)            # 1 + (digits * 10/3)
+        EQU    digits,   32            # 16
+        EQU    cols,     1+(digits*10//3)            # 1 + (digits * 10/3)
 
-        mov   r13,r0                  # Initialise r13 to stop PUSH/POP ever loading X's to stack for regression runs
+        mov    r13,r0                  # Initialise r13 to stop PUSH/POP ever loading X's to stack for regression runs
         lmov   r14,r0,0x0FFE           # Set stack to grow down from here for monitor
         lmov   pc,r0,0x1000            # Program start at 0x1000 for use with monitor/copro
 
@@ -169,9 +169,9 @@ start:
                                         # Initialise remainder/denominator array using temp vars
         mov     r2,r0,2                 # r2=const 2 for initialisation, used as data for rem[] and increment val
         mov     r3,r0,cols              # loop counter i starts at index = 1
-L1:     lsto     r2,r3,remain-1          # store remainder value to pointer
+L1:     lsto    r2,r3,remain-1          # store remainder value to pointer
         sub     r3,r0,1                    # increment loop counter
-        nz.sub  pc,r0,PC-L1
+        nz.lmov pc,r0,L1
 
         mov     r9,r0,digits            # set up outer loop counter
 L3:     mov     r11,r0                  # r11 = Q
@@ -179,12 +179,12 @@ L3:     mov     r11,r0                  # r11 = Q
         # All loop counters count down from
         # RHS of the arrays in this loop
         #
-        lmov     r12,r0,cols-1           # r4 inner loop counter
-        lmov     r7,r0,remain+cols-1
+        lmov    r12,r0,cols-1           # r4 inner loop counter
+        lmov    r7,r0,remain+cols-1
         mov     r2,r12,1                # r2 = i+1
-        lmov     r10,r0,(cols-1)*2 + 1     # initial denominator at furthest colum
+        lmov    r10,r0,(cols-1)*2 + 1   # initial denominator at furthest colum
 L4:
-        ljsr     r13,r0,muls             # r11=Q * i+1 -> result in r11
+        ljsr    r13,r0,muls             # r11=Q * i+1 -> result in r11
         ld      r2,r7                   # r2 <- *remptr
         ASL     (r2)                    # Compute 16b result for r2 * 10
         mov     r1,r2
@@ -192,16 +192,16 @@ L4:
         ASL     (r2)
         add     r1,r2
         add     r11,r1                  # add it to Q as second term
-        ljsr     r13,r0,udiv24           # r11/r10; r11 <- quo, r2 <- rem, r10 preserved
+        ljsr    r13,r0,udiv24           # r11/r10; r11 <- quo, r2 <- rem, r10 preserved
         sto     r2, r7                  # rem[i] <- r2
-        sub     r7,r0,1                    # dec rem ptr
+        sub     r7,r0,1                 # dec rem ptr
                                         # denom <- denom-2, but denom[0]=10
-        sub     r10,r0,3                   # oversubtract by 1
-        z.add   r10,r0,9                   # correct by 9 if zero
-        add     r10,r0,1                   # and always correct oversubtraction
+        sub     r10,r0,3                # oversubtract by 1
+        z.add   r10,r0,9                # correct by 9 if zero
+        add     r10,r0,1                # and always correct oversubtraction
         mov     r2,r12                  # get loop ctr into r2 before decr so it's r12+1 on next iter
-        sub     r12,r0,1                   # decr loop counter
-        c.mov   pc,pc,L4-PC                # loop if >=0
+        sub     r12,r0,1                # decr loop counter
+        c.lmov  pc,r0,L4                # loop if >=0
 
         #SINGLE_DIGIT_CORRECTION()
         MULTI_DIGIT_CORRECTION()
@@ -243,7 +243,7 @@ udiv24_loop:
         c.sub   r2,r10                  # if yes then do the subtraction for real
         c.mov   r11,r11,1               # ... set LSB of quotient using (new) carry
         add     r1,r0,1                 # increment loop counter zeroing carry
-        nz.sub  pc,r0,PC-udiv24_loop    # loop again if not finished (r5=udiv24_loop)
+        nz.lmov pc,r0,udiv24_loop       # loop again if not finished (r5=udiv24_loop)
         RTS     ()                      # and return with quotient/remainder in r1/r2
 
         # --------------------------------------------------------------
@@ -269,7 +269,7 @@ muls_loop0:
         c.add   r11,r2                  # add copy of multiplicand into accumulator if carry
         ASL     (r2)                    # shift left multiplicand
         lsr     r3, r3                  # shift right multiplier
-        nz.sub  pc,r0,PC-muls_loop0     # no need for loop counter - just stop when r1 is empty
+        nz.lmov pc,r0,muls_loop0     # no need for loop counter - just stop when r1 is empty
         c.add   r11,r2                  # add last copy of multiplicand into accumulator if carry
         RTS     ()
 
