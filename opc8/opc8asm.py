@@ -1,9 +1,9 @@
 import sys, re, codecs
-op = "halt,not,xor,or,bperm,ror,lsr,asr,rol,rti,putpsr,getpsr,0C,0D.0E.0F,mov,jsr,cmp,sub,add,and,sto,ld,lmov,ljsr,lcmp,lsub,ladd,land,lsto,lld".split(",")
-long_op = "mov,and,jsr,add,sto,ld,sub,cmp".split(",")
+op = "halt,not,xor,or,bperm,ror,lsr,asr,rol,rti,putpsr,getpsr,0C,0D,0E,0F,mov,jsr,cmp,sub,add,and,sto,ld,lmov,ljsr,lcmp,lsub,ladd,land,lsto,lld".split(",")
+long_op = "lmov,ljsr,lcmp,lsub,ladd,land,lsto,lld".split(",")
 symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
 pdict = {"1":0x000000,"z":0x400000,"nz":0x600000,"c":0x800000,"nc":0xA00000,"mi":0xC00000,"pl":0xE00000,"":0x000000} 
-(wordmem,macro,macroname,newtext,wcount,errors,warnings,reg_re,mnum,nextmnum)=([0x0000]*64*1024,dict(),None,[],0,[],[],re.compile("(r\d*|psr|pc)"),0,0)
+(wordmem,macro,macroname,newtext,wcount,errors,warnings,reg_re,mnum,nextmnum)=([0x000000]*256*64*1024,dict(),None,[],0,[],[],re.compile("(r\d*|psr|pc)"),0,0)
 def expand_macro(line, macro, mnum):  # recursively expand macros, passing on instances not (yet) defined
     global nextmnum
     (text,mobj)=([line],re.match("^(?P<label>\w*\:)?\s*(?P<name>\w+)\s*?\((?P<params>.*?)\)",line))
@@ -35,8 +35,10 @@ for iteration in range (0,2): # Two pass assembly
         if (iteration==0 and (label and label != "None") or (inst=="EQU")):
             errors = (errors + ["Error: Symbol %16s redefined in ...\n         %s" % (label,line.strip())]) if label in symtab else errors
             exec ("%s= int(%s)" % ((label,str(nextmem)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
-        if (inst in("WORD","BYTE") or inst in op) and iteration < 1:
+        if inst in("WORD","BYTE") and iteration < 1:
             nextmem += (len(opfields) if inst=="WORD" else ((len(opfields)+1)//2) if inst=="BYTE" else len(opfields)-1) # If two operands are provide instruction will be one word
+        elif inst in op and iteration < 1:
+            nextmem += 2 if inst in long_op else 1 
         elif inst in op or inst in ("BYTE","WORD","STRING","BSTRING","PBSTRING"):
             if  inst in("STRING","BSTRING","PBSTRING"):
                 strings = re.match('.*STRING\s*\"(.*?)\"(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?.*?', line.rstrip())
@@ -48,21 +50,22 @@ for iteration in range (0,2): # Two pass assembly
                 if ((len(opfields)==2 and not reg_re.match(opfields[1])) and inst not in ("WORD","BYTE")):
                     warnings.append("Warning: suspected register field missing in ...\n         %s" % (line.strip()))
                 try:
-                    exec("PC=%d+%d" % (nextmem,len(opfields)-1), globals(), symtab) # calculate PC as it will be in EXEC state
+                    exec("PC=%d+%d" % (nextmem, 2 if (inst in long_op) else 1), globals(), symtab) # calculate PC as it will be in EXEC state
                     words = [int(eval( f,globals(), symtab)) for f in opfields ] + ([0,0] if inst=="BYTE" else []) # pad out BYTE lines wih a single zero
                     words = ([(words[i+2]&0xFF)<<16|(words[i+1]&0xFF)<<8|(words[i]&0xFF) for i in range(0,len(words)-1,3)]) if inst=="BYTE" else words # pack bytes 3 to a word
                 except (ValueError, NameError, TypeError,SyntaxError):
                     (words,errors)=([0]*3,errors+["Error: illegal or undefined register name or expression in ...\n         %s" % line.strip() ])
                 if (inst in op) :
                     (dst,src,val) = (words+[0])[:3]
-                    if (inst in long_op) and ( (~val & 0xFFFF80 !=0xFFFF80) and ( val & 0xFFFF80 != 0xFFFF80)):
-                        inst = 'l'+inst
-                        words=[(pdict[pred] if ((op.index(inst)&0x10)==0) else 0x2000)|((op.index(inst)&0x1F)<<16)|(dst<<12)|(src<<8)][:len(words)-(len(words)==2)]
+                    if (inst not in long_op):
+                        if ( (~val & 0xFFFF80 !=0xFFFF80) and ( val & 0xFFFF80 != 0xFFFF80)):
+                            errors=(errors+["Error: short constant out of range in ...\n         %s"%(line.strip())])
+                        words=[pdict[pred]|((op.index(inst)&0x1F)<<16)|(dst<<12)|(src<<8)|val&0xFF][:len(words)-(len(words)==2)]                        
+                    else :
+                        words=[pdict[pred]|((op.index(inst)&0x1F)<<16)|(dst<<12)|(src<<8)][:len(words)-(len(words)==2)]
                         words.append( val & 0xFFFFFF);
-                    else:
-                        words=[(pdict[pred] if ((op.index(inst)&0x10)==0) else 0x2000)|((op.index(inst)&0x1F)<<16)|(dst<<12)|(src<<8)|val&0xFF][:len(words)-(len(words)==2)]
-                        errors=(errors+["Error: short constant out of range in ...\n         %s"%(line.strip())]) if ( (~val & 0xFFFF80 !=0xFFFF80) and ( val & 0xFFFF80 != 0xFFFF80)) else errors
-            (wordmem[nextmem:nextmem+len(words)], nextmem,wcount )  = (words, nextmem+len(words),wcount+len(words))
+                        
+            (wordmem[nextmem:nextmem+len(words)],nextmem,wcount )  = (words, nextmem+len(words),wcount+len(words))
         elif inst == "ORG":
             nextmem = eval(operands,globals(),symtab)
         elif inst and (inst != "EQU") and iteration>0 :
@@ -72,5 +75,5 @@ for iteration in range (0,2): # Two pass assembly
 print ("\nAssembled %d words of code with %d error%s and %d warning%s." % (wcount,len(errors),'' if len(errors)==1 else 's',len(warnings),'' if len(warnings)==1 else 's'))
 print ("\nSymbol Table:\n\n%s\n\n%s\n%s" % ('\n'.join(["%-32s 0x%04X (%06d)" % (k,v,v) for k,v in sorted(symtab.items()) if not re.match("r\d|r\d\d|pc|psr",k)]),'\n'.join(errors),'\n'.join(warnings)))
 with open("/dev/null" if len(errors)>0 else sys.argv[2],"w" ) as f:   ## write to hex file only if no errors else send result to null file
-    f.write( '\n'.join([''.join("%04x " % d for d in wordmem[j:j+24]) for j in [i for i in range(0,len(wordmem),24)]]))
+    f.write( '\n'.join([''.join("%06x " % d for d in wordmem[j:j+24]) for j in [i for i in range(0,len(wordmem),24)]]))
 sys.exit( len(errors)>0)

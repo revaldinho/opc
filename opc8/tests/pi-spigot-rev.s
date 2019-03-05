@@ -51,22 +51,20 @@ MACRO   SINGLE_DIGIT_CORRECTION()
         sto     r1,r8,-1                # store it
 
 SDCL5:  add     r8,r0,1                    # incr pi digit pointer
-        cmp     r8,r0,mypi+1            #
+        lcmp     r8,r0,mypi+1            #
         z.add   pc,r0,SDCL6-PC             # if first digit nothing to print yet
 SDCL8:
         ld      r1,r8,-2                # Get digit 2 places back from latest
-        mov     r1,r1,48                # Make it ASCII
-        jsr     r13,r0,oswrch           # Print it
+        jsr     r13,r0,wrdecdig           # Print it
         mov     r1,r0,46                # get '.' into r1 in case...
-        cmp     r8,r0,mypi+2            # is this the first digit ?
+        lcmp     r8,r0,mypi+2            # is this the first digit ?
         z.jsr     r13,r0,oswrch         #  ..yes, print the '.'
 
 SDCL6:  sub     r9,r0,1                    # dec loop counter
-        nz.mov  pc,r0,L3                # jump back into main program
+        nz.mov  pc,pc,PC-L3                # jump back into main program
         # empty the buffer
 SDCL7:  ld      r1,r8,-1
-        mov     r1,r1,48                # Make it ASCII
-        jsr     r13,r0,oswrch
+        jsr     r13,r0,wrdecdig
 ENDMACRO
 
 MACRO   MULTI_DIGIT_CORRECTION()
@@ -91,24 +89,22 @@ pdcloop:
         sto     r1,r2                   # store it and return to execution
 
 MDCL5:  add     r8,r0,1                    # incr pi digit pointer
-        cmp     r8,r0,4+mypi            # allow buffer of 4 chars for corrections
+        lcmp     r8,r0,4+mypi            # allow buffer of 4 chars for corrections
         nc.add  pc,r0,MDCL6-PC
         ld      r1,r8,-4                # Get digit 3 places back from latest
-        mov     r1,r1,48                # Make it ASCII
-        jsr     r13,r0,oswrch
+        jsr     r13,r0,wrdecdig
         mov     r1,r0,46                # get '.' into r1 in case...
-        cmp     r8,r0,mypi+4            # is this the first digit ?
+        lcmp     r8,r0,mypi+4            # is this the first digit ?
         z.jsr   r13,r0,oswrch           #  ..yes, print the '.'
 
 MDCL6:
         sub     r9,r0,1                    # dec loop counter
-        nz.mov  pc,r0,L3                # back to main program
+        nz.mov  pc,pc,PC-L3                # jump back into main program        
 
         # empty the buffer
         mov     r9,r8,-3
 MDCL7:  ld      r1,r9
-        mov     r1,r1,48                # Make it ASCII
-        jsr     r13,r0,oswrch
+        jsr     r13,r0,wrdecdig
         add     r9,r0,1
         cmp     r9,r8
         nz.sub  pc,r0,PC-MDCL7
@@ -130,14 +126,38 @@ ENDMACRO
         EQU     cols,     1+(digits*10//3)            # 1 + (digits * 10/3)
 
         mov   r13,r0                  # Initialise r13 to stop PUSH/POP ever loading X's to stack for regression runs
-        mov   r14,r0,0x0FFE           # Set stack to grow down from here for monitor
-        mov   pc,r0,0x1000            # Program start at 0x1000 for use with monitor/copro
+        lmov   r14,r0,0x0FFE           # Set stack to grow down from here for monitor
+        lmov   pc,r0,0x1000            # Program start at 0x1000 for use with monitor/copro
 
+
+        # --------------------------------------------------------------
+        #
+        # oswrch
+        #
+        # Output a single ascii character to the uart, or enter at wrdecdig
+        # with a single decimal digit which will be converted to ASCII first.
+        # Entry:
+        #       r1 is the character to output
+        # Exit:
+        #       r2 used as temporary
+        # ---------------------------------------------------------------
+wrdecdig:
+         mov     r1, r1, 48
+oswrch:
+oswrch_loop:
+#        in      r2, r0, 0xfe08
+#        and     r2, r0, 0x8000
+#        nz.dec  pc, PC-oswrch_loop
+        lsto     r1,r0,0xfffe09
+        RTS     ()
+
+
+        
         ORG   0x1000
 start:
         PUSH  (r13)
 
-        mov     r8,r0,mypi
+        lmov     r8,r0,mypi
         ;; trivial banner
         mov     r1, r0, 0x4f
         jsr     r13,r0,oswrch
@@ -149,7 +169,7 @@ start:
                                         # Initialise remainder/denominator array using temp vars
         mov     r2,r0,2                 # r2=const 2 for initialisation, used as data for rem[] and increment val
         mov     r3,r0,cols              # loop counter i starts at index = 1
-L1:     sto     r2,r3,remain-1          # store remainder value to pointer
+L1:     lsto     r2,r3,remain-1          # store remainder value to pointer
         sub     r3,r0,1                    # increment loop counter
         nz.sub  pc,r0,PC-L1
 
@@ -159,12 +179,12 @@ L3:     mov     r11,r0                  # r11 = Q
         # All loop counters count down from
         # RHS of the arrays in this loop
         #
-        mov     r12,r0,cols-1           # r4 inner loop counter
-        mov     r7,r0,remain+cols-1
+        lmov     r12,r0,cols-1           # r4 inner loop counter
+        lmov     r7,r0,remain+cols-1
         mov     r2,r12,1                # r2 = i+1
-        mov     r10,r0,(cols-1)*2 + 1     # initial denominator at furthest colum
+        lmov     r10,r0,(cols-1)*2 + 1     # initial denominator at furthest colum
 L4:
-        jsr     r13,r0,muls             # r11=Q * i+1 -> result in r11
+        ljsr     r13,r0,muls             # r11=Q * i+1 -> result in r11
         ld      r2,r7                   # r2 <- *remptr
         ASL     (r2)                    # Compute 16b result for r2 * 10
         mov     r1,r2
@@ -172,7 +192,7 @@ L4:
         ASL     (r2)
         add     r1,r2
         add     r11,r1                  # add it to Q as second term
-        jsr     r13,r0,udiv24           # r11/r10; r11 <- quo, r2 <- rem, r10 preserved
+        ljsr     r13,r0,udiv24           # r11/r10; r11 <- quo, r2 <- rem, r10 preserved
         sto     r2, r7                  # rem[i] <- r2
         sub     r7,r0,1                    # dec rem ptr
                                         # denom <- denom-2, but denom[0]=10
@@ -181,7 +201,7 @@ L4:
         add     r10,r0,1                   # and always correct oversubtraction
         mov     r2,r12                  # get loop ctr into r2 before decr so it's r12+1 on next iter
         sub     r12,r0,1                   # decr loop counter
-        c.mov   pc,r0,L4                # loop if >=0
+        c.mov   pc,pc,L4-PC                # loop if >=0
 
         #SINGLE_DIGIT_CORRECTION()
         MULTI_DIGIT_CORRECTION()
@@ -258,23 +278,4 @@ mypi:    WORD 0                          # Space for pi digit storage
 remain:  WORD 0                          # Array space for remainder data
 
 
-ORG     0xFFEE
-        # --------------------------------------------------------------
-        #
-        # oswrch
-        #
-        # Output a single ascii character to the uart
-        #
-        # Entry:
-        #       r1 is the character to output
-        # Exit:
-        #       r2 used as temporary
-        # ---------------------------------------------------------------
-oswrch:
-oswrch_loop:
-#        in      r2, r0, 0xfe08
-#        and     r2, r0, 0x8000
-#        nz.dec  pc, PC-oswrch_loop
-        sto     r1,r0,0xfffe09
-        RTS     ()
 
