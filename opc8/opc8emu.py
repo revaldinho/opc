@@ -55,6 +55,8 @@ while True:
                 regfile[dest] = (regfile[dest] ^ ea_ed) & 0xFFFFFF
             elif opcode in (op["ror"],op["asr"],op["lsr"]):
                 (c, regfile[dest]) = (ea_ed & 0x1, ( ((c<<23) if opcode==op["ror"] else (ea_ed&0x800000 if opcode==op["asr"] else 0)) | ((ea_ed&0xFFFFFF) >> 1)))
+            elif opcode == op["rol"] :
+                (c,regfile[dest]) = ( (ea_ed & 0x800000)>>23, (c|(ea_ed<<1))&0xFFFFFF)
             elif opcode == op["add"] :
                 res = (regfile[dest] + ea_ed)  & 0x1FFFFFF
                 (c, regfile[dest])  = ( (res>>24) & 1, res & 0xFFFFFF)
@@ -63,9 +65,9 @@ while True:
                 bytes = [ 0 if (i==3) else ((ea_ed>>(n[i]*8))&0xFF) for i in range(0,3)]
                 bytes = [ ~x for b in bytes if n[3]>2] # invert bytes if top bit of simm set
                 regfile[dest] = functools.reduce( lambda x,y: x|y, [ y<<x for (y,x) in zip(bytes,range(0,24,8))])
-            elif opcode in (op["mov"], op["ld"], op["not"]):
-                (regfile[source],regfile[dest]) = (((regfile[source]+operand)&0xFFFFFF), (~ea_ed if opcode==op["not"] else ea_ed) & 0xFFFFFF)
-                if opcode==op["ld"]:
+            elif opcode in (op["mov"], op["not"], op["ld"]):
+                regfile[dest] = (~ea_ed if opcode==op["not"] else ea_ed) & 0xFFFFFF
+                if opcode==op["ld"]: 
                     print_memory_access( "LOAD" , eff_addr, ea_ed)
             elif opcode in (op["sub"], op["cmp"]) :
                 res = (regfile[dest] + ((~ea_ed)&0xFFFFFF) + 1) & 0x1FFFFFF
@@ -84,6 +86,9 @@ while True:
                     print_memory_access("STDOUT",ea_ed,regfile[dest])
                 else:
                     print_memory_access("STORE",ea_ed,regfile[dest])            
+            else:
+                print( "Unrecognized opcode ")
+                sys.exit()
             (swiid,ei,s,c,z) = flag_save if (preserve_flag or dest==0xF ) else (swiid, ei, (regfile[dest]>>23) & 1, c, 1 if (regfile[dest]==0) else 0)
 if len(sys.argv) > 2:  # Dump memory for inspection if required
     with open(sys.argv[2],"w" ) as f:

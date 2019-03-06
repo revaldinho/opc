@@ -46,7 +46,7 @@ MACRO   SINGLE_DIGIT_CORRECTION()
         sto     r0,r8                   # overwrite 0 if Q=10
         ld      r1,r8,-1                # get predigit
         sub     r1,r0,9                 # need to add 1 and set to 0 if overflow to 10, so sub 9 first
-        z.sub   r1,10                   # subtract another 10 if zero
+        z.sub   r1,r0,10                # subtract another 10 if zero
         add     r1,r0,10                # and add 10 to get final value
         sto     r1,r8,-1                # store it
 
@@ -58,7 +58,7 @@ SDCL8:
         jsr     r13,r0,wrdecdig         # Print it
         mov     r1,r0,46                # get '.' into r1 in case...
         lcmp    r8,r0,mypi+2            # is this the first digit ?
-        z.jsr   r13,r0,oswrch           #  ..yes, print the '.'
+        z.jsr   r13,r0,oswrch              #  ..yes, print the '.'
 
 SDCL6:  sub     r9,r0,1                 # dec loop counter
         nz.lmov pc,r0,L3                # jump back into main program
@@ -122,7 +122,7 @@ ENDMACRO
 # r3..r5 = local registers
 # r1,r2  = temporary registers, parameters and return registers
 
-        EQU    digits,   32            # 16
+        EQU    digits,   16            # 16
         EQU    cols,     1+(digits*10//3)            # 1 + (digits * 10/3)
 
         mov    r13,r0                  # Initialise r13 to stop PUSH/POP ever loading X's to stack for regression runs
@@ -203,8 +203,8 @@ L4:
         sub     r12,r0,1                # decr loop counter
         c.lmov  pc,r0,L4                # loop if >=0
 
-        #SINGLE_DIGIT_CORRECTION()
-        MULTI_DIGIT_CORRECTION()
+        SINGLE_DIGIT_CORRECTION()
+        #MULTI_DIGIT_CORRECTION()
 
         mov     r1, r0, 10              # Print Newline to finish off
         jsr     r13,r0,oswrch
@@ -230,8 +230,8 @@ L4:
         # - r13 holds return address
         # Exit
         # - r3 upwards preserved (except r11)
-        # - r2 = quotient
-        # - r11 = remainder
+        # - r2 =  remainder
+        # - r11 = quotient
         # --------------------------------------------------------------
 udiv24:
         mov     r2,r0                   # Get dividend/quotient into double word r1,2
@@ -239,11 +239,11 @@ udiv24:
 udiv24_loop:
         ASL     (r11)                   # shift left the quotient/dividend
         ROL     (r2)                    #
-        cmp     r2,r10                  # check if quotient is larger than divisor
+        cmp     r2,r10                  # check if remainder is larger than divisor
         c.sub   r2,r10                  # if yes then do the subtraction for real
         c.mov   r11,r11,1               # ... set LSB of quotient using (new) carry
         add     r1,r0,1                 # increment loop counter zeroing carry
-        nz.lmov pc,r0,udiv24_loop       # loop again if not finished (r5=udiv24_loop)
+        nz.mov  pc,pc, udiv24_loop-PC   # loop again if not finished (r5=udiv24_loop)
         RTS     ()                      # and return with quotient/remainder in r1/r2
 
         # --------------------------------------------------------------
@@ -276,6 +276,3 @@ muls_loop0:
 mypi:    WORD 0                          # Space for pi digit storage
          ORG mypi + digits + 8
 remain:  WORD 0                          # Array space for remainder data
-
-
-

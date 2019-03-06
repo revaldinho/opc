@@ -29,7 +29,7 @@ for line in open(sys.argv[1], "r").readlines():       # Pass 0 - macro expansion
 for iteration in range (0,2): # Two pass assembly
     (wcount,nextmem) = (0,0)
     for line in newtext:
-        mobj = re.match('^(?:(?P<label>\w+):)?\s*((?:(?P<pred>((pl)|(mi)|(nc)|(nz)|(c)|(z)|(1)?)?)\.))?(?P<inst>\w+)?\s*(?P<operands>.*)',re.sub("#.*","",line))
+        mobj = re.match('^(?:(?P<label>\w+):)?\s*((?:(?P<pred>((pl)|(mi)|(nc)|(nz)|(c)|(z)|(1)?)?)\.))?\.?(?P<inst>\w+)?\s*(?P<operands>.*)',re.sub("#.*","",line))
         (label, pred, inst,operands) = [ mobj.groupdict()[item] for item in ("label","pred", "inst","operands")]
         (pred, opfields,words, memptr) = ("1" if pred==None else pred, [ x.strip() for x in operands.split(",")],[], nextmem)
         if (iteration==0 and (label and label != "None") or (inst=="EQU")):
