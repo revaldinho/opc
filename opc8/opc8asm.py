@@ -36,7 +36,7 @@ for iteration in range (0,2): # Two pass assembly
             errors = (errors + ["Error: Symbol %16s redefined in ...\n         %s" % (label,line.strip())]) if label in symtab else errors
             exec ("%s= int(%s)" % ((label,str(nextmem)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
         if inst in("WORD","BYTE") and iteration < 1:
-            nextmem += (len(opfields) if inst=="WORD" else ((len(opfields)+1)//2) if inst=="BYTE" else len(opfields)-1) # If two operands are provide instruction will be one word
+            nextmem += (len(opfields) if inst=="WORD" else ((len(opfields)+1)//2) if inst=="BYTE" else len(opfields)-1) 
         elif inst in op and iteration < 1:
             nextmem += 2 if inst in long_op else 1 
         elif inst in op or inst in ("BYTE","WORD","STRING","BSTRING","PBSTRING"):
@@ -64,7 +64,6 @@ for iteration in range (0,2): # Two pass assembly
                     else :
                         words=[pdict[pred]|((op.index(inst)&0x1F)<<16)|(dst<<12)|(src<<8)][:len(words)-(len(words)==2)]
                         words.append( val & 0xFFFFFF);
-                        
             (wordmem[nextmem:nextmem+len(words)],nextmem,wcount )  = (words, nextmem+len(words),wcount+len(words))
         elif inst == "ORG":
             nextmem = eval(operands,globals(),symtab)
@@ -72,13 +71,7 @@ for iteration in range (0,2): # Two pass assembly
             errors.append("Error: unrecognized instruction or macro %s in ...\n         %s" % (inst,line.strip()))
         if iteration > 0 :
             print("%04x  %-20s  %s"%(memptr,' '.join([("%06x" % i) for i in words]),line.rstrip()))
-if False:
-    while wordmem and wordmem[-1]==0: # Trim memory to last non-zero byte
-        wordmem.pop(-1)
-else:
-    #wordmem = wordmem[:1+re.sub(r'(, 0)*.$','',str(wordmem)).count(',')]
-    wordmem = functools.reduce(lambda l, e: [e]+l if l or e else [],wordmem[::-1])
-
+wordmem = functools.reduce(lambda l, e: [e]+l if l or e else [],wordmem[::-1]) # Truncate hex output
 print ("\nAssembled %d words of code with %d error%s and %d warning%s." % (wcount,len(errors),'' if len(errors)==1 else 's',len(warnings),'' if len(warnings)==1 else 's'))
 print ("\nSymbol Table:\n\n%s\n\n%s\n%s" % ('\n'.join(["%-32s 0x%04X (%06d)" % (k,v,v) for k,v in sorted(symtab.items()) if not re.match("r\d|r\d\d|pc|psr",k)]),'\n'.join(errors),'\n'.join(warnings)))
 with open("/dev/null" if len(errors)>0 else sys.argv[2],"w" ) as f:   ## write to hex file only if no errors else send result to null file

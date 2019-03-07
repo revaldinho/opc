@@ -17,29 +17,23 @@ with open(sys.argv[1],"r") as f:
 (regfile, acc, c, z, pcreg, c_save, s, ei, swiid, interrupt) = ([0]*16,0,0,0,15,0,0,0,0,0) # initialise machine state inc PC = reg[15]
 print ("PC     : Mem           : Instruction              : SWI I S C Z : %s\n%s" % (''.join(["  r%2d  " % d for d in range(0,16)]), '-'*176))
 while True:
-    (pc_save,flag_save,regfile[0],preserve_flag) = (regfile[pcreg],(swiid,ei,s,c,z),0,False)    # always overwrite regfile location 0 and then dont care about assignments
+    (pc_save,flag_save,regfile[0],preserve_flag) = (regfile[pcreg],(swiid,ei,s,c,z),0,False) # always overwrite regfile location 0 and then dont care about assignments
     instr_word = wordmem[regfile[pcreg] & 0xFFFFFF ] &  0xFFFFFF
     (p0, p1, p2) = ( (instr_word & 0x800000) >> 23, (instr_word & 0x400000) >> 22, (instr_word & 0x200000)>>21)    
     (opcode, dest, source, simm) = (((instr_word & 0x1F0000) >> 16) , (instr_word & 0xF000) >>12, (instr_word & 0xF00)>>8, instr_word & 0xFF)
     simm = (0xFFFF00 | simm) if (simm & 0x80) else simm
     (instr_len, rdmem, preserve_flag) = (2 if (opcode&0x18==0x18) else 1, opcode==op["ld"], (dest==pcreg))
-    operand = wordmem[regfile[pcreg]+1] if (instr_len==2) else simm
+    (regfile[15],operand) = (regfile[15]+2,wordmem[regfile[pcreg]+1]) if (instr_len==2) else (regfile[15]+1,simm)
     instr_str = "%s%s r%d," % ((pred_dict[p0<<2 | p1<<1 | p2] if (p0,p1,p2)!=(0,0,1) else ""),dis[opcode],dest)
     instr_str += ("%s%d%s" % (("r" ,source, (",0x%06x" % operand) if instr_len==2 else (",%02x" % operand))))
     instr_str = re.sub("r0","psr",instr_str,1) if (opcode in (op["putpsr"],op["getpsr"])) else instr_str
     mem_str = " %06x %6s " % (instr_word, "%06x" % (operand) if instr_len==2 else '')
-    regfile[15] += instr_len
     if ( opcode==op["bperm"]):
         ea_ed = eff_addr = regfile[source] & 0xFFFFFF
     else:
         eff_addr = (regfile[source] + operand)&0xFFFFFF  # EA_ED must be computed after PC is brought up to date
         ea_ed = wordmem[eff_addr] & 0xFFFFFF if (opcode ==op["ld"]) else eff_addr 
     opcode = (opcode - 8) if opcode >=24 else opcode # Alias long instructions to short equivalents for execution
-##    if opcode == op["in"]:
-##        try:
-##            ea_ed = ord(input_text.__next__())
-##        except:
-##            ea_ed = 0
     if interrupt : # software interrupts dont care about EI bit
         (interrupt, regfile[pcreg], pc_int, psr_int , ei) = (0, 0x0002, pc_save, (swiid,ei,s,c,z), 0)
     else:
