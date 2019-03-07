@@ -28,12 +28,12 @@ while True:
     instr_str += ("%s%d%s" % (("r" ,source, (",0x%06x" % operand) if instr_len==2 else (",%02x" % operand))))
     instr_str = re.sub("r0","psr",instr_str,1) if (opcode in (op["putpsr"],op["getpsr"])) else instr_str
     mem_str = " %06x %6s " % (instr_word, "%06x" % (operand) if instr_len==2 else '')
+    opcode = (opcode - 8) if opcode >=24 else opcode # Alias long instructions to short equivalents for execution
     if ( opcode==op["bperm"]):
         ea_ed = eff_addr = regfile[source] & 0xFFFFFF
     else:
         eff_addr = (regfile[source] + operand)&0xFFFFFF  # EA_ED must be computed after PC is brought up to date
-        ea_ed = wordmem[eff_addr] & 0xFFFFFF if (opcode ==op["ld"]) else eff_addr 
-    opcode = (opcode - 8) if opcode >=24 else opcode # Alias long instructions to short equivalents for execution
+        ea_ed = wordmem[eff_addr] & 0xFFFFFF if (opcode==op["ld"]) else eff_addr 
     if interrupt : # software interrupts dont care about EI bit
         (interrupt, regfile[pcreg], pc_int, psr_int , ei) = (0, 0x0002, pc_save, (swiid,ei,s,c,z), 0)
     else:

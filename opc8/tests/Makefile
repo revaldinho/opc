@@ -1,6 +1,6 @@
 VPATH=..
 
-SRCS   ?= $(shell ls -1 *s | egrep -v '(macro|tmp)'  )
+SRCS   ?= $(shell ls -1 *s | egrep -v '(macro|tmp|printdec)'  )
 
 HEXS  = $(patsubst %.s,%.hex,$(SRCS))
 DUMPS = $(patsubst %.s,%.dump,$(SRCS))
