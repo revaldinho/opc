@@ -1,4 +1,4 @@
-import sys, re, codecs
+import sys, re, codecs, functools
 op = "halt,not,xor,or,bperm,ror,lsr,asr,rol,rti,putpsr,getpsr,0C,0D,0E,0F,mov,jsr,cmp,sub,add,and,sto,ld,lmov,ljsr,lcmp,lsub,ladd,land,lsto,lld".split(",")
 long_op = "lmov,ljsr,lcmp,lsub,ladd,land,lsto,lld".split(",")
 symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
@@ -72,8 +72,15 @@ for iteration in range (0,2): # Two pass assembly
             errors.append("Error: unrecognized instruction or macro %s in ...\n         %s" % (inst,line.strip()))
         if iteration > 0 :
             print("%04x  %-20s  %s"%(memptr,' '.join([("%06x" % i) for i in words]),line.rstrip()))
+if False:
+    while wordmem and wordmem[-1]==0: # Trim memory to last non-zero byte
+        wordmem.pop(-1)
+else:
+    #wordmem = wordmem[:1+re.sub(r'(, 0)*.$','',str(wordmem)).count(',')]
+    wordmem = functools.reduce(lambda l, e: [e]+l if l or e else [],wordmem[::-1])
+
 print ("\nAssembled %d words of code with %d error%s and %d warning%s." % (wcount,len(errors),'' if len(errors)==1 else 's',len(warnings),'' if len(warnings)==1 else 's'))
 print ("\nSymbol Table:\n\n%s\n\n%s\n%s" % ('\n'.join(["%-32s 0x%04X (%06d)" % (k,v,v) for k,v in sorted(symtab.items()) if not re.match("r\d|r\d\d|pc|psr",k)]),'\n'.join(errors),'\n'.join(warnings)))
 with open("/dev/null" if len(errors)>0 else sys.argv[2],"w" ) as f:   ## write to hex file only if no errors else send result to null file
-    f.write( '\n'.join([''.join("%06x " % d for d in wordmem[j:j+24]) for j in [i for i in range(0,len(wordmem),24)]]))
+    f.write( '\n'.join([''.join("%06x " % d for d in (wordmem+24*[0])[j:j+24]) for j in [i for i in range(0,len(wordmem),24)]]))
 sys.exit( len(errors)>0)

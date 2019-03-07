@@ -13,6 +13,7 @@ def print_memory_access( type, address, data):
     print( "%5s:   Address : 0x%06x (%10d)         :        Data : 0x%06x (%10d) %s" % (type,address,address,data,data,ch))
 with open(sys.argv[1],"r") as f: 
     wordmem  = [ (int(x,16) & 0xFFFFFF) for x in f.read().split() ]
+    wordmem.extend( [0]*(2**24-len(wordmem)))
 (regfile, acc, c, z, pcreg, c_save, s, ei, swiid, interrupt) = ([0]*16,0,0,0,15,0,0,0,0,0) # initialise machine state inc PC = reg[15]
 print ("PC     : Mem           : Instruction              : SWI I S C Z : %s\n%s" % (''.join(["  r%2d  " % d for d in range(0,16)]), '-'*176))
 while True:
@@ -83,7 +84,7 @@ while True:
                 print (regfile[source], regfile[dest], hex(ea_ed))
                 (regfile[source],preserve_flag,wordmem[ea_ed]) = (regfile[source], True,regfile[dest])
                 if ea_ed == 0xfffe09:
-                    print_memory_access("STDOUT",ea_ed,regfile[dest])
+                    print_memory_access("OUT",ea_ed,regfile[dest])
                 else:
                     print_memory_access("STORE",ea_ed,regfile[dest])            
             else:

@@ -1,34 +1,3 @@
-# Simple Fibonacci number program ported from earlier machines
-MACRO   CLC()
-        c.add r0,r0
-ENDMACRO
-
-MACRO   PUSH( _data_)
-        sto     _data_, r14
-        mov    r14, r14, 0xffffff
-ENDMACRO
-
-MACRO   POP( _data_ )
-        mov    r14, r14, 0x01
-        ld     _data_, r14
-ENDMACRO
-        
-MACRO   SEC()
-        nc.ror     r0,r0,1
-ENDMACRO
-
-MACRO   ASL( _reg_ )
-        add     _reg_, _reg_
-ENDMACRO
-
-MACRO   ROL( _reg_ )
-        rol   _reg_, _reg_
-ENDMACRO
-
-MACRO   RTS ()
-        mov     pc,r13
-ENDMACRO
-
         ORG 0x0000
         lmov    r10,r0,RSLTS      # initialise the results pointer
         lmov    r14,r0,RETSTK     # initialise the return address stack

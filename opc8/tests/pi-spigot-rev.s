@@ -5,36 +5,6 @@
 #
 #
 
-MACRO   CLC()
-        c.add r0,r0
-ENDMACRO
-
-MACRO   PUSH( _data_)
-        sto     _data_, r14
-        mov    r14, r14, 0xffffff
-ENDMACRO
-
-MACRO   POP( _data_ )
-        mov    r14, r14, 0x01
-        ld     _data_, r14
-ENDMACRO
-        
-MACRO   SEC()
-        nc.ror     r0,r0,1
-ENDMACRO
-
-MACRO   ASL( _reg_ )
-        add     _reg_, _reg_
-ENDMACRO
-
-MACRO   ROL( _reg_ )
-        rol   _reg_, _reg_
-ENDMACRO
-
-MACRO   RTS ()
-        mov     pc,r13
-ENDMACRO
-
 MACRO   SINGLE_DIGIT_CORRECTION()
         # r11 = Q
         # r8  = mypi pointer (pointing at next free digit)
@@ -42,7 +12,7 @@ MACRO   SINGLE_DIGIT_CORRECTION()
         # r1 = temp store/predigit value
         cmp     r11,r0,10               # check if Q==10 and needing correction?
         nz.sto  r11,r8                  # Save digit if Q <10
-        nz.lmov pc,r0,SDCL5             # if no correction needed then continue else start corrections
+        nz.mov  pc,pc,SDCL5-PC          # if no correction needed then continue else start corrections
         sto     r0,r8                   # overwrite 0 if Q=10
         ld      r1,r8,-1                # get predigit
         sub     r1,r0,9                 # need to add 1 and set to 0 if overflow to 10, so sub 9 first
@@ -52,7 +22,7 @@ MACRO   SINGLE_DIGIT_CORRECTION()
 
 SDCL5:  add     r8,r0,1                 # incr pi digit pointer
         lcmp    r8,r0,mypi+1            #
-        z.lmov  pc,r0,SDCL6             # if first digit nothing to print yet
+        z.mov   pc,pc,SDCL6-PC          # if first digit nothing to print yet
 SDCL8:
         ld      r1,r8,-2                # Get digit 2 places back from latest
         jsr     r13,r0,wrdecdig         # Print it
@@ -76,7 +46,7 @@ MACRO   MULTI_DIGIT_CORRECTION()
         #
         cmp     r11,r0,10               # check if Q==10 and needing correction?
         nz.sto  r11,r8                  # Save digit if Q <10
-        nz.lmov pc,r0,MDCL5             # if no correction needed then continue else start corrections
+        nz.mov  pc,pc,MDCL5-PC          # if no correction needed then continue else start corrections
         sto     r0,r8                   # overwrite 0 if Q=10
         mov     r2,r8                   # r2 is predigit pointer, start at current digit
 pdcloop:
@@ -84,13 +54,13 @@ pdcloop:
         ld      r1,r2                   # get next predigit
         cmp     r1,r0,9                 # is predigit=9 (ie would it overflow if incremented?)
         z.sto   r0,r2                   # store 0 to predigit if yes (preserve Z)
-        z.lmov  pc,r0,pdcloop           # loop again to correct next predigit
+        z.mov   pc,pc,pdcloop-PC        # loop again to correct next predigit
         add     r1,r0,1                 # if predigit wasnt 9 fall thru to here and add 1
         sto     r1,r2                   # store it and return to execution
 
 MDCL5:  add     r8,r0,1                 # incr pi digit pointer
         lcmp    r8,r0,4+mypi            # allow buffer of 4 chars for corrections
-        nc.lmov pc,r0,MDCL6
+        nc.mov  pc,pc,MDCL6-PC
         ld      r1,r8,-4                # Get digit 3 places back from latest
         jsr     r13,r0,wrdecdig
         mov     r1,r0,46                # get '.' into r1 in case...
@@ -110,21 +80,10 @@ MDCL7:  ld      r1,r9
         nz.lmov pc,r0,MDCL7
 ENDMACRO
 
-
-# r14 = stack pointer
-# r13 = link register
-# r12 = inner loop counter
-# r11 = Q
-# r10 = denominator
-# r9  = outer loop counter
-# r8  = next pi output digit pointer
-# r7  = remainder pointer
-# r3..r5 = local registers
-# r1,r2  = temporary registers, parameters and return registers
-
-        EQU    digits,   16            # 16
-        EQU    cols,     1+(digits*10//3)            # 1 + (digits * 10/3)
-
+        # --------------------------------------------------------------
+        # Machine startup
+        # --------------------------------------------------------------
+        
         mov    r13,r0                  # Initialise r13 to stop PUSH/POP ever loading X's to stack for regression runs
         lmov   r14,r0,0x0FFE           # Set stack to grow down from here for monitor
         lmov   pc,r0,0x1000            # Program start at 0x1000 for use with monitor/copro
@@ -139,19 +98,34 @@ ENDMACRO
         # Entry:
         #       r1 is the character to output
         # Exit:
-        #       r2 used as temporary
+        #       r2 used as temporar
         # ---------------------------------------------------------------
 wrdecdig:
          mov     r1, r1, 48
 oswrch:
-oswrch_loop:
-#        in      r2, r0, 0xfe08
-#        and     r2, r0, 0x8000
-#        nz.dec  pc, PC-oswrch_loop
         lsto     r1,r0,0xfffe09
         RTS     ()
 
 
+
+        # ---------------------------------------------------------------
+        # Main Loop
+        # ---------------------------------------------------------------        
+	# r14 = stack pointer
+	# r13 = link register
+	# r12 = inner loop counter
+	# r11 = Q
+	# r10 = denominator
+	# r9  = outer loop counter
+	# r8  = next pi output digit pointer
+	# r7  = remainder pointer
+	# r3..r5 = local registers
+	# r1,r2  = temporary registers, parameters and return registers
+        # ---------------------------------------------------------------
+        EQU    digits,   32            # 16
+        EQU    cols,     1+(digits*10//3)            # 1 + (digits * 10/3)
+
+        
         
         ORG   0x1000
 start:
@@ -168,7 +142,7 @@ start:
 
                                         # Initialise remainder/denominator array using temp vars
         mov     r2,r0,2                 # r2=const 2 for initialisation, used as data for rem[] and increment val
-        mov     r3,r0,cols              # loop counter i starts at index = 1
+        lmov    r3,r0,cols              # loop counter i starts at index = 1
 L1:     lsto    r2,r3,remain-1          # store remainder value to pointer
         sub     r3,r0,1                    # increment loop counter
         nz.lmov pc,r0,L1
@@ -263,13 +237,13 @@ udiv24_loop:
         #       r11   result
         # --------------------------------------------------------------
 muls:
-        lsr     r3,r11                 # shift right multiplier into r3
+        lsr     r3,r11                  # shift right multiplier into r3
         mov     r11,r0
 muls_loop0:
         c.add   r11,r2                  # add copy of multiplicand into accumulator if carry
         ASL     (r2)                    # shift left multiplicand
         lsr     r3, r3                  # shift right multiplier
-        nz.lmov pc,r0,muls_loop0     # no need for loop counter - just stop when r1 is empty
+        nz.mov pc,pc,muls_loop0-PC      # no need for loop counter - just stop when r1 is empty
         c.add   r11,r2                  # add last copy of multiplicand into accumulator if carry
         RTS     ()
 
