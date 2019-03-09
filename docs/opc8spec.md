@@ -24,9 +24,11 @@ and destination using the two 4 bit fields in the encoding. Two of the registers
   
 The address bus and program counter are both 24 bits wide.
 
-All intructions can use an 8 bit short immediate value. This value will be sign extended to 24 bits.
+All intructions can use an 8 bit short immediate value.
 
-The valid range of a 8b immediate is 0x000000->0x00007F and 0xFFFF80->0xFFFFFF.
+When the source register is not R0, the value will be sign extended to 24 bits. In this case the valid range of a 8b immediate is 0x000000->0x00007F and 0xFFFF80->0xFFFFFF.
+
+When the source register is R0, the value will be left unsigned and the upper bytes of the immediate will be filled with zeros. In this case the valid range of an 8b immediate is -1 < immediate < 256
 
 Only a sub-set of instructions allow a full 24b immediate value to be used  - see the Instruction Set table for details.
 
@@ -85,33 +87,10 @@ a prefix on the instruction mnemonic in the assembler.
   |  1 |  1 |  0 | mi.        | Execute if Sign flag is set                        |
   |  1 |  1 |  1 | pl.        | Execute if Sign flag is clear                      |
   
-Byte Permute Function
----------------------
-							
-OPC-8 retains a byte permute function from OPC-7 which can perform various byte-wise shifts, rotations, swaps and replication.		
-							
-Bytes are picked from the source register (rs) and placed into the destination register (rd) according to the bit pattern
-provided in the 8b immediate data. The lower 6 bits of this control word are split into 3 pairs. Each pair of control bits
-determine which byte of the source will be placed in the corresponding byte position of the destination.
-Bytes (and pairs) are numbered from 2 down to 0 reading from left to right (MSB to LSB). 
-							
-    BPERM rd,rs,0b00_10_01_00  Has no effect on r1 - all bytes are put back in their original positions
-    BPERM rd,rs,0b00_00_01_10  Reverses the order of the bytes in r1					
-    BPERM rd,rs,0b00_00_10_01  Byte-wise rotate right					
-    BPERM rd,rs,0b00_01_00_10  Byte-wise rotate left					
-    BPERM rd,rs,0b00_00_00_00  Replicate byte 0 into all bytes
-    
-In addition to picking bytes from the source, it's possible also to specify that bytes should be zeroed by using the value
-0b11 in the appropriate control pair. Again, with some examples
+Byte Rotate Instructions
+------------------------
 
-    BPERM rd,rs,0b00_11_11_00  Blank off top two bytes
-    BPERM rd,rs,0b00_11_11_11  Zeroes all bytes in the destination 
-
-The top two bits of the control word are unused. These should be written as zero in case additional options are provided
-here, e.g.
-
-    bit 7 could invert the entire destination word
-    bit 6 could use all-ones rather than all-zeros for blank bytes
+OPC-8 has two byte rotate instructions. Unlike the bit rotates these don't rotate through the carry flag. For byte rotate left the carry flag is set if any of the bits in the topmost byte of the source are non-zero. For byte rotate right the carry is set if any of the bits in the lowest byte of the source are non-zero.
 
 Interrupts
 ----------

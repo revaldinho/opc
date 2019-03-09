@@ -34,7 +34,7 @@ def generate_histograms(filename, type, verbose=False):
                 instr     = pobj.groupdict()["instr"]
                 rd        = pobj.groupdict()["rd"]    
                 if rd in ('r15','pc'):
-                    instr = instr+'[dst=pc]'    
+                    instr = instr+'[dst=pc]'
                 if predicate:
                     if predicate in preds_dict:
                         preds_dict[predicate] += 1

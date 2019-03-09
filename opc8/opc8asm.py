@@ -1,5 +1,5 @@
 import sys, re, codecs, functools
-op = "halt,not,xor,or,bperm,ror,lsr,asr,rol,rti,putpsr,getpsr,0C,0D,0E,0F,mov,jsr,cmp,sub,add,and,sto,ld,lmov,ljsr,lcmp,lsub,ladd,land,lsto,lld".split(",")
+op = "halt,not,xor,or,bperm,ror,lsr,asr,rol,rti,putpsr,getpsr,bror,brol,0E,0F,mov,jsr,cmp,sub,add,and,sto,ld,lmov,ljsr,lcmp,lsub,ladd,land,lsto,lld".split(",")
 long_op = "lmov,ljsr,lcmp,lsub,ladd,land,lsto,lld".split(",")
 symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
 pdict = {"1":0x000000,"z":0x400000,"nz":0x600000,"c":0x800000,"nc":0xA00000,"mi":0xC00000,"pl":0xE00000,"":0x000000} 
@@ -58,7 +58,7 @@ for iteration in range (0,2): # Two pass assembly
                 if (inst in op) :
                     (dst,src,val) = (words+[0])[:3]
                     if (inst not in long_op):
-                        if ( (~val & 0xFFFF80 !=0xFFFF80) and ( val & 0xFFFF80 != 0xFFFF80)):
+                        if ( (src!=0) and (~val & 0xFFFF80 !=0xFFFF80) and ( val & 0xFFFF80 != 0xFFFF80)) or ( (src==0) and not( -1 <val<0x100)):
                             errors=(errors+["Error: short constant out of range in ...\n         %s"%(line.strip())])
                         words=[pdict[pred]|((op.index(inst)&0x1F)<<16)|(dst<<12)|(src<<8)|val&0xFF][:len(words)-(len(words)==2)]                        
                     else :

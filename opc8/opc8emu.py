@@ -1,5 +1,5 @@
 import sys, re
-mnemonics = "halt,not,xor,or,bperm,ror,lsr,asr,rol,rti,putpsr,getpsr,0C,0D,0E,0F,mov,jsr,cmp,sub,add,and,sto,ld,lmov,ljsr,lcmp,lsub,ladd,land,lsto,lld".split(",")
+mnemonics = "halt,not,xor,or,bperm,ror,lsr,asr,rol,rti,putpsr,getpsr,bror,brol,0E,0F,mov,jsr,cmp,sub,add,and,sto,ld,lmov,ljsr,lcmp,lsub,ladd,land,lsto,lld".split(",")
 op = dict([(opcode,mnemonics.index(opcode)) for opcode in mnemonics])
 dis = dict([(mnemonics.index(opcode),opcode) for opcode in mnemonics])
 pred_dict = {0:"",1:"0.",2:"z.",3:"nz.",4:"c.",5:"nc.",6:"mi.",7:"pl."}
@@ -21,7 +21,7 @@ while True:
     instr_word = wordmem[regfile[pcreg] & 0xFFFFFF ] &  0xFFFFFF
     (p0, p1, p2) = ( (instr_word & 0x800000) >> 23, (instr_word & 0x400000) >> 22, (instr_word & 0x200000)>>21)    
     (opcode, dest, source, simm) = (((instr_word & 0x1F0000) >> 16) , (instr_word & 0xF000) >>12, (instr_word & 0xF00)>>8, instr_word & 0xFF)
-    simm = (0xFFFF00 | simm) if (simm & 0x80) else simm
+    simm = (0xFFFF00 | simm) if (source!=0 and (simm & 0x80)) else simm
     (instr_len, rdmem, preserve_flag) = (2 if (opcode&0x18==0x18) else 1, opcode==op["ld"], (dest==pcreg))
     (regfile[15],operand) = (regfile[15]+2,wordmem[regfile[pcreg]+1]) if (instr_len==2) else (regfile[15]+1,simm)
     instr_str = "%s%s r%d," % ((pred_dict[p0<<2 | p1<<1 | p2] if (p0,p1,p2)!=(0,0,1) else ""),dis[opcode],dest)
@@ -52,14 +52,13 @@ while True:
                 (c, regfile[dest]) = (ea_ed & 0x1, ( ((c<<23) if opcode==op["ror"] else (ea_ed&0x800000 if opcode==op["asr"] else 0)) | ((ea_ed&0xFFFFFF) >> 1)))
             elif opcode == op["rol"] :
                 (c,regfile[dest]) = ( (ea_ed & 0x800000)>>23, (c|(ea_ed<<1))&0xFFFFFF)
+            elif opcode == op["brol"]:
+                (c,regfile[dest]) = ( functools.reduce( lambda x,y: x|y , [ 1 if (i&1<<j) else 0 for j in range(16,24)], ((ea_ed<<8)|(ea_ed>>16))&0xFFFFFF ))
+            elif opcode == op["bror"]:
+                (c,regfile[dest]) = ( functools.reduce( lambda x,y: x|y , [ 1 if (i&1<<j) else 0 for j in range(0,8)], ((ea_ed>>8)|(ea_ed<<16))&0xFFFFFF ))
             elif opcode == op["add"] :
                 res = (regfile[dest] + ea_ed)  & 0x1FFFFFF
                 (c, regfile[dest])  = ( (res>>24) & 1, res & 0xFFFFFF)
-            elif opcode == op["bperm"]:
-                n = [ (operand>>i)&0x03 for i in range(0,8,2) ]
-                bytes = [ 0 if (i==3) else ((ea_ed>>(n[i]*8))&0xFF) for i in range(0,3)]
-                bytes = [ ~x for b in bytes if n[3]>2] # invert bytes if top bit of simm set
-                regfile[dest] = functools.reduce( lambda x,y: x|y, [ y<<x for (y,x) in zip(bytes,range(0,24,8))])
             elif opcode in (op["mov"], op["not"], op["ld"]):
                 regfile[dest] = (~ea_ed if opcode==op["not"] else ea_ed) & 0xFFFFFF
                 if opcode==op["ld"]: 

@@ -8,7 +8,7 @@
         sto     r6,r10,1
         add     r10,r0,2
 
-        mov     r4,r0,-10         # set up a counter in R4
+        lmov     r4,r0,-10         # set up a counter in R4
         lmov    r8,r0,FIB
 LOOP:   jsr     r13,r8
 CONT:   add     r4,r0,1          # inc loop counter
@@ -17,7 +17,7 @@ CONT:   add     r4,r0,1          # inc loop counter
 END:    halt    r0,r0,00         # Finish simulation
 
 
-FIB:    PUSH (r13,r14)           # Push return address on stack
+FIB:    PUSH    (r13)           # Push return address on stack
 
         mov     r2,r5            # Fibonacci computation
         add     r2,r6
@@ -27,7 +27,7 @@ FIB:    PUSH (r13,r14)           # Push return address on stack
         mov     r5,r6            # Prepare r5,r6 for next iteration
         mov     r6,r2
 
-        POP     (pc,r14)         # and return
+        POP     (pc)         # and return
 
         ORG 0x100
 
