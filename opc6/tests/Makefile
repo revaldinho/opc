@@ -20,7 +20,7 @@ vcd_option = ""
 .NOTPARALLEL : all_sim *.exe
 
 %.hex %.lst : %.s opc6asm.py
-	python3 ${assembler} $< $@ >  $*.lst
+	python3 ${assembler} $< $*.hex >  $*.lst
 
 %.emu.stdout %.dump : %.hex opc6emu.py
 	${pyexec} ${emulator} $< $*.dump | tee  $*.trace | ${pyexec} ${show_stdout} >  $*.emu.stdout

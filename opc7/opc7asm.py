@@ -181,7 +181,7 @@ def assemble( filename, listingon=True):
             elif inst and (inst != "EQU") and iteration>0 :
                 errors.append("Error: unrecognized instruction or macro %s in ...\n         %s" % (inst,line.strip()))
             if iteration > 0 and listingon==True:
-                print("%06x: %-36s  %s"%(memptr,' '.join([("%08x" % i) for i in words]),line.rstrip()))
+                print("%08x: %-36s  %s"%(memptr,' '.join([("%08x" % i) for i in words]),line.rstrip()))
 
     print ("\nAssembled %d words of code with %d error%s and %d warning%s." % (wcount,len(errors),'' if len(errors)==1 else 's',len(warnings),'' if len(warnings)==1 else 's'))
     print ("\nSymbol Table:\n\n%s\n\n%s\n%s" % ('\n'.join(["%-32s 0x%08X (%08d)" % (k,v,v) for k,v in sorted(symtab.items()) if not re.match("r\d|r\d\d|pc|psr",k)]),'\n'.join(errors),'\n'.join(warnings)))
@@ -234,13 +234,10 @@ if __name__ == "__main__":
             sys.exit(1)
 
     if filename != "":
-
         if size==0:
             size = 1024*1024 - start_adr
-
         print(header_text)
         wordmem = assemble(filename, listingon)[start_adr:start_adr+size]
-
         if len(errors)==0 and output_filename != "":
             if output_format == "hex":
                 with open(output_filename,"w" ) as f:

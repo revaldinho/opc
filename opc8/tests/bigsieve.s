@@ -1,7 +1,7 @@
         #
         # bigsieve.s
         #
-        # Find all prime numbers less than ~1.7M limited by memory storage
+        # Find all prime numbers limited by memory storage
         #
         # MAX = 10000
         # mem = [0] * MAX
@@ -18,9 +18,12 @@
         # NB All mem[] markers are packed 16 to a word to save space, so get_bit/set_bit
         # routines here need to find the relevant bit in each 16 bit word which holds
         # the marker for any given number. In fact we only ever store 'odd' flags to mem[]
-        # so there's another factor of 2 saving. In 64KWords then we can handle up to
-        # 64K x 32 = >2M. With current arrangement for monitor etc mem[] starts at 0x2000 so has
-        # 0xD000 available = 53248 words -> largest prime < 1.7M
+        # so there's another factor of 2 saving.
+        #
+        # CPU   Data bits   Addr bits   Prime size
+        # OPC6      16          16    : 64K x 32 => 2M. 
+        # OPC8      32          20    : 2^20 x 64 => 2M. 
+        # OPC7      24          24    : 2^24 x 32 => ??? (16 bits used for flags only)
         #
         # Register Usage
         #

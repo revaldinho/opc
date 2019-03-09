@@ -2,14 +2,18 @@
 #
 import re, sys, getopt
 
+
 def show_usage_and_exit():
     sys.exit("Usage:  python3 histogram.py [-d|--dynamic][-s|--static] [-f|--filename <test.trace>|<test.lst>][-v,--verbose]")
 
 def generate_histograms(filename, type, verbose=False):
-    if type == "Dynamic":
-        instr_re = re.compile("[0-9a-f]{4}\s*:\s*(?P<opcode>[0-9a-f]{4})\s*?(?P<operand>[0-9a-f]{4})?\s*: ((?P<pred>(mi|pl|z|c|nz|nc))\.)?(?P<instr>\w*)\s+(?P<rd>r\d*|psr),.*")
+
+    digits = wordsize/4
+    
+    if type == "Dynamic":        
+        instr_re = re.compile("[0-9a-f]{%d}\s*:\s*(?P<opcode>[0-9a-f]{%d})\s*?(?P<operand>[0-9a-f]{%d})?\s*: ((?P<pred>(mi|pl|z|c|nz|nc))\.)?(?P<instr>\w*)\s+(?P<rd>r\d*|psr),.*" % (digits,digits,digits) )
     else:
-        instr_re = re.compile("[0-9a-f]{4}\s+(?P<opcode>[0-9a-f]{4})\s*?(?P<operand>[0-9a-f]{4})?\s+(?P<label>\w+?\:\s+)?((?P<pred>(mi|pl|z|c|nz|nc))\.)?(?P<instr>[a-z]+)\s+(?P<rd>\w+)")
+        instr_re = re.compile("[0-9a-f]{%d}\s+(?P<opcode>[0-9a-f]{%d})\s*?(?P<operand>[0-9a-f]{%d})?\s+(?P<label>\w+?\:\s+)?((?P<pred>(mi|pl|z|c|nz|nc))\.)?(?P<instr>[a-z]+)\s+(?P<rd>\w+)" % (digits,digits,digits))
 
 
     one_word_instr_count = 0
@@ -90,8 +94,9 @@ if __name__ == "__main__":
     type = "Dynamic"
     filename = ""
     verbose=False
+    wordsize=16
     try:
-        opts, args = getopt.getopt( sys.argv[1:], "f:dshv", ["filename=","dynamic","static","help","verbose"])
+        opts, args = getopt.getopt( sys.argv[1:], "f:w:dshv", ["filename=","wordsize=","dynamic","static","help","verbose"])
     except getopt.GetoptError:
         show_usage_and_exit()
     for opt, arg in opts:
@@ -103,6 +108,8 @@ if __name__ == "__main__":
             verbose=True
         elif opt in ( "-f", "--filename" ) :            
             filename = arg
+        elif opt in ( "-w", "--wordsize" ) :            
+            wordsize = int(arg)
         elif opt in ( "-h","--help" ) :            
             show_usage_and_exit()
     if (filename==""):
