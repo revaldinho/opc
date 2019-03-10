@@ -187,6 +187,8 @@ L4:
         mov     r1, r0, 13
         jsr     r13,r0,oswrch
 
+        mov     r1,r0             # Write NUL to stdout before end of test
+        jsr     r13,r0,oswrch                
         halt    r0,r0,0x00
         POP     (r13)
         RTS     ()

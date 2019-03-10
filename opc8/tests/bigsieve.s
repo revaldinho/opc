@@ -110,6 +110,8 @@ L3:     add     r11,r0,2          # skip even numbers so always increment by 2
         cmp     r11,r9
         mi.mov  pc,pc,L1-PC
 
+        mov     r1,r0             # Write NUL to stdout before end of test
+        jsr     r13,r0,oswrch        
         halt    r0,r0,0x0001
         POP     (r13)             # for running via monitor
         RTS     ()

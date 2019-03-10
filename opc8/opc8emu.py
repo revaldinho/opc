@@ -1,4 +1,4 @@
-import sys, re, functools
+import sys, re, functools, time
 mnemonics = "halt,not,xor,or,bperm,ror,lsr,asr,rol,rti,putpsr,getpsr,bror,brol,0E,0F,mov,jsr,cmp,sub,add,and,sto,ld,lmov,ljsr,lcmp,lsub,ladd,land,lsto,lld".split(",")
 op = dict([(opcode,mnemonics.index(opcode)) for opcode in mnemonics])
 dis = dict([(mnemonics.index(opcode),opcode) for opcode in mnemonics])
@@ -11,9 +11,10 @@ else:
 def print_memory_access( type, address, data):
     ch = '%s' % chr(data) if ( 0x1F < data < 0x7F) else '.'
     print( "%5s:   Address : 0x%06x (%10d)         :        Data : 0x%06x (%10d) %s" % (type,address,address,data,data,ch))
-with open(sys.argv[1],"r") as f: 
+with open(sys.argv[1],"r") as f:
     wordmem  = [ (int(x,16) & 0xFFFFFF) for x in f.read().split() ]
-    wordmem.extend( [0]*(2**24-len(wordmem)))
+    wordmem.extend( [0]*(2**24-len(wordmem)))    
+    
 (regfile, acc, c, z, pcreg, c_save, s, ei, swiid, interrupt) = ([0]*16,0,0,0,15,0,0,0,0,0) # initialise machine state inc PC = reg[15]
 print ("PC     : Mem           : Instruction              : SWI I S C Z : %s\n%s" % (''.join(["  r%2d  " % d for d in range(0,16)]), '-'*176))
 while True:
@@ -86,7 +87,6 @@ while True:
                 print( "Unrecognized opcode ")
                 sys.exit()
             (swiid,ei,s,c,z) = flag_save if (preserve_flag or dest==0xF ) else (swiid, ei, (regfile[dest]>>23) & 1, c, 1 if (regfile[dest]==0) else 0)
-if len(sys.argv) > 2: 
-    #wordmem = functools.reduce(lambda l, e: [e]+l if l or e else [],wordmem[::-1]) # Truncate hex output
+if len(sys.argv) > 2:
     with open(sys.argv[2],"w" ) as f:
         f.write( '\n'.join([''.join("%06x " % d for d in wordmem[j:j+16]) for j in [i for i in range(0,len(wordmem),16)]]))
