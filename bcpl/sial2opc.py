@@ -3,7 +3,7 @@
 ## sial2opc.py - Backend code converter for SIAL (BCPL) intermediate code 
 ##               to OPC6 or OPC7 assembler
 ##
-## COPYRIGHT 2017 Richard Evans
+## COPYRIGHT 2017,2018,2019 Richard Evans
 ##
 ## The program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU Lesser General Public License as published by
@@ -54,6 +54,7 @@ OPTIONAL SWITCHES ::
   -7  --opc7                Select target CPU. Default is OPC6.
   -6  --opc6 
   -5  --opc5ls                
+  -8  --opc8 
 
 All output is sent to stdout.
 

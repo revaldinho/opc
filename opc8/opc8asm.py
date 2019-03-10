@@ -44,8 +44,9 @@ for iteration in range (0,2): # Two pass assembly
                 strings = re.match('.*STRING\s*\"(.*?)\"(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?.*?', line.rstrip())
                 string_data = codecs.decode(''.join([ x for x in strings.groups() if x != None]),  'unicode_escape')
                 string_len = chr(len( string_data ) & 0xFF) if inst=="PBSTRING" else ''    # limit string length to 255 for PBSTRINGS
-                (step, wordstr) =  ( 3 if inst in("BSTRING","PBSTRING") else 1, string_len + string_data + chr(0))                
-                (words) = ([(ord(wordstr[i]) | ((ord(wordstr[i+1])<<8 | (ord(wordstr[i+2])<<16)) if inst in ("BSTRING","PBSTRING") else 0)) for  i in range(0,len(wordstr)-1,step) ])
+                (step, wordstr) =  ( 3 if inst in("BSTRING","PBSTRING") else 1, string_len + string_data )
+                wordstr += '\0' * (step-len(wordstr)%step) # need to pad out string to step size for packing
+                (words) = ([(ord(wordstr[i]) | ((ord(wordstr[i+1])<<8 | (ord(wordstr[i+2])<<16)) if inst in ("BSTRING","PBSTRING") else 0)) for  i in range(0,len(wordstr),step) ])
             else:
                 if ((len(opfields)==2 and not reg_re.match(opfields[1])) and inst not in ("WORD","BYTE")):
                     warnings.append("Warning: suspected register field missing in ...\n         %s" % (line.strip()))

@@ -213,19 +213,6 @@ pd24_l3:
         jsr     r13,r0,oswrch           # and print it
         POP6   (r2,r3,r4,r5,r6,pc)      # Restore all registers used to stack with last (link reg) direct into PC to return
 
-newline:
-        PUSH  (r1)
-        PUSH  (r2)
-        PUSH  (r13)                
-        mov   r1, r0, 10       # LF/CR pair to finish
-        jsr   r13,r0,oswrch
-        mov   r1, r0, 13
-        jsr   r13,r0,oswrch        
-        POP   (r13)
-        POP   (r2)
-        POP   (r1)                
-        RTS   ()
-
 pd24_table:
         WORD            10 
         WORD           100 

@@ -1,3 +1,13 @@
+
+MACRO BROL (_rd_, _rs_ )
+        brol _rd_,_rs_,0        
+ENDMACRO
+
+MACRO BROR (_rd_, _rs_ )
+        bror _rd_,_rs_,0        
+ENDMACRO
+
+        
 MACRO   CLC()
         c.add r0,r0
 ENDMACRO
@@ -82,3 +92,11 @@ MACRO   POPALL()
         ld      r13, r14, 9
         mov     r14, r14, 9
 ENDMACRO
+
+
+MACRO   SPRINT( _str_addr_, _eol_ )
+        lmov    r1, r0, _str_addr_
+        lmov    r2,r0, _eol_
+        JSR (sprint)
+ENDMACRO
+        

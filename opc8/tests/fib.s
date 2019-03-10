@@ -8,11 +8,11 @@
         sto     r6,r10,1
         add     r10,r0,2
 
-        lmov     r4,r0,-10         # set up a counter in R4
+        lmov    r4,r0,10         # set up a counter in R4
         lmov    r8,r0,FIB
 LOOP:   jsr     r13,r8
-CONT:   add     r4,r0,1          # inc loop counter
-        nz.sub  pc,r0,PC-LOOP    # another iteration if not zero
+CONT:   sub     r4,r0,1          # dec loop counter
+        nz.mov  pc,pc,LOOP-PC    # another iteration if not zero
 
 END:    halt    r0,r0,00         # Finish simulation
 

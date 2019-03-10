@@ -16,12 +16,12 @@ show_stdout ?= ../../utils/show_stdout.py
 vcd_option = ""
 #-D_dumpvcd=1
 
-.NOTPARALLEL : all_sim *.exe
+.NOTPARALLEL : ${SIMS} *.exe
 
 %.hex %.lst : %.s macro.s opc8asm.py
-	cat macro.s $<  > tmp.s
-	${pyexec} ${assembler} tmp.s $@ >  $*.lst
-	rm tmp.s
+	cat macro.s $<  > $*.tmp.s
+	${pyexec} ${assembler} $*.tmp.s $@ >  $*.lst
+	rm $*.tmp.s
 
 %.emu.stdout %.dump.gz : %.hex opc8emu.py
 	${pyexec} ${emulator} $< $*.dump | tee  $*.trace | ${pyexec} ${show_stdout} >  $*.emu.stdout
@@ -34,15 +34,26 @@ vcd_option = ""
 	mv test.vdump $*.vdump
 	if [ -e dump.vcd ] ; then mv dump.vcd $*.vcd ; fi
 
+%.hist.txt: all_emulation
+	rm -rf all_listings.lst.gz all_traces.trace.gz
+	cat *.lst | gzip -c > all_listings.lst.gz
+	gunzip -c *.trace.gz | gzip -c > all_traces.trace.gz
+	${pyexec} ../../utils/histogram.py -f all_listings.lst.gz -s -w 24 >  static.hist.txt
+	${pyexec} ../../utils/histogram.py -f all_traces.trace.gz -d -w 24 >  dynamic.hist.txt
+
 # -D_dumpvcd=1        
 
-all: all_emulation all_simulation all_diff
+histogram: histogramsdynamic_histogram.txt static_histogram.txt all_emulation
+
+all: all_emulation all_stats all_simulation all_diff
 
 all_simulation: all_stdout all_sim
 
 all_emulation: opc8asm.py opc8emu.py ${DUMPS} ${HEXS}
 
 all_sim: opc8cpu.v opc8tb.v ${SIMS}
+
+all_stats: static.hist.txt  dynamic.hist.txt
 
 clean: 
 	rm -rf *dump* *sim* *trace* *stdout* *hex *~ *diff *exe *vcd* a.out *lst *gz

@@ -1,4 +1,4 @@
-import sys, re
+import sys, re, functools
 mnemonics = "halt,not,xor,or,bperm,ror,lsr,asr,rol,rti,putpsr,getpsr,bror,brol,0E,0F,mov,jsr,cmp,sub,add,and,sto,ld,lmov,ljsr,lcmp,lsub,ladd,land,lsto,lld".split(",")
 op = dict([(opcode,mnemonics.index(opcode)) for opcode in mnemonics])
 dis = dict([(mnemonics.index(opcode),opcode) for opcode in mnemonics])
@@ -53,9 +53,11 @@ while True:
             elif opcode == op["rol"] :
                 (c,regfile[dest]) = ( (ea_ed & 0x800000)>>23, (c|(ea_ed<<1))&0xFFFFFF)
             elif opcode == op["brol"]:
-                (c,regfile[dest]) = ( functools.reduce( lambda x,y: x|y , [ 1 if (i&1<<j) else 0 for j in range(16,24)], ((ea_ed<<8)|(ea_ed>>16))&0xFFFFFF ))
+                c = functools.reduce( lambda x,y: x|y , [ 1 if (ea_ed&(1<<j)) else 0 for j in range(16,24)])
+                regfile[dest] = ((ea_ed<<8)|(ea_ed>>16))&0xFFFFFF
             elif opcode == op["bror"]:
-                (c,regfile[dest]) = ( functools.reduce( lambda x,y: x|y , [ 1 if (i&1<<j) else 0 for j in range(0,8)], ((ea_ed>>8)|(ea_ed<<16))&0xFFFFFF ))
+                c = functools.reduce( lambda x,y: x|y , [ 1 if (ea_ed&(1<<j)) else 0 for j in range(0,8)])
+                regfile[dest] = ((ea_ed>>8)|(ea_ed<<16))&0xFFFFFF
             elif opcode == op["add"] :
                 res = (regfile[dest] + ea_ed)  & 0x1FFFFFF
                 (c, regfile[dest])  = ( (res>>24) & 1, res & 0xFFFFFF)
@@ -84,6 +86,7 @@ while True:
                 print( "Unrecognized opcode ")
                 sys.exit()
             (swiid,ei,s,c,z) = flag_save if (preserve_flag or dest==0xF ) else (swiid, ei, (regfile[dest]>>23) & 1, c, 1 if (regfile[dest]==0) else 0)
-if len(sys.argv) > 2:  # Dump memory for inspection if required
+if len(sys.argv) > 2: 
+    #wordmem = functools.reduce(lambda l, e: [e]+l if l or e else [],wordmem[::-1]) # Truncate hex output
     with open(sys.argv[2],"w" ) as f:
         f.write( '\n'.join([''.join("%06x " % d for d in wordmem[j:j+16]) for j in [i for i in range(0,len(wordmem),16)]]))
