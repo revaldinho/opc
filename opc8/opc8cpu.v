@@ -28,7 +28,7 @@ module opc8cpu(input[23:0] din,input clk,input reset_b,input[1:0] int_b,input cl
       FET    : FSM_d = (din[20:19]==2'b11)? FET1 : EAD;
       FET1   : FSM_d = EAD; // Could check predicates here to speed up skipped double word instructions     
       EAD    : FSM_d = (!pred) ? FET : (IR_q==LD) ? RDM : (IR_q==STO) ? WRM : EXEC;
-      EXEC   : FSM_d = ((!(&int_b) & PSR_q[EI])||(IR_q==PPSR&&(|swiid)))?INT:(dst_q==4'hF)?FET:(din[20:19]==2'b11)? FET1 : (dst_q==4'hF||IR_q==JSR)?FET:EAD;
+      EXEC   : FSM_d = ((!(&int_b) & PSR_q[EI])||(IR_q==PPSR&&(|swiid)))?INT:(dst_q==4'hF||IR_q==JSR)?FET:(din[20:19]==2'b11)?FET1:EAD;
       WRM    : FSM_d = (!(&int_b) & PSR_q[EI])?INT:FET;
       default: FSM_d = (FSM_q==RDM)? EXEC : FET;
     endcase
@@ -37,7 +37,7 @@ module opc8cpu(input[23:0] din,input clk,input reset_b,input[1:0] int_b,input cl
     if (clken) begin
       RF_pipe_q <= (dst_q==4'hF)? PC_q : RF_q[dst_q] & {24{(|dst_q)}};
       // Sign extension on short immediates only if source field==0 being done on reading memory - may move this to EAD state...
-      OR_q <= (FSM_q==EAD) ? (IR_q==BROL||IR_q==BROR)?bytes: ((RF_sout+OR_q)^{24{(IR_q==SUB||IR_q==CMP)}} ): (FSM_q!=FET)? din: { {16{(din[7]&(|din[11:8]))}}, din[7:0]};      
+      OR_q <= (FSM_q==EAD)?(IR_q==BROL||IR_q==BROR)? bytes: ((RF_sout+OR_q)^{24{(IR_q==SUB||IR_q==CMP)}}):(FSM_q==FET||FSM_q==EXEC)?{{16{(din[7]&(|din[11:8]))}}, din[7:0]}:din;
       {reset_s0_b,reset_s1_b, subnotadd_q} <= {reset_b,reset_s0_b, IR_q!=ADD};
       if (!reset_s1_b) begin
         {PC_q,PCI_q,PSRI_q,PSR_q,FSM_q,vda_q} <= 0;
@@ -45,19 +45,19 @@ module opc8cpu(input[23:0] din,input clk,input reset_b,input[1:0] int_b,input cl
       end      
       else begin
         {FSM_q, rnw_q} <= {FSM_d, !(FSM_d==WRM) } ;
-        {vpa_q, vda_q} <= {FSM_d==FET||FSM_d==EXEC,FSM_d==RDM||FSM_d==WRM};        
+        {vpa_q, vda_q} <= {FSM_d==FET||FSM_d==FET1||FSM_d==EXEC,FSM_d==RDM||FSM_d==WRM};        
         if ((FSM_q==FET)||(FSM_q==EXEC))
           {IR_q, dst_q, src_q} <= { (din[20:19]==2'b11)?2'b10: din[20:19], din[18:8]}; // Alias 'long' opcodes to short equivalent 
         else if (FSM_q==EAD & IR_q==CMP )
           dst_q <= 4'b0; // Zero dest address after reading it in EAD for CMP operations
         if ( FSM_q == INT )
           {PC_q,PCI_q,PSRI_q,PSR_q[EI]} <= {(!int_b[1])?INT_VECTOR1:INT_VECTOR0,PC_q,PSR_q[3:0],1'b0};
-        else if (FSM_q==FET)
+        else if (FSM_q==FET||FSM_q==FET1)
           PC_q  <= PC_q + 1;
         else if ( FSM_q == EXEC) begin
           PC_q <= (IR_q==RTI)?PCI_q: (dst_q==4'hF) ? result[23:0] : (IR_q==JSR)?OR_q:((!(&int_b)&&PSR_q[EI])||(IR_q==PPSR&&(|swiid)))?PC_q:PC_q + 1;
           PSR_q <= (IR_q==RTI)?{4'b0,PSRI_q}:{swiid,enable_int,sign,carry,zero};
-          RF_q[dst_q] <= result;
+          RF_q[dst_q] <= (IR_q==JSR)? PC_q : result ;          
         end
       end
     end
