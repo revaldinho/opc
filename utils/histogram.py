@@ -1,6 +1,6 @@
 # Generate static or dynamic(runtime) stats on instruction and predicate usage from emulator trace or assembler listing files
 #
-import re, sys, getopt
+import re, sys, getopt, gzip
 
 
 def show_usage_and_exit():
@@ -21,36 +21,40 @@ def generate_histograms(filename, type, verbose=False):
     instr_dict = dict();
     pinstr_dict = dict();
     preds_dict  = dict();
-    
-    with open(filename,"r") as f:
-        for line in f: 
-            pobj = instr_re.match(re.sub('#.*','',(line.strip())))
-            if pobj and pobj.groupdict()['instr'] != None:
-                if ( pobj.groupdict()["operand"] ) == None:
-                    one_word_instr_count += 1
-                else:
-                    two_word_instr_count += 1                    
-                predicate = pobj.groupdict()["pred"]
-                instr     = pobj.groupdict()["instr"]
-                rd        = pobj.groupdict()["rd"]    
-                if rd in ('r15','pc'):
-                    instr = instr+'[dst=pc]'
-                if predicate:
-                    if predicate in preds_dict:
-                        preds_dict[predicate] += 1
-                    else:
-                        preds_dict[predicate] = 1
-                    if instr in pinstr_dict:
-                        pinstr_dict[instr] += 1
-                    else:
-                        pinstr_dict[instr] = 1             
-                if instr in instr_dict:
-                    instr_dict[instr] += 1
-                else:
-                    instr_dict[instr] = 1       
+
+
+    if filename.endswith("gz"):
+        f = gzip.open(filename, "rt")
+    else:
+        f = open(filename,"r")
+    for line in f: 
+        pobj = instr_re.match(re.sub('#.*','',(line.strip())))
+        if pobj and pobj.groupdict()['instr'] != None:
+            if ( pobj.groupdict()["operand"] ) == None:
+                one_word_instr_count += 1
             else:
-                if verbose:
-                    print(line.strip())
+                two_word_instr_count += 1                    
+            predicate = pobj.groupdict()["pred"]
+            instr     = pobj.groupdict()["instr"]
+            rd        = pobj.groupdict()["rd"]    
+            if rd in ('r15','pc'):
+                instr = instr+'[dst=pc]'
+            if predicate:
+                if predicate in preds_dict:
+                    preds_dict[predicate] += 1
+                else:
+                    preds_dict[predicate] = 1
+                if instr in pinstr_dict:
+                    pinstr_dict[instr] += 1
+                else:
+                    pinstr_dict[instr] = 1             
+            if instr in instr_dict:
+                instr_dict[instr] += 1
+            else:
+                instr_dict[instr] = 1       
+        else:
+            if verbose:
+                print(line.strip())
                     
     if ( len(instr_dict)==0 ) :
         print("Error: No instructions match regular expressions - is this a valid %s file ?" % ("trace" if type=="Dynamic" else "assembler listing"))

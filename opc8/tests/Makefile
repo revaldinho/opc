@@ -3,7 +3,7 @@ VPATH=..
 SRCS   ?= $(shell ls -1 *s | egrep -v '(macro|tmp|printdec)'  )
 
 HEXS  = $(patsubst %.s,%.hex,$(SRCS))
-DUMPS = $(patsubst %.s,%.dump,$(SRCS))
+DUMPS = $(patsubst %.s,%.dump.gz,$(SRCS))
 DIFFS = $(patsubst %.s,%.diff,$(SRCS))
 SIMS  = $(patsubst %.s,%.sim,$(SRCS))
 STDOUTS  = $(patsubst %.s,%.sim.stdout,$(SRCS))
@@ -23,8 +23,9 @@ vcd_option = ""
 	${pyexec} ${assembler} tmp.s $@ >  $*.lst
 	rm tmp.s
 
-%.emu.stdout %.dump : %.hex opc8emu.py
+%.emu.stdout %.dump.gz : %.hex opc8emu.py
 	${pyexec} ${emulator} $< $*.dump | tee  $*.trace | ${pyexec} ${show_stdout} >  $*.emu.stdout
+	gzip -f $*.dump $*.trace	
 
 %.sim : %.hex ../opc8tb.v ../opc8cpu.v
 	cp $*.hex test.hex
@@ -44,4 +45,4 @@ all_emulation: opc8asm.py opc8emu.py ${DUMPS} ${HEXS}
 all_sim: opc8cpu.v opc8tb.v ${SIMS}
 
 clean: 
-	rm -rf *dump* *sim* *trace* *stdout* *hex *~ *diff *exe *vcd* a.out *lst
+	rm -rf *dump* *sim* *trace* *stdout* *hex *~ *diff *exe *vcd* a.out *lst *gz
