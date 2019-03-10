@@ -8,10 +8,12 @@
 MACRO   SINGLE_DIGIT_CORRECTION()
         # r11 = Q
         # r8  = mypi pointer (pointing at next free digit)
+        # r3 = pointer to start of mypi 
         # r2 = predigit pointer
         # r1 = temp store/predigit value
+        lmov    r3,r0,mypi              
         cmp     r11,r0,10               # check if Q==10 and needing correction?
-        nz.sto  r11,r8                  # Save digit if Q <10
+        nz.sto  r11,r8                  # Save digit if Q <10        
         nz.mov  pc,pc,SDCL5-PC          # if no correction needed then continue else start corrections
         sto     r0,r8                   # overwrite 0 if Q=10
         ld      r1,r8,-1                # get predigit
@@ -21,14 +23,14 @@ MACRO   SINGLE_DIGIT_CORRECTION()
         sto     r1,r8,-1                # store it
 
 SDCL5:  add     r8,r0,1                 # incr pi digit pointer
-        lcmp    r8,r0,mypi+1            #
+        cmp     r8,r3,+1                # is pointer = mypi+1 ?
         z.mov   pc,pc,SDCL6-PC          # if first digit nothing to print yet
 SDCL8:
         ld      r1,r8,-2                # Get digit 2 places back from latest
         jsr     r13,r0,wrdecdig         # Print it
         mov     r1,r0,46                # get '.' into r1 in case...
-        lcmp    r8,r0,mypi+2            # is this the first digit ?
-        z.jsr   r13,r0,oswrch              #  ..yes, print the '.'
+        cmp     r8,r3,+2                # is this the first digit ? (mypi+2)
+        z.jsr   r13,r0,oswrch           #  ..yes, print the '.'
 
 SDCL6:  sub     r9,r0,1                 # dec loop counter
         nz.lmov pc,r0,L3                # jump back into main program
@@ -209,14 +211,14 @@ L4:
         # --------------------------------------------------------------
 udiv24:
         mov     r2,r0                   # Get dividend/quotient into double word r1,2
-        mov     r1,r0,-24               # Setup a loop counter
+        mov     r1,r0,24               # Setup a loop counter
 udiv24_loop:
         ASL     (r11)                   # shift left the quotient/dividend
         ROL     (r2)                    #
         cmp     r2,r10                  # check if remainder is larger than divisor
         c.sub   r2,r10                  # if yes then do the subtraction for real
         c.mov   r11,r11,1               # ... set LSB of quotient using (new) carry
-        add     r1,r0,1                 # increment loop counter zeroing carry
+        sub     r1,r0,1                 # decrement loop counter zeroing carry
         nz.mov  pc,pc, udiv24_loop-PC   # loop again if not finished (r5=udiv24_loop)
         RTS     ()                      # and return with quotient/remainder in r1/r2
 
