@@ -29,7 +29,7 @@ module opc8tb(  ) ;
      clken = 1'b1;
      interrupt_b = 1;
      #3005 reset_b = 1;
-     #500000 ;  // no timeout
+     #500000000 ;  // no timeout
 
      $finish;
    end
