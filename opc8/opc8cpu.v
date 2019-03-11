@@ -5,10 +5,10 @@ module opc8cpu(input[23:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   reg [7:0]   PSR_q; (* RAM_STYLE="DISTRIBUTED" *)
   reg [23:0]  PC_q,PCI_q, RF_q[14:0], RF_pipe_q, OR_q, result; 
   reg [4:0]   IR_q;
-  reg [3:0]   swiid,PSRI_q,dst_q,src_q;
+  reg [3:0]   swiid,PSRI_q,dst_q,src_q, pred_q;
   reg [2:0]   FSM_q, FSM_d;
   reg         zero,carry,sign,enable_int,reset_s0_b,reset_s1_b,subnotadd_q, rnw_q, vpa_q, vda_q;
-  wire        pred         = (OR_q[21] ^ (OR_q[22]?(OR_q[23]?PSR_q[S]:PSR_q[Z]):(OR_q[23]?PSR_q[C]:1)));
+  wire        pred         = (pred_q[0] ^ (pred_q[1]?(pred_q[2]?PSR_q[S]:PSR_q[Z]):(pred_q[2]?PSR_q[C]:1)));
   wire [23:0] RF_sout      = {24{(|src_q)&&IR_q[4:2]!=3'b111}} & ((src_q==4'hF)? PC_q : RF_q[src_q]);
   wire [23:0] bytes        = (IR_q==BROL)?{OR_q[15:0],OR_q[23:16]}:{OR_q[7:0],OR_q[23:8]};
   assign {rnw,dout,address}= {rnw_q, RF_pipe_q, (vpa_q)? PC_q : OR_q};
@@ -47,7 +47,7 @@ module opc8cpu(input[23:0] din,input clk,input reset_b,input[1:0] int_b,input cl
         {FSM_q, rnw_q} <= {FSM_d, !(FSM_d==WRM) } ;
         {vpa_q, vda_q} <= {FSM_d==FET||FSM_d==FET1||FSM_d==EXEC,FSM_d==RDM||FSM_d==WRM};        
         if ((FSM_q==FET)||(FSM_q==EXEC))
-          {IR_q, dst_q, src_q} <= { (din[20:19]==2'b11)?2'b10: din[20:19], din[18:8]}; // Alias 'long' opcodes to short equivalent 
+          {pred_q, IR_q, dst_q, src_q} <= { din[23:21],(din[20:19]==2'b11)?2'b10: din[20:19], din[18:8]}; // Alias 'long' opcodes to short equivalent 
         else if (FSM_q==EAD & IR_q==CMP )
           dst_q <= 4'b0; // Zero dest address after reading it in EAD for CMP operations
         if ( FSM_q == INT )
