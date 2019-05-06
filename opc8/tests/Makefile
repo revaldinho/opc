@@ -37,9 +37,9 @@ vcd_option = ""
 %.hist.txt: all_emulation
 	rm -rf all_listings.lst.gz all_traces.trace.gz
 	cat *.lst | gzip -c > all_listings.lst.gz
-	gunzip -c *.trace.gz | gzip -c > all_traces.trace.gz
+	gunzip -c *.trace.gz | gzip -c > all_traces.gz
 	${pyexec} ../../utils/histogram.py -f all_listings.lst.gz -s -w 24 >  static.hist.txt
-	${pyexec} ../../utils/histogram.py -f all_traces.trace.gz -d -w 24 >  dynamic.hist.txt
+	${pyexec} ../../utils/histogram.py -f all_traces.gz -d -w 24 >  dynamic.hist.txt
 
 # -D_dumpvcd=1        
 
