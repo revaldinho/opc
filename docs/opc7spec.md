@@ -97,11 +97,10 @@ a prefix on the instruction mnemonic in the assembler.
   |  1 |  1 |  0 | mi.        | Execute if Sign flag is set                        |
   |  1 |  1 |  1 | pl.        | Execute if Sign flag is clear                      |
 
-Note that the Overflow bit cannot be used in predication directly. To check the overflow bit it is read the PSR which will transfer the
-V flag into the MSB of the destination register. The state of the overflow can then be checked by looking at the sign flag. e.g.
+The overflow flag is stored in the MSB of the PSR, but cannot be used in predication directly. To check for overflow first read the PSR into R0 (or any other register) and then check the sign flag, i.e.
 
-    getpsr R0, PSR
- mi.mov    PC, R0, exit_on_overflow  
+       getpsr R0, PSR
+    mi.mov    PC, R0, exit_on_overflow  
 
 Byte Permute Function
 ---------------------
