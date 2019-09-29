@@ -58,15 +58,16 @@ operands with the LD and STO instructions the following addressing modes are sup
 Processor Status Register
 -------------------------
 
-The processor has an 8 bit processor status register. Included in this are three processor status flags which 
-are set by ALU operations - calculation of the EA/ED values has no effect on these - and 5 bits related to interrupt
-handling. 
+The processor has an 32 bit processor status register, although only 9 bits are used. Included in this are
+four processor status flags which are set by ALU operations - calculation of the EA/ED values has no effect on these
+- and 5 bits related to interrupt handling. 
 
-  * SWI   - 4 bits used to identify a software interrupt. Writing a non-zero value here triggers a SWI.
-  * EI    - used to enable or disable hardware interrupts
-  * Carry - set or cleared only on arithmetic operations
-  * Zero  - set on every instruction based on the state of the destination register
-  * Sign  - set when the MSB of the result is a '1'
+  * SWI      - 4 bits used to identify a software interrupt. Writing a non-zero value here triggers a SWI.
+  * EI       - used to enable or disable hardware interrupts
+  * Carry    - set or cleared only on arithmetic operations
+  * Zero     - set on every instruction based on the state of the destination register
+  * Sign     - set when the MSB of the result is a '1'
+  * Overflow - set when an addition, subtraction or compare of two like signed operands results in a change of sign in the result
 
 Instruction Set
 ---------------
@@ -95,7 +96,13 @@ a prefix on the instruction mnemonic in the assembler.
   |  1 |  0 |  1 | nc.        | Execute if Carry flag is clear                     |
   |  1 |  1 |  0 | mi.        | Execute if Sign flag is set                        |
   |  1 |  1 |  1 | pl.        | Execute if Sign flag is clear                      |
-  
+
+Note that the Overflow bit cannot be used in predication directly. To check the overflow bit it is read the PSR which will transfer the
+V flag into the MSB of the destination register. The state of the overflow can then be checked by looking at the sign flag. e.g.
+
+    getpsr R0, PSR
+ mi.mov    PC, R0, exit_on_overflow  
+
 Byte Permute Function
 ---------------------
 							
