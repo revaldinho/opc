@@ -15,10 +15,10 @@ else:
 
 with open(sys.argv[1],"r") as f:
     wordmem = [ (int(x,16) & 0xFFFFFFFF) for x in f.read().split() ]
-(regfile, acc, c, z, pcreg, c_save, s, ei, swiid, interrupt, iomem) = ([0]*16,0,0,0,15,0,0,0,0,0, [0]*65536)
-print ("PC     : Mem      : Instruction            : SWI I S C Z : %s\n%s" % (''.join(["  r%2d    " % d for d in range(0,16)]), '-'*202))
+(regfile, v, acc, c, z, pcreg, c_save, s, ei, swiid, interrupt, iomem) = ([0]*16,0,0,0,0,15,0,0,0,0,0, [0]*65536)
+print ("PC     : Mem      : Instruction            : V SWI I S C Z : %s\n%s" % (''.join(["  r%2d    " % d for d in range(0,16)]), '-'*202))
 while True:
-    (pc_save,flag_save,regfile[0]) = (regfile[pcreg],(swiid,ei,s,c,z),0)    # always overwrite r0 and then dont care about assignments
+    (pc_save,flag_save,regfile[0]) = (regfile[pcreg],(v,swiid,ei,s,c,z),0)    # always overwrite r0 and then dont care about assignments
     instr_word = wordmem[regfile[pcreg] & 0xFFFFF] &  0xFFFFFFFF
     (p0, p1, p2) = ( (instr_word >> 31) & 1, (instr_word >> 30) & 1, (instr_word >> 29 ) & 1)
     (opcode, dest, source) = (((instr_word >> 24) & 0x1F), (instr_word>>20)&0xF , (instr_word>>16) & 0xF)
@@ -46,16 +46,16 @@ while True:
         except:
             ea_ed = 0
     if interrupt : # software interrupts dont care about EI bit
-        (interrupt, regfile[pcreg], pc_int, psr_int , ei) = (0, 0x00000002, pc_save, (swiid,ei,s,c,z), 0)
+        (interrupt, regfile[pcreg], pc_int, psr_int , ei) = (0, 0x00000002, pc_save, (v,swiid,ei,s,c,z), 0)
     else:
-        print ("%06x : %08X : %-22s :  %1X  %d %d %d %d : " % (pc_save, instr_word, instr_str, swiid ,ei, s, c, z), end='')
+        print ("%06x : %08X : %-22s : %d  %1X  %d %d %d %d : " % (pc_save, instr_word, instr_str, v, swiid ,ei, s, c, z), end='')
         print (' '.join(["%08X" % r for r in regfile ]))
         if (bool(p2) ^ (bool(s if p0==1 else z) if p1==1 else bool(c if p0==1 else 1))):
             if opcode == (op["halt"]):
                 print("Stopped on halt instruction at %08x with halt number 0x%04x" % (regfile[pcreg], operand) )
                 break
             elif opcode == op["rti"]:
-                (regfile[pcreg], flag_save) = (pc_int, (0,psr_int[1],psr_int[2],psr_int[3],psr_int[4]) )
+                (regfile[pcreg], flag_save) = (pc_int, (psr_int[0],0,psr_int[2],psr_int[3],psr_int[4],psr_int[5]) )
             elif opcode ==op["and"]:
                 regfile[dest] = (regfile[dest] & ea_ed) & 0xFFFFFFFF
             elif opcode == op["or"]:
@@ -68,6 +68,7 @@ while True:
                 (c, regfile[dest]) = ( (ea_ed>>31)&1, ((ea_ed<<1)&0xFFFFFFFE) | c)
             elif opcode == op["add"] :
                 res = (regfile[dest] + ea_ed & 0x1FFFFFFFF)
+                v = 1 if  ((((~res)&ea_ed&regfile[dest])|((res)&(~ea_ed)&(~regfile[dest])))&0x80000000)!=0 else 0                
                 (c, regfile[dest])  = ( (res>>32) & 1, res & 0xFFFFFFFF)
             elif opcode == op["not"]:
                 regfile[dest] = (~ea_ed) & 0xFFFFFFFF
@@ -80,6 +81,7 @@ while True:
             elif opcode in (op["sub"], op["cmp"]) :
                 res = (regfile[dest] + ((~ea_ed)&0xFFFFFFFF) + 1) & 0x1FFFFFFFF
                 dest = 0 if opcode==op["cmp"] else dest #  update dest reg to be r0 for correct flag setting later if PC was compared
+                v = 1 if  ((((~res)&ea_ed&regfile[dest])|((res)&(~ea_ed)&(~regfile[dest])))&0x80000000)!=0 else 0                                
                 (c, regfile[dest])  = ( (res>>32) & 1, res & 0xFFFFFFFF)
             elif opcode in (op["jsr"], op["ljsr"]):
                 (preserve_flag,regfile[dest],regfile[pcreg]) = (True,regfile[pcreg],ea_ed)
@@ -88,9 +90,9 @@ while True:
                 bytes = [ 0 if (8>i>3) else ((ea_ed>>(n[i]*8))&0xFF) for i in range(0,5)]
                 regfile[dest] = functools.reduce( lambda x,y: x|y, [ y<<x for (y,x) in zip(bytes,range(0,32,8))])
             elif opcode == op["putpsr"]:
-                (flag_save, interrupt) = (((ea_ed&0xF0)>>4,(ea_ed&0x8)>>3,(ea_ed&0x4)>>2,(ea_ed&0x2)>>1,(ea_ed)&1), (ea_ed&0xF0)!=0)
+                (flag_save, interrupt) = (((ea_ed&0x80000000)>>31,(ea_ed&0xF0)>>4,(ea_ed&0x8)>>3,(ea_ed&0x4)>>2,(ea_ed&0x2)>>1,(ea_ed)&1), (ea_ed&0xF0)!=0)
             elif opcode == op["getpsr"]:
-                regfile[dest] = ((swiid&0xF)<<4) | (ei<<3) | (s<<2) | (c<<1) | z
+                regfile[dest] = ((v<<31)&0x80000000)| ((swiid&0xF)<<4) | (ei<<3) | (s<<2) | (c<<1) | z
             elif opcode in (op["sto"],op["lsto"]):
                 wordmem[ea_ed&0xFFFFF] = regfile[dest]
                 print_memory_access("STORE",ea_ed,regfile[dest])
@@ -98,9 +100,9 @@ while True:
                 iomem[ea_ed&0xFFFF] = regfile[dest]
                 print_memory_access("OUT",ea_ed,regfile[dest])
             if  (dest==pcreg) or opcode in (op["sto"],op["in"],op["lsto"],op["putpsr"], op["rti"]):
-                (swiid,ei,s,c,z) = flag_save
+                (v,swiid,ei,s,c,z) = flag_save
             else:
-                (swiid,ei,s,c,z) = (swiid,ei,(regfile[dest]>>31) & 1, c, 1 if (regfile[dest]==0) else 0)
+                (v, swiid,ei,s,c,z) = (v,swiid,ei,(regfile[dest]>>31) & 1, c, 1 if (regfile[dest]==0) else 0)
 if len(sys.argv) > 2:  # Dump memory for inspection if required
     with open(sys.argv[2],"w" ) as f:
         f.write( '\n'.join([''.join("%08x " % d for d in wordmem[j:j+12]) for j in [i for i in range(0,len(wordmem),12)]]))
