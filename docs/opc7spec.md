@@ -59,8 +59,7 @@ Processor Status Register
 -------------------------
 
 The processor has an 32 bit processor status register, although only 9 bits are used. Included in this are
-four processor status flags which are set by ALU operations - calculation of the EA/ED values has no effect on these
-- and 5 bits related to interrupt handling. 
+four processor status flags which are set by ALU operations - calculation of the EA/ED values has no effect on these - and 5 bits related to interrupt handling. 
 
   * SWI      - 4 bits used to identify a software interrupt. Writing a non-zero value here triggers a SWI.
   * EI       - used to enable or disable hardware interrupts
