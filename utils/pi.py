@@ -1,8 +1,6 @@
-
-
-## Different spigot, use base 100 to compute triplets
+## Different spigot, use base 10,100 or 1000 to compute triplets
 ##
-## python3  pi.py digits  base
+## python3  pi.py digits base
 
 import math,sys
 
@@ -30,6 +28,7 @@ digit_tuples  = digits//tuple_size
 columns       = 1+digit_tuples*10*tuple_size//3
 format_string = "%%0%dd" % tuple_size
 pistring = ""
+nines = 0
 (maxQ,maxDenom,maxR) = (0,0,0)
 
 r = [2 * base//10 ] * columns ## initialise remainder array
@@ -60,23 +59,30 @@ for digit in range (0,digit_tuples,1):
         divisions += 1
 
     result = c+q //base
+    c = q % base;
+
     divisions += 1
 
-
-    if result == base:
-        print("\nSingle group correction @ digit_tuple %d" % digit)
+    if result == base-1:
+        nines+=1
+    elif result == base:
+        print("\nCorrecting overflow at digit %d, collected %d nines " % (digit, nines))
         predigits += 1
         result = 0
-        if predigits == base:
-            print("Alarm - correcting predigit overflows at current digit_tuple=%d" % digit)
-            predigits = 0
-
-    if digit >0:
         print( format_string % ( predigits ), end="");
         pistring+= format_string % ( predigits )
-
-    predigits = result
-    c = q % base;
+        print( (format_string % 0 ) * nines,end="" )
+        pistring+= (format_string % ( 0 ))*nines
+        nines = 0
+        predigits = result
+    else:
+        if digit>0:
+            print( format_string % ( predigits ), end="");
+            pistring+= format_string % ( predigits )
+            print( (format_string % (base-1))* nines, end="")
+            pistring+= (format_string % ( base-1 ))*nines
+            nines = 0
+        predigits = result
 
 print( format_string % ( predigits ), end="");
 pistring+=format_string % ( predigits )

@@ -77,4 +77,4 @@ all_stdout: ${SIMS} ${SIMSTDOUTS} ${EMUSTDOUTS}
 
 
 clean: 
-	rm -rf *dump* *trace* *~ *diff *vcd* *sasm* a.out *lst ${BCPLEXECS} *_tb.v ${ASMS} ${HEXS} ${SIALS} ${SIMS} ${SIMSTDOUTS} ${EMUSTDOUTS}
+	rm -rf *dump* *trace* *~ *diff *vcd* *sasm* a.out *lst ${BCPLEXECS} *_tb.v ${ASMS} ${HEXS} ${SIALS} ${SIMS} ${SIMSTDOUTS} ${EMUSTDOUTS} *exe *.sim
