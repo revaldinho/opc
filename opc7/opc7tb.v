@@ -1,4 +1,3 @@
-
 `timescale 1ns / 1ns
 `define HALT 5'b1_0000
 `define EXEC 3'b011
@@ -15,7 +14,7 @@ module opc7tb(  ) ;
    wire          mreq_b = !(vda||vpa);
    integer       seed = 10;
    // OPC CPU instantiation
-   opc7cpu  dut0_u (.address(addr), .din(data0), .dout(data1), .rnw(rnw), .clk(clk), .reset_b(reset_b), .int_b({1'b1, interrupt_b}), .clken(clken), .vpa(vpa), .vda(vda), .vio(vio));
+   opc7cpu  dut0_u (.addr(addr), .din(data0), .dout(data1), .rnw(rnw), .clk(clk), .reset_b(reset_b), .int_b({1'b1, interrupt_b}), .clken(clken), .vpa(vpa), .vda(vda), .vio(vio));
    initial begin
 
 `ifdef _dumpvcd
@@ -32,7 +31,7 @@ module opc7tb(  ) ;
      $finish;
    end
 
-  always @ (negedge clk) begin
+  always @ (posedge clk) begin
     if (!rnw && !ceb && oeb && reset_b)
       if ( !mreq_b) begin
         mem[addr&20'hFFFFF] <= data1;
