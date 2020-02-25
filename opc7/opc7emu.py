@@ -5,7 +5,7 @@ dis = dict([(mnemonics.index(opcode),opcode) for opcode in mnemonics])
 pred_dict = {0:"",1:"0.",2:"z.",3:"nz.",4:"c.",5:"nc.",6:"mi.",7:"pl."}
 def print_memory_access( type, address, data):
     ch = '%s' % chr(data) if ( 0x1F < data < 0x7F) else ' '
-    print( "%6s :  Address : 0x%05x (%6d)       :        Data : 0x%08x (%10d) %s" % (type,address&(0xFFFFF if type not in ("IN","OUT") else 0xFFFF),address&(0xFFFFF if type not in ("IN","OUT") else 0xFFFF),data,data,ch))
+    print( "%6s :  Address : 0x%08x (%6d)       :        Data : 0x%08x (%10d) %s" % (type,address&(0xFFFFF if type not in ("IN","OUT") else 0xFFFF),address&(0xFFFFF if type not in ("IN","OUT") else 0xFFFF),data,data,ch))
 
 if len(sys.argv) > 3:
     with open(sys.argv[3],"r") as f:
@@ -48,7 +48,7 @@ while True:
     if interrupt : # software interrupts dont care about EI bit
         (interrupt, regfile[pcreg], pc_int, psr_int , ei) = (0, 0x00000002, pc_save, (v,swiid,ei,s,c,z), 0)
     else:
-        print ("%06x : %08X : %-22s : %d  %1X  %d %d %d %d : " % (pc_save, instr_word, instr_str, v, swiid ,ei, s, c, z), end='')
+        print ("%08x : %08X : %-22s : %d  %1X  %d %d %d %d : " % (pc_save, instr_word, instr_str, v, swiid ,ei, s, c, z), end='')
         print (' '.join(["%08X" % r for r in regfile ]))
         if (bool(p2) ^ (bool(s if p0==1 else z) if p1==1 else bool(c if p0==1 else 1))):
             if opcode == (op["halt"]):

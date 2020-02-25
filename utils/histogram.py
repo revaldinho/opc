@@ -27,7 +27,8 @@ def generate_histograms(filename, type, verbose=False):
         f = gzip.open(filename, "rt")
     else:
         f = open(filename,"r")
-    for line in f: 
+    for line in f:
+        line = line.lower()
         pobj = instr_re.match(re.sub('#.*','',(line.strip())))
         if pobj and pobj.groupdict()['instr'] != None:
             if ( pobj.groupdict()["operand"] ) == None:
