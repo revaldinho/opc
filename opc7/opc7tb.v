@@ -49,7 +49,7 @@ module opc7tb(  ) ;
 
   always @ (posedge int_clk)
     if ( (($random(seed) %100)> 85) && interrupt_b ==1'b1)
-      interrupt_b = 1'b0;
+      interrupt_b = 1'b1;
     else
       interrupt_b = 1'b1;
   always begin
