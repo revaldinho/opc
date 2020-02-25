@@ -18,7 +18,7 @@ vcd_option =
 #-D_dumpvcd=1
 
 %.hex %.lst : %.s opc7asm.py
-	python3 ${assembler} $< $@ >  $*.lst
+	python3 ${assembler} $< $*.hex >  $*.lst
 
 %.emu.stdout %.dump : %.hex opc7emu.py
 	${pyexec} ${emulator} $< $*.dump | tee  $*.trace | ${pyexec} ${show_stdout} -7 >  $*.emu.stdout
