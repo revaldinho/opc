@@ -84,20 +84,21 @@ ENDMACRO
         # r1,r2 = temporary registers, parameters and return registers
         # (r0   =0)
 
-        EQU     digits,   8          # 16
+        EQU     digits,   6          # 16
         EQU     cols,     1+(digits*10//3)            # 1 + (digits * 10/3)
 
-        mov   r13,r0                  # Initialise r13 to stop PUSH/POP ever loading X's to stack for regression runs
-        mov   r14,r0,0x0FFE           # Set stack to grow down from here for monitor
-        mov   pc,r0,0x1000            # Program start at 0x1000 for use with monitor/copro
-        mov   r5,r0,0                 # zero C
+        mov     r13,r0                  # Initialise r13 to stop PUSH/POP ever loading X's to stack for regression runs
+        mov     r14,r0,0x0FFE           # Set stack to grow down from here for monitor
+        mov     pc,r0,0x1000            # Program start at 0x1000 for use with monitor/copro
 
-        ORG   0x1000
+        ORG     0x1000
 start:
         PUSH  (r13)
 
         mov     r8,r0,0
         mov     r4,r0,0
+        mov     r5,r0,0                 # zero C
+
         ;; trivial banner
         WRCH    (r0, 0x4f)
         WRCH    (r0, 0x6b)
