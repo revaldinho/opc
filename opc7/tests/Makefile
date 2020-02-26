@@ -45,12 +45,12 @@ vcd_option =
 	rm -f $*_tb.v
 
 %.sim.stdout : %.sim
-	python3 ../../utils/show_stdout.py -7 -f $*.sim >  $*.sim.stdout
+	${pyexec} ../../utils/show_stdout.py -7 -f $*.sim >  $*.sim.stdout
 
 
 # -D_dumpvcd=1        
 
-all: all_emulation all_simulation all_diff all_stats
+all: all_emulation all_simulation all_exe all_sim all_diff all_stats 
 
 all_exe: ${EXES}
 
