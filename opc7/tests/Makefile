@@ -7,12 +7,15 @@ EXES  = $(patsubst %.s,%.exe,$(SRCS))
 DUMPS = $(patsubst %.s,%.dump,$(SRCS))
 DIFFS = $(patsubst %.s,%.diff,$(SRCS))
 SIMS  = $(patsubst %.s,%.sim,$(SRCS))
+DYNSTATS  = $(patsubst %.s,%.dynstats,$(SRCS))
+STASTATS  = $(patsubst %.s,%.stastats,$(SRCS))
 STDOUTS  = $(patsubst %.s,%.sim.stdout,$(SRCS))
 
 pyexec ?= python3
 assembler ?= ../opc7asm.py
 emulator ?= ../opc7emu.py
 show_stdout ?= ../../utils/show_stdout.py
+histogram ?= ../../utils/histogram.py
 
 vcd_option = 
 #-D_dumpvcd=1
@@ -30,6 +33,12 @@ vcd_option =
 %.sim : %.hex %.exe
 	./$*.exe > $@
 
+%.dynstats : %.trace.gz
+	${pyexec} ${histogram} -d -f ./$*.trace.gz -w 32 > $@
+
+%.stastats : %.lst
+	${pyexec} ${histogram} -s -f ./$*.lst -w 32 > $@
+
 %.exe : ../opc7tb.v ../opc7cpu.v
 	perl -pale 's/test\.(hex|dump|vcd)/$*\.\1/g' ../opc7tb.v > $*_tb.v
 	iverilog -D_simulation=1 ${vcd_option} -o $@ $*_tb.v ../opc7cpu.v 
@@ -41,7 +50,7 @@ vcd_option =
 
 # -D_dumpvcd=1        
 
-all: all_emulation all_simulation all_diff
+all: all_emulation all_simulation all_diff all_stats
 
 all_exe: ${EXES}
 
@@ -54,6 +63,8 @@ all_sim: opc7cpu.v opc7tb.v ${SIMS}
 all_diff: ${DIFFS}
 
 all_stdout: ${STDOUTS}
+
+all_stats: ${DYNSTATS} ${STASTATS}
 
 clean: 
 	rm -rf *dump* *sim* *trace* *stdout* *hex *~ *diff *exe *vcd* a.out *lst

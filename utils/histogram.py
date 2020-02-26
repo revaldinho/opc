@@ -60,9 +60,15 @@ def generate_histograms(filename, type, verbose=False):
     if ( len(instr_dict)==0 ) :
         print("Error: No instructions match regular expressions - is this a valid %s file ?" % ("trace" if type=="Dynamic" else "assembler listing"))
         show_usage_and_exit()
-    
-    maxcount = max ( instr_dict[i] for i in instr_dict )
-    maxpred = max ( preds_dict[i] for i in preds_dict )
+
+    try:
+        maxcount = max ( instr_dict[i] for i in instr_dict )
+    except ValueError as e:
+        maxcount = 0
+    try:        
+        maxpred = max ( preds_dict[i] for i in preds_dict )
+    except ValueError as e:
+        maxpred = 0
     
     print("\n%s Instruction Usage from %s"% (type, filename))
     print("\nAll Instructions\n")
