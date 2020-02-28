@@ -9,9 +9,12 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   reg [3:0]   swiid,PSRI_q,PSRI_d,dst_q,dst_d,src_q,src_d;
   reg [2:0]   FSM_q, FSM_d;
   reg         overflow,zero,carry,sign,enable_int,reset_s0_b,reset_s1_b,subnotadd_q,rnw_q, rnw_d,vpa_q, vpa_d, vda_q, vda_d, vio_q, vio_d;
-  //wire        pred       = (OR_q[29] ^ (OR_q[30]?(OR_q[31]?PSR_q[S]:PSR_q[Z]):(OR_q[31]?PSR_q[C]:1)));
+`ifdef PRED_IN_EAD_ONLY  
+  wire        pred       = (OR_q[29] ^ (OR_q[30]?(OR_q[31]?PSR_q[S]:PSR_q[Z]):(OR_q[31]?PSR_q[C]:1)));
+`else  
   wire        pred_d     = (din[31:29]==3'b001) || (din[P2] ^ (din[P1] ? (din[P0] ? sign : zero): (din[P0] ? carry : 1))); // New data,new flags (in exec/fetch)
   wire        pred_din   = (din[31:29]==3'b001) || (din[P2] ^ (din[P1]?(din[P0]?PSR_q[S]:PSR_q[Z]):(din[P0]?PSR_q[C]:1))); // New data,old flags (in fetch0)
+`endif  
   wire [31:0] RF_sout    = {32{(|src_q)&&IR_q[4:2]!=3'b111}} & ((src_q==4'hF)? {12'b0,PC_q} : RF_q[src_q]);
   wire [7:0]  bytes0     = {8{~OR_q[2] }} & ((OR_q[1])?  ((OR_q[0]) ?RF_sout[31:24] :RF_sout[23:16]):(OR_q[0]) ? RF_sout[15:8]:RF_sout[7:0]);
   wire [7:0]  bytes1     = {8{~OR_q[6] }} & ((OR_q[5])?  ((OR_q[4]) ?RF_sout[31:24] :RF_sout[23:16]):(OR_q[4]) ? RF_sout[15:8]:RF_sout[7:0]);
@@ -38,10 +41,15 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
     if (!reset_s1_b) FSM_d=FET;
     else
       case (FSM_q)
+`ifdef PRED_IN_EAD_ONLY        
+        FET    : FSM_d = EAD ;
+        EAD    : FSM_d = (!pred) ? FET : (IR_q==LD||IR_q==LLD||IR_q==IN) ? RDM : (IR_q==STO||IR_q==LSTO||IR_q==OUT) ? WRM : EXEC;
+        EXEC   : FSM_d = ((!(&int_b) & PSR_q[EI])||(IR_q==PPSR&&(|swiid)))?INT:(dst_q==4'hF||IR_q==JSR||IR_q==LJSR)?FET: EAD;
+`else
         FET    : FSM_d = (!pred_din) ? FET : EAD ;
-        //EAD    : FSM_d = (!pred) ? FET : (IR_q==LD||IR_q==LLD||IR_q==IN) ? RDM : (IR_q==STO||IR_q==LSTO||IR_q==OUT) ? WRM : EXEC;
         EAD    : FSM_d = (IR_q==LD||IR_q==LLD||IR_q==IN) ? RDM : (IR_q==STO||IR_q==LSTO||IR_q==OUT) ? WRM : EXEC;        
         EXEC   : FSM_d = ((!(&int_b) & PSR_q[EI])||(IR_q==PPSR&&(|swiid)))?INT:(dst_q==4'hF||IR_q==JSR||IR_q==LJSR)?FET:  (pred_d) ? EAD: FET;
+`endif        
         WRM    : FSM_d = (!(&int_b) & PSR_q[EI])?INT:FET;
         default: FSM_d = (FSM_q==RDM)? EXEC : FET;
       endcase

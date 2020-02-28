@@ -17,7 +17,8 @@ emulator ?= ../opc7emu.py
 show_stdout ?= ../../utils/show_stdout.py
 histogram ?= ../../utils/histogram.py
 
-vcd_option = 
+vcd_option =
+#vcd_option = -DPRED_IN_EAD_ONLY=1
 #-D_dumpvcd=1
 
 %.hex %.lst : %.s opc7asm.py
@@ -50,7 +51,7 @@ vcd_option =
 
 # -D_dumpvcd=1        
 
-all: all_emulation all_simulation all_exe all_sim all_diff all_stats 
+all: all_diff all_stats  all_emulation all_simulation all_exe all_sim 
 
 all_exe: ${EXES}
 
@@ -67,4 +68,4 @@ all_stdout: ${STDOUTS}
 all_stats: ${DYNSTATS} ${STASTATS}
 
 clean: 
-	rm -rf *dump* *sim* *trace* *stdout* *hex *~ *diff *exe *vcd* a.out *lst
+	rm -rf *dump* *sim* *trace* *stdout* *hex *~ *diff *exe *vcd* a.out *lst *stats
