@@ -35,7 +35,7 @@ ENDMACRO
         # r4,5,6,7 = unused
         # r1..r3  = local registers
 
-        EQU     digits,   64            # Digits to be printed
+        EQU     digits,   32            # Digits to be printed
         EQU     saved_digits, 16        # Max digits to be save in memory (for regression)
         EQU     cols,     digits+2      # Needs a few more columns than digits to avoid occasional errors in last digit or few
 
