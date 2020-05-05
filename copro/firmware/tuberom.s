@@ -421,10 +421,10 @@ cmdLoop1:
 cmdLoop2:
     add     r2, r0, 1               # increment command table pointer
     add     r3, r0, 1               # increment user command pointer
-    ld      r4, r2                  # read next character from command table
-    mi.mov  pc, r0, cmdExec         # if an address, then we are done
     ld      r5, r3                  # read next character from user command
     or      r5, r0, 0x20            # convert to lower case
+    ld      r4, r2                  # read next character from command table
+    mi.mov  pc, r0, cmdCheck        # if an address, then we are done matching
     cmp     r5, r4                  # compare the characters
     z.mov   pc, r0, cmdLoop2        # if a match, loop back for more
 
@@ -434,8 +434,10 @@ cmdLoop3:                           # skip to the end of the command in the tabl
     ld      r4, r2
     pl.mov  pc, r0, cmdLoop3
 
-    cmp     r5, r0, 0x2e            # was the mis-match a '.'
+    cmp     r5, r0, ord('.')        # was the mis-match a '.'
     nz.mov  pc, r0, cmdLoop1        # no, then start again with next command
+
+    add     r3, r0, 1               # increment user command pointer past the '.'
 
 cmdExec:
 
@@ -444,12 +446,26 @@ cmdExec:
 
     JSR     (cmdExecR2)
 
+cmdExit:
     POP     (r13)
     POP     (r5)
     POP     (r4)
     POP     (r3)
     POP     (r2)
     RTS     ()
+                                    # Additional code to make the match non-greedy
+                                    # e.g. *MEMORY should not match against the MEM command
+                                    #      also exclude *MEM.
+cmdCheck:
+    cmp     r5, r0, ord('.')        # check the first non-matching user char against '.'
+    z.mov   pc, r0, cmdReject       # if == '.' then reject the command
+    cmp     r5, r0, ord('a')        # check the first non-matching user char against 'a'
+    nc.mov  pc, r0, cmdExec         # if < 'a' then execute the local command
+    cmp     r5, r0, ord('z')+1      # check the first non-matching user char against 'z'
+    c.mov   pc, r0, cmdExec         # if >= 'z'+1 then execute the local command
+cmdReject:
+    mov     r1, r0, 1               # flag command as not handled here then return
+    mov     pc, r0, cmdExit         # allowing the command to be handled elsewhere
 
 # --------------------------------------------------------------
 
