@@ -3,7 +3,7 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   parameter HLT=5'h10,RTI=5'h11,PPSR=5'h12,GPSR=5'h13,OUT=5'h18,IN=5'h19,STO=5'h1A,LD=5'h1B,LJSR=5'h1C,LMOV=5'h1D,LSTO=5'h1E,LLD=5'h1F;
   parameter FET=3'h0,EAD=3'h1,RDM=3'h2,EXEC=3'h3,WRM=3'h4,INT=3'h5,V=31,EI=3,S=2,C=1,Z=0,INT_VECTOR0=20'h2,INT_VECTOR1=20'h4;
   parameter P2=29,P1=30,P0=31;
-  reg [19:0]  addr_q, addr_d, PC_q,PC_d,PCI_q,PCI_d;(* RAM_STYLE="DISTRIBUTED" *)
+  reg [19:0]  addr_d, PC_q,PC_d,PCI_q,PCI_d;(* RAM_STYLE="DISTRIBUTED" *)
   reg [31:0]  PSR_d,PSR_q,RF_q[14:0], RF_pipe_q, RF_pipe_d, OR_q, OR_d, result;
   reg [4:0]   IR_q, IR_d;
   reg [3:0]   swiid,PSRI_q,PSRI_d,dst_q,dst_d,src_q,src_d;
@@ -85,7 +85,7 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   always @(posedge clk)
     if (clken) begin
       {RF_pipe_q, OR_q, PC_q, PCI_q, PSRI_q, PSR_q} <= {RF_pipe_d, OR_d, PC_d, PCI_d, PSRI_d, PSR_d};
-      {reset_s0_b,reset_s1_b, subnotadd_q, addr_q} <= {reset_b, reset_s0_b, IR_q!=ADD, addr_d};
+      {reset_s0_b,reset_s1_b, subnotadd_q} <= {reset_b, reset_s0_b, IR_q!=ADD};
       {FSM_q, vda_q, vpa_q, vio_q, rnw_q, IR_q, dst_q, src_q} <= {FSM_d, vda_d, vpa_d, vio_d, rnw_d, IR_d, dst_d, src_d};
       if ( FSM_q == EXEC) begin
         RF_q[dst_q] <= result;
