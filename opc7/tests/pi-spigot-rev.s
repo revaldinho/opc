@@ -84,7 +84,7 @@ ENDMACRO
         # r1,r2 = temporary registers, parameters and return registers
         # (r0   =0)
 
-        EQU     digits,   6          # 16
+        EQU     digits,   16          # 16
         EQU     cols,     1+(digits*10//3)            # 1 + (digits * 10/3)
 
         mov     r13,r0                  # Initialise r13 to stop PUSH/POP ever loading X's to stack for regression runs
@@ -253,13 +253,13 @@ qm32_1:
         # Routine returns on divide by zero with carry flag set.
         #
         # ------------------------------------------------------------------
-udiv32:
-        lmov    r4,32           # loop counter
-        BRA     (udiv)
 udiv16:
         lmov    r4,16           # loop counter
         movt    r1,r0
         bperm   r1, r1, 0x1044  # Move N into R5 upper half word/zero lower half
+        BRA     (udiv)
+udiv32:
+        lmov    r4,32           # loop counter
 udiv:
         mov     r3,r0           # Initialise R
         cmp     r2,r0           # check D != 0
