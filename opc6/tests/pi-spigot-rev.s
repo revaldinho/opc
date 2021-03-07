@@ -66,16 +66,6 @@ MACRO   SEC()
         nc.ror     r0,r0,1
 ENDMACRO
 
-MACRO PRINTNINES ( _ninesreg_, _value_ )
-        cmp     _ninesreg_,r0
-        z.mov   pc,r0,@cont
-@l1:    mov     r1,r0,48+_value_
-        jsr     r13,r0,oswrch
-        dec     _ninesreg_,1
-        nz.mov  pc,r0,@l1
-@cont:
-ENDMACRO
-
 MACRO   WRCH( _reg_, _data_ )
         mov     r1, _reg_, _data_
         jsr    r13,r0,oswrch
@@ -98,7 +88,7 @@ ENDMACRO
         # r1,r2 = temporary registers, parameters and return registers
         # (r0   =0)
 
-        EQU     digits,   6          # 16
+        EQU     digits,   16          # 16
         EQU     cols,     1+(digits*10//3)            # 1 + (digits * 10/3)
 
         mov     r13,r0                  # Initialise r13 to stop PUSH/POP ever loading X's to stack for regression runs
@@ -177,14 +167,15 @@ L4b:    cmp     r11,r0,10               # Is result 10 and needing correction?
         INC     (r8,1)                  # increment predigit
         mov     r11,r0                  # Zero result
         WRCH    (r8,48)                 # write predigit as ASCII
-
-        PRINTNINES (r6,0)               # Now write out any nines as 0s
+        cmp     r6,r0,0        
+        nz.jsr     r13,r0,PRINTZEROES   # Now write out any nines as 0s
         BRA     (SDCL6b)
 
 SDCL5:  cmp     r9,r0,digits
         SFBCC   (z, SDCL6a)             # if first digit nothing to print yet
 SDCL8:  WRCH    (r8,48)                 # write predigit as ASCII
-        PRINTNINES (r6, 9)              # Now write out any nines
+        cmp     r6,r0,0        
+        nz.jsr     r13,r0,PRINTNINES    # Now write out any nines
 
 SDCL6a: cmp     r9,r0,digits-1          # Print the decimal point if this is the first digit printed
         SFBCC   (nz,SDCL6b)
@@ -195,8 +186,8 @@ SDCL6:  DEC     (r9,1)                  # dec loop counter
         BCC     (nz,L3)
 
 SDCL7:  WRCH    (r8,48)                 # Print last predigit (ASCII) and any nines we're holding
-
-        PRINTNINES (r6,9)
+        cmp     r6,r0,0
+        nz.jsr     r13,r0,PRINTNINES    # Now write out any nines
 
 L7b:
         WRCH    (r0,10)                 # Print Newline to finish off
@@ -204,6 +195,38 @@ L7b:
         halt    r0,r0,0x1234
         POP     (r13)
         RTS     ()
+
+        ; -----------------------------------------------------------------
+        ;
+        ; PRINTZEROES/PRINTNINES
+        ;
+        ; Print a string of nines or zeroes depending on the entry point.
+        ; The number of digits is given by the value in r6 on entry.
+        ;
+        ; Entry
+        ; - R6 holds a **non-zero** number of digits to print
+        ; - R13 holds return address
+        ;
+        ; Exit
+        ; - R6 holds zero
+        ; - R3, R2, R1, R0 used as workspace and trashed (inc by oswrch)
+        ; - all other registers preserved
+        ; ------------------------------------------------------------------
+        
+PRINTZEROES:
+        mov     r3, r0, 48        
+        BRA     (pn0)
+PRINTNINES:
+        mov     r3, r0, 48+9
+pn0:    
+        PUSH    (r13)        
+pn1:    mov     r1, r3
+        jsr     r13,r0,oswrch
+        dec     r6,1
+        nz.mov  pc,r0,pn1
+        POP     (r13)
+        RTS     ()
+        
         # -----------------------------------------------------------------
         #
         # qmul16
