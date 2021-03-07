@@ -253,6 +253,15 @@ qm32_1:
         # Routine returns on divide by zero with carry flag set.
         #
         # ------------------------------------------------------------------
+
+MACRO DIVSTEP()
+        ASL     (r1)            # left shift N
+        rol     r3,r3           # left shift R and import carry into LSB
+        cmp     r3, r2          # compare R with D
+        pl.sub  r3, r2          # if >= 0 then do subtract for real..
+        pl.add  r1,r0,1         # ..and increment quotient
+ENDMACRO
+
 udiv:   # generic entry point - will determine whether to invoke 32b or 16b version
         # based on size of data in r1, r2
         mov     r3, r1
@@ -271,12 +280,11 @@ udiv_0:
         cmp     r2,r0           # check D != 0
         z.mov   pc, r13         # bail out if zero (and carry will be set also)
 udiv_1:
-        ASL     (r1)            # left shift N
-        rol     r3,r3           # left shift R and import carry into LSB
-        cmp     r3, r2          # compare R with D
-        pl.sub  r3, r2          # if >= 0 then do subtract for real..
-        pl.add  r1,r0,1         # ..and increment quotient
-        sub     r4,r0,1         # dec loop counter
+        DIVSTEP ()
+        DIVSTEP ()
+        DIVSTEP ()
+        DIVSTEP ()
+        sub     r4,r0,4         # dec loop counter
         BCC     (nz,udiv_1)     # repeat 'til zero
         c.add   r0,r0           # clear carry
         mov     r2,r3           # put remainder into r2 for return

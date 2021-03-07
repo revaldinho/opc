@@ -167,14 +167,14 @@ L4b:    cmp     r11,r0,10               # Is result 10 and needing correction?
         INC     (r8,1)                  # increment predigit
         mov     r11,r0                  # Zero result
         WRCH    (r8,48)                 # write predigit as ASCII
-        cmp     r6,r0,0        
+        cmp     r6,r0,0
         nz.jsr     r13,r0,PRINTZEROES   # Now write out any nines as 0s
         BRA     (SDCL6b)
 
 SDCL5:  cmp     r9,r0,digits
         SFBCC   (z, SDCL6a)             # if first digit nothing to print yet
 SDCL8:  WRCH    (r8,48)                 # write predigit as ASCII
-        cmp     r6,r0,0        
+        cmp     r6,r0,0
         nz.jsr     r13,r0,PRINTNINES    # Now write out any nines
 
 SDCL6a: cmp     r9,r0,digits-1          # Print the decimal point if this is the first digit printed
@@ -212,21 +212,21 @@ L7b:
         ; - R3, R2, R1, R0 used as workspace and trashed (inc by oswrch)
         ; - all other registers preserved
         ; ------------------------------------------------------------------
-        
+
 PRINTZEROES:
-        mov     r3, r0, 48        
+        mov     r3, r0, 48
         BRA     (pn0)
 PRINTNINES:
         mov     r3, r0, 48+9
-pn0:    
-        PUSH    (r13)        
+pn0:
+        PUSH    (r13)
 pn1:    mov     r1, r3
         jsr     r13,r0,oswrch
         dec     r6,1
         nz.mov  pc,r0,pn1
         POP     (r13)
         RTS     ()
-        
+
         # -----------------------------------------------------------------
         #
         # qmul16
@@ -298,7 +298,14 @@ udiv16_loop:
         cmp     r2,r3                   # check if quotient is larger than divisor
         c.sub   r2,r3                   # if yes then do the subtraction for real
         c.adc   r1,r0                   # ... set LSB of quotient using (new) carry
-        inc     r4,1                    # increment loop counter zeroing carry
+
+        ASL     (r1)                    # shift left the quotient/dividend
+        ROL     (r2)                    #
+        cmp     r2,r3                   # check if quotient is larger than divisor
+        c.sub   r2,r3                   # if yes then do the subtraction for real
+        c.adc   r1,r0                   # ... set LSB of quotient using (new) carry
+
+        inc     r4, 2                   # increment loop counter zeroing carry
         SBBCC   (nz,udiv16_loop)        # loop again if not finished
         RTS     ()                      # and return with quotient/remainder in r1/r2
 
