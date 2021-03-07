@@ -132,7 +132,7 @@ L4:     ld      r2,r7                   # r2 <- *remptr = r[i]
         DEC     (r10,2)                 # next denominator
         mov     r1,r11,r0               # Compute Q % denom, Q // denom
         mov     r2,r10,r0
-        ljsr    r13,udiv32
+        ljsr    r13,udiv
         mov     r11,r1                  # Q<- Quotient
         sto     r2, r7                  # rem[i] <- r2
         DEC     (r7,1)                  # dec remptr
@@ -148,7 +148,7 @@ L4:     ld      r2,r7                   # r2 <- *remptr = r[i]
 
 L10:    mov     r1,r11,0                # result (Q) = C + Q//10
         mov     r2,r0,10
-        ljsr    r13,udiv32
+        ljsr    r13,udiv
         mov     r11,r1,0                # result (Q) = quotient + C
         add     r11,r5,0                # add C
         mov     r5,r2,0                 # (new) C = remainder from division
@@ -253,14 +253,20 @@ qm32_1:
         # Routine returns on divide by zero with carry flag set.
         #
         # ------------------------------------------------------------------
+udiv:   # generic entry point - will determine whether to invoke 32b or 16b version
+        # based on size of data in r1, r2
+        mov     r3, r1
+        or      r3, r2
+        bperm   r3, r3, 0x4432
+        nz.mov  pc, udiv32
 udiv16:
         lmov    r4,16           # loop counter
         movt    r1,r0
         bperm   r1, r1, 0x1044  # Move N into R5 upper half word/zero lower half
-        BRA     (udiv)
+        BRA     (udiv_0)
 udiv32:
         lmov    r4,32           # loop counter
-udiv:
+udiv_0:
         mov     r3,r0           # Initialise R
         cmp     r2,r0           # check D != 0
         z.mov   pc, r13         # bail out if zero (and carry will be set also)

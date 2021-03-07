@@ -1,6 +1,6 @@
 # The root directory of the project
 ROOT       = ../../..
-SERIAL     = /dev/cu.usbmodem1A124231
+SERIAL     ?= /dev/cu.usbmodem1A124231
 
 # The target .bit file to be generated including the monitor program
 TARGET     = system
