@@ -1,6 +1,9 @@
 `ifdef cpu_opc7
  `define use_lookahead
 `endif
+`ifdef cpu_opc6
+ `define use_lookahead
+`endif
 
 module system ( input clk, input[7:0] sw, output[7:0] led, input rxd, output txd,
                     output [6:0] seg, output [3:0] an, input select);

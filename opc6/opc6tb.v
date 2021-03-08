@@ -1,6 +1,7 @@
 `timescale 1ns / 1ns
 `define HALT 10'b00_0000_0000
 `define EXEC 3'b100
+
 module opc6tb();
    reg [15:0] mem [ 65535:0 ], iomem[65535:0];
    reg        clk, reset_b, interrupt_b, int_clk, m1, clken;
@@ -12,7 +13,20 @@ module opc6tb();
    wire          mreq_b = !(vda||vpa);
    integer       seed = 10;
    // OPC CPU instantiation
-   opc6cpu  dut0_u (.address(addr), .din(data0), .dout(data1), .rnw(rnw), .clk(clk), .reset_b(reset_b), .int_b({1'b1, interrupt_b}), .clken(clken), .vpa(vpa), .vda(vda), .vio(vio));
+   opc6cpu  dut0_u (
+                    .address(addr), 
+                    .din(data0), 
+                    .dout(data1), 
+                    .rnw(rnw), 
+                    .clk(clk), 
+                    .reset_b(reset_b), 
+                    .int_b({1'b1, interrupt_b}), 
+                    .clken(clken), 
+                    .vpa(vpa), 
+                    .vda(vda), 
+                    .vio(vio)
+                    );
+  
    initial begin
 
 `ifdef _dumpvcd
@@ -21,9 +35,6 @@ module opc6tb();
      $readmemh("test.hex", mem); // Problems with readmemb - use readmemh for now
      iomem[16'hfe08] = 16'b0; 
      { clk, int_clk, reset_b}  = 0;
-`ifndef POSEDGE_MEMORY
-      clken = 1'b1;
-`endif
      interrupt_b = 1;
      #3005 reset_b = 1;
      #50000000000000 ;  // no timeout
@@ -36,30 +47,27 @@ module opc6tb();
       m1 <= 0;
     else
       m1 <= !m1;
-`ifdef POSEDGE_MEMORY
+
   always @ (negedge clk or negedge reset_b)
     if ( !reset_b)
       clken = 1'b1;
     else
       clken <= (mreq_b | m1 | !reset_b) ;
+
   always @ (posedge clk) begin
-`else // Negedge memory
-    always @ (negedge clk) begin
-`endif
-      if (!rnw && !ceb && oeb && reset_b)
-        if ( !mreq_b) begin
-          mem[addr] <= data1;
-          $display(" STORE:  Address : 0x%04x ( %d )  : Data : 0x%04x ( %d)",addr,addr,data1,data1);
-        end
-        else begin  
-          iomem[addr]<= data1;    
-          $display("   OUT:  Address : 0x%04x ( %6d )       :        Data : 0x%04x ( %6d) %c ",addr,addr,data1,data1,data1);
+    if (!rnw && !ceb && oeb && reset_b)
+      if ( !mreq_b) begin
+        mem[addr] <= data1;
+        $display(" STORE:  Address : 0x%04x ( %d )  : Data : 0x%04x ( %d)",addr,addr,data1,data1);
       end
-      data0 <= (!mreq_b) ? mem[addr]: iomem[addr];
-      if ( dut0_u.FSM_q == dut0_u.RDM )
-        $display("  LOAD:  Address : 0x%04x ( %d )  : Data : 0x%04x ( %d)",addr,addr,data0,data0);       
-      
-    end
+      else begin  
+        iomem[addr]<= data1;    
+        $display("   OUT:  Address : 0x%04x ( %6d )       :        Data : 0x%04x ( %6d) %c ",addr,addr,data1,data1,data1);
+      end
+    data0 <= (!mreq_b) ? mem[addr]: iomem[addr];
+    if ( dut0_u.FSM_q == dut0_u.RDM )
+      $display("  LOAD:  Address : 0x%04x ( %d )  : Data : 0x%04x ( %d)",addr,addr,data0,data0);           
+  end
   always @ (posedge int_clk)
     if ( (($random(seed) %100)> 85) && interrupt_b ==1'b1)
       interrupt_b = 1'b0;

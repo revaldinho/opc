@@ -145,7 +145,8 @@ L4:     ld      r2,r7                   # r2 <- *remptr = r[i]
 
         mov     r2, r12                 # Q <- Q * i
         mov     r1, r11
-        jsr     r13,r0,qmul16
+        mul     r1, r2
+#        jsr     r13,r0,qmul16
         mov     r11,r1
 
         mov     pc,r0,L4                # loop again
@@ -248,16 +249,16 @@ pn1:    mov     r1, r3
         # - R1 = Product Register
         # - R3 = holds first shifted copy of A
         # ------------------------------------------------------------------
-qmul16:
-        lsr     r3,r1           # shift A into r3
-        mov     r1,r0           # initialise product (preserve C)
-qm16_1:
-        c.add   r1,r2           # add B into acc if carry
-        ASL     (r2)            # multiply B x 2
-        lsr     r3,r3           # shift A to check LSB
-        SBBCC   (nz,qm16_1)     # if A is zero then exit else loop again (preserving carry)
-        c.add   r1,r2           # Add last copy of multiplicand into acc if carry was set
-        RTS()
+#qmul16:
+#        lsr     r3,r1           # shift A into r3
+#        mov     r1,r0           # initialise product (preserve C)
+#qm16_1:
+#        c.add   r1,r2           # add B into acc if carry
+#        ASL     (r2)            # multiply B x 2
+#        lsr     r3,r3           # shift A to check LSB
+#        SBBCC   (nz,qm16_1)     # if A is zero then exit else loop again (preserving carry)
+#        c.add   r1,r2           # Add last copy of multiplicand into acc if carry was set
+#        RTS()
         # -----------------------------------------------------------------
         #
         # udiv16 (udiv16)
@@ -293,20 +294,22 @@ udiv16:
         mov     r2,r0                   # Get dividend/quotient into double word r1,2
         mov     r4,r0,-16               # Setup a loop counter
 udiv16_loop:
+
+MACRO DIVSTEP ()        
         ASL     (r1)                    # shift left the quotient/dividend
         ROL     (r2)                    #
         cmp     r2,r3                   # check if quotient is larger than divisor
         c.sub   r2,r3                   # if yes then do the subtraction for real
         c.adc   r1,r0                   # ... set LSB of quotient using (new) carry
+ENDMACRO
 
-        ASL     (r1)                    # shift left the quotient/dividend
-        ROL     (r2)                    #
-        cmp     r2,r3                   # check if quotient is larger than divisor
-        c.sub   r2,r3                   # if yes then do the subtraction for real
-        c.adc   r1,r0                   # ... set LSB of quotient using (new) carry
-
-        inc     r4, 2                   # increment loop counter zeroing carry
-        SBBCC   (nz,udiv16_loop)        # loop again if not finished
+        DIVSTEP ()
+        DIVSTEP ()
+        DIVSTEP ()
+        DIVSTEP ()        
+        inc     r4, 4                   # increment loop counter zeroing carry
+#        SBBCC   (nz,udiv16_loop)        # loop again if not finished
+        BCC   (nz,udiv16_loop)          # loop again if not finished        
         RTS     ()                      # and return with quotient/remainder in r1/r2
 
         # --------------------------------------------------------------

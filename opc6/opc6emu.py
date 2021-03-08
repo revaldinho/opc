@@ -1,5 +1,5 @@
 import sys, re
-mnemonics="mov,and,or,xor,add,adc,sto,ld,ror,jsr,sub,sbc,inc,lsr,dec,asr,halt,bswp,putpsr,getpsr,rti,not,out,in,push,pop,cmp,cmpc".split(",")
+mnemonics="mov,and,or,xor,add,adc,sto,ld,ror,jsr,sub,sbc,inc,lsr,dec,asr,halt,bswp,putpsr,getpsr,rti,not,out,in,push,pop,cmp,cmpc,mul".split(",")
 op = dict([(opcode,mnemonics.index(opcode)) for opcode in mnemonics])
 dis = dict([(mnemonics.index(opcode),opcode) for opcode in mnemonics])
 pred_dict = {0:"",1:"0.",2:"z.",3:"nz.",4:"c.",5:"nc.",6:"mi.",7:"pl."}
@@ -46,6 +46,8 @@ while True:
                 (regfile[pcreg], flag_save, preserve_flag ) = (pc_int, (0,psr_int[1],psr_int[2],psr_int[3],psr_int[4]), True )
             elif opcode in (op["and"], op["or"]):
                 regfile[dest] = ((regfile[dest] & ea_ed) if opcode==op["and"] else (regfile[dest] | ea_ed))& 0xFFFF
+            elif opcode == op["mul"]:
+                ( c, regfile[dest]) = ( ((regfile[dest] * ea_ed) & 0x10000)>> 16, (regfile[dest] * ea_ed) & 0xFFFF )
             elif opcode == op["xor"]:
                 regfile[dest] = (regfile[dest] ^ ea_ed) & 0xFFFF
             elif opcode in (op["ror"],op["asr"],op["lsr"]):
