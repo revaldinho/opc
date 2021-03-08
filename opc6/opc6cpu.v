@@ -1,3 +1,5 @@
+`define PUSHPOP 1
+`define MUL 1
 module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input clken,output vpa,output vda,output vio,output[15:0] dout,output[15:0] address,output rnw);  
   parameter MOV=5'h0,AND=5'h1,OR=5'h2,XOR=5'h3,ADD=5'h4,ADC=5'h5,STO=5'h6,LD=5'h7,ROR=5'h8,JSR=5'h9,SUB=5'hA,SBC=5'hB,INC=5'hC,LSR=5'hD,DEC=5'hE,ASR=5'hF;
   parameter HLT=5'h10,BSWP=5'h11,PPSR=5'h12,GPSR=5'h13,RTI=5'h14,NOT=5'h15,OUT=5'h16,IN=5'h17,PUSH=5'h18,POP=5'h19,CMP=5'h1A,CMPC=5'h1B,MUL=5'h1C;
@@ -22,7 +24,9 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   always @( * ) begin
     case (op)
       AND,OR               :{carry,result} = {PSR_q[C],(IR_q[8])?(RF_dout & operand):(RF_dout | operand)};
+`ifdef MUL      
       MUL                  :{carry,result} = (RF_dout * operand) & 17'h1FFFF;
+`endif      
       ADD,ADC,INC          :{carry,result} = RF_dout + operand + (IR_q[8] & PSR_q[C]);
       SUB,SBC,CMP,CMPC,DEC :{carry,result} = RF_dout + (operand ^ 16'hFFFF) + ((IR_q[8])?PSR_q[C]:1);
       XOR,GPSR             :{carry,result} = (IR_q[IRNPRED])?{PSR_q[C],8'b0,PSR_q}:{PSR_q[C],RF_dout ^ operand};
@@ -34,11 +38,20 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   end // always @ ( * )
   always @( * ) begin
     case (FSM_q)
+`ifdef PUSHPOP      
       FET0   : FSM_d = (din[IRLEN]) ? FET1 : (!pred_din) ? FET0 : ((din[11:8]==LD)||(din[11:8]==STO)||(op_d==PUSH)||(op_d==POP)) ? EAD : EXEC;
+`else      
+      FET0   : FSM_d = (din[IRLEN]) ? FET1 : (!pred_din) ? FET0 : ((din[11:8]==LD)||(din[11:8]==STO)) ? EAD : EXEC;
+`endif      
       FET1   : FSM_d = (!pred_q )? FET0: ((IR_q[3:0]!=0) || (IR_q[IRLD])||IR_q[IRSTO])?EAD:EXEC;
       EAD    : FSM_d = (IR_q[IRLD]) ? RDM : (IR_q[IRSTO]) ? WRM : EXEC;
+`ifdef PUSHPOP      
       EXEC   : FSM_d = ((!(&int_b) & PSR_q[EI])||((op==PPSR) && (|swiid)))?INT:((IR_q[3:0]==4'hF)||(op==JSR))?FET0:
                        (din[IRLEN]) ? FET1 : ((din[11:8]==LD)||(din[11:8]==STO)||(op_d==POP)||(op_d==PUSH))?EAD:(pred_d)?EXEC:FET0;
+`else
+      EXEC   : FSM_d = ((!(&int_b) & PSR_q[EI])||((op==PPSR) && (|swiid)))?INT:((IR_q[3:0]==4'hF)||(op==JSR))?FET0:
+                       (din[IRLEN]) ? FET1 : ((din[11:8]==LD)||(din[11:8]==STO))?EAD:(pred_d)?EXEC:FET0;
+`endif
       WRM    : FSM_d = (!(&int_b) & PSR_q[EI])?INT:FET0;
       default: FSM_d = (FSM_q==RDM)? EXEC : FET0;  // Applies to INT and RDM plus undefined states
     endcase
@@ -56,7 +69,11 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   always @ ( * ) begin
     IR_d = IR_q;
     if ((FSM_q==FET0)||(FSM_q==EXEC))
+`ifdef PUSHPOP                                              
       IR_d = {(op_d==PUSH)||(op_d==POP),(din[15:13]==3'b001),(din[11:8]==STO)||(op_d==PUSH),(din[11:8]==LD)||(op_d==POP),din};
+`else                                              
+      IR_d = {(op_d==PUSH)||(op_d==POP),(din[15:13]==3'b001),(din[11:8]==STO),(din[11:8]==LD),din};
+`endif                                              
     else if (((FSM_q==EAD && (IR_q[IRLD]||IR_q[IRSTO]))||(FSM_q==RDM)))
       IR_d[7:0] = {IR_q[3:0],IR_q[7:4]}; // Swap source/dest reg in EA for reads and writes for writeback of 'source' in push/pop .. swap back again in RDMEM
   end
@@ -66,8 +83,12 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
       if (!reset_s1_b)
         {PCI_q,PSRI_q,PSR_q,PC_q,FSM_q,IR_q} <= 0;
       else begin
-        {PC_q,FSM_q,IR_q} <= { PC_d, FSM_d, IR_d};        
+        {PC_q,FSM_q,IR_q} <= { PC_d, FSM_d, IR_d};
+`ifdef PUSHPOP                                              
         OR_q <= ((FSM_q==FET0)||(FSM_q==EXEC))?({16{op_d==PUSH}}^({12'b0,(op_d==DEC)||(op_d==INC)?din[7:4]:{3'b0,(op_d==POP)}})):(FSM_q==EAD)?RF_w_p2+OR_q:din;
+`else
+        OR_q <= ((FSM_q==FET0)||(FSM_q==EXEC))?({16{1'b0}}^({12'b0,(op_d==DEC)||(op_d==INC)?din[7:4]:{3'b0,(1'b0)}})):(FSM_q==EAD)?RF_w_p2+OR_q:din;
+`endif                                              
         if ( FSM_q == INT )
           {PCI_q,PSRI_q,PSR_q[EI]} <= {PC_q,PSR_q[3:0],1'b0} ; // Always clear EI on taking interrupt
         else if ( FSM_q == EXEC)
