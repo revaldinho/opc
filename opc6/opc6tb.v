@@ -36,8 +36,8 @@ module opc6tb();
      iomem[16'hfe08] = 16'b0; 
      { clk, int_clk, reset_b}  = 0;
      interrupt_b = 1;
-     #2005 reset_b = 1;
-     #5000000 ;  // no timeout
+     #2505 reset_b = 1;
+     #500000000 ;  // no timeout
      $finish;
    end
   always @ (posedge clk or negedge reset_b)

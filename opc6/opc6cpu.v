@@ -11,7 +11,7 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   reg [2:0]           FSM_q,FSM_d;
   reg [3:0]           swiid,PSRI_q;
   reg [7:0]           PSR_q ;
-  reg                 zero,carry,sign,enable_int,reset_s0_b,reset_s1_b,pred_q;
+  reg                 zero,carry,sign,enable_int,reset_s0_b,reset_s1_b,pred_q, reset_s2_b, reset_s2_q;
   wire [4:0]          op       = {IR_q[IRNPRED],IR_q[11:8]};
   wire [4:0]          op_d     = { (din[15:13]==3'b001),din[11:8] };
   wire                pred_d   = (din[15:13]==3'b001) || (din[P2] ^ (din[P1] ? (din[P0] ? sign : zero): (din[P0] ? carry : 1))); // New data,new flags (in exec/fetch)
@@ -21,8 +21,8 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   wire [15:0]         RF_w_p2_d  = (IR_d[7:4]==4'hF) ? PC_d: {16{(IR_d[7:4]!=4'h0)}} & RF_q[IR_d[7:4]];                          // Port 2 always reads source reg  
   wire [15:0]         RF_dout_d  = (IR_d[3:0]==4'hF) ? PC_d: {16{(IR_d[3:0]!=4'h0)}} & RF_q[IR_d[3:0]];                          // Port 1 always reads dest reg  
   wire [15:0]         operand  = (IR_q[IRLEN]||IR_q[IRLD]||(op==INC)||(op==DEC)||(IR_q[IRWBK]))?OR_q:RF_w_p2;           // One word instructions operand usu comes from RF
-  assign {rnw,dout,address} = {!(FSM_d==WRM), RF_w_p2_d,(FSM_d==WRM||FSM_d==RDM)? ((op_d==POP)? RF_dout: OR_d)  : PC_d};
-  assign {vpa,vda,vio}      = {((FSM_d==FET0)||(FSM_d==FET1)||(FSM_d==EXEC)),({2{(FSM_d==RDM)||(FSM_d==WRM)}} & {!((op_d==IN)||(op_d==OUT)),(op_d==IN)||(op_d==OUT)})};
+  assign {rnw,dout,address} = {!(FSM_d==WRM), RF_w_p2_d,(FSM_d==WRM||FSM_d==RDM)? ((op==POP)? RF_dout_d: OR_d)  : PC_d};
+  assign {vpa,vda,vio}      = {((FSM_d==FET0)||(FSM_d==FET1)||(FSM_d==EXEC)),({2{(FSM_d==RDM)||(FSM_d==WRM)}} & {!((op==IN)||(op==OUT)),(op==IN)||(op==OUT)})};
   always @( * ) begin
     case (op)
       AND,OR               :{carry,result} = {PSR_q[C],(IR_q[8])?(RF_dout & operand):(RF_dout | operand)};
@@ -70,7 +70,7 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   always @ ( * ) begin
     if ( FSM_q == INT )
       PC_d = (!int_b[1])?INT_VECTOR1:INT_VECTOR0 ; // Always clear EI on taking interrupt
-    else if ((FSM_q==FET0)||(FSM_q==FET1))
+    else if (((FSM_q==FET0)||(FSM_q==FET1)) && reset_s2_b) // Wait one extra cycle after reset
       PC_d = PC_q + 1;
     else if ( FSM_q == EXEC)
       PC_d = (op==RTI)?PCI_q: ((IR_q[3:0]==4'hF)||(op==JSR))?result:(((!(&int_b)) && PSR_q[EI])||((op==PPSR)&&(|swiid)))?PC_q:PC_q + 1;
@@ -90,7 +90,7 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   end
   always @(posedge clk) begin
     if (clken) begin
-      {reset_s0_b,reset_s1_b,pred_q} <= {reset_b,reset_s0_b,(FSM_q==FET0)?pred_din:pred_d};
+      {reset_s0_b,reset_s1_b,reset_s2_b,pred_q} <= {reset_b,reset_s0_b,reset_s1_b,(FSM_q==FET0)?pred_din:pred_d};
       if (!reset_s1_b)
         {PCI_q,PSRI_q,PSR_q,PC_q,FSM_q,IR_q,OR_q} <= 0;
       else begin
