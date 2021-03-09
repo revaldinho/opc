@@ -36,8 +36,8 @@ module opc6tb();
      iomem[16'hfe08] = 16'b0; 
      { clk, int_clk, reset_b}  = 0;
      interrupt_b = 1;
-     #3005 reset_b = 1;
-     #50000000000000 ;  // no timeout
+     #2005 reset_b = 1;
+     #5000000 ;  // no timeout
      $finish;
    end
   always @ (posedge clk or negedge reset_b)
@@ -52,7 +52,8 @@ module opc6tb();
     if ( !reset_b)
       clken = 1'b1;
     else
-      clken <= (mreq_b | m1 | !reset_b) ;
+      clken = 1'b1;  
+//      clken <= (mreq_b | m1 | !reset_b) ;
 
   always @ (posedge clk) begin
     if (!rnw && !ceb && oeb && reset_b)
@@ -62,17 +63,17 @@ module opc6tb();
       end
       else begin  
         iomem[addr]<= data1;    
-        $display("   OUT:  Address : 0x%04x ( %6d )       :        Data : 0x%04x ( %6d) %c ",addr,addr,data1,data1,data1);
+        $display("   OUT:  Address : 0x%04x ( %6d )       :        Data : 0x%04x ( %6d) %c ",addr,addr,data1,data1,(data1>31 && data1<128) ? data1: 32);
       end
     data0 <= (!mreq_b) ? mem[addr]: iomem[addr];
     if ( dut0_u.FSM_q == dut0_u.RDM )
       $display("  LOAD:  Address : 0x%04x ( %d )  : Data : 0x%04x ( %d)",addr,addr,data0,data0);           
   end
-  always @ (posedge int_clk)
-    if ( (($random(seed) %100)> 85) && interrupt_b ==1'b1)
-      interrupt_b = 1'b0;
-    else
-      interrupt_b = 1'b1;
+//  always @ (posedge int_clk)
+//    if ( (($random(seed) %100)> 85) && interrupt_b ==1'b1)
+//      interrupt_b = 1'b0;
+//    else
+//      interrupt_b = 1'b1;
   always begin
     #273   int_clk = !int_clk;
     #5000  int_clk = !int_clk;
