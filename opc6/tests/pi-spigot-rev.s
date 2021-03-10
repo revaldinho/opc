@@ -47,12 +47,22 @@ MACRO   INC( _reg_, _num_ )
 ENDMACRO
 
 MACRO   PUSH( _data_)
-        push    _data_, r14
+    sto     _data_, r14
+    mov     r14, r14, -1
 ENDMACRO
 
 MACRO   POP( _data_ )
-        pop     _data_, r14
+    mov    r14, r14, 1
+    ld      _data_, r14
 ENDMACRO
+        
+## MACRO   PUSH( _data_)
+##         push    _data_, r14
+## ENDMACRO
+## 
+## MACRO   POP( _data_ )
+##         pop     _data_, r14
+## ENDMACRO
 
 MACRO   ROL( _reg_ )
         adc     _reg_, _reg_
@@ -145,8 +155,8 @@ L4:     ld      r2,r7                   # r2 <- *remptr = r[i]
 
         mov     r2, r12                 # Q <- Q * i
         mov     r1, r11
-        mul     r1, r2
-#        jsr     r13,r0,qmul16
+#        mul     r1, r2
+        jsr     r13,r0,qmul16
         mov     r11,r1
 
         mov     pc,r0,L4                # loop again
@@ -249,16 +259,16 @@ pn1:    mov     r1, r3
         # - R1 = Product Register
         # - R3 = holds first shifted copy of A
         # ------------------------------------------------------------------
-#qmul16:
-#        lsr     r3,r1           # shift A into r3
-#        mov     r1,r0           # initialise product (preserve C)
-#qm16_1:
-#        c.add   r1,r2           # add B into acc if carry
-#        ASL     (r2)            # multiply B x 2
-#        lsr     r3,r3           # shift A to check LSB
-#        SBBCC   (nz,qm16_1)     # if A is zero then exit else loop again (preserving carry)
-#        c.add   r1,r2           # Add last copy of multiplicand into acc if carry was set
-#        RTS()
+qmul16:
+        lsr     r3,r1           # shift A into r3
+        mov     r1,r0           # initialise product (preserve C)
+qm16_1:
+        c.add   r1,r2           # add B into acc if carry
+        ASL     (r2)            # multiply B x 2
+        lsr     r3,r3           # shift A to check LSB
+        SBBCC   (nz,qm16_1)     # if A is zero then exit else loop again (preserving carry)
+        c.add   r1,r2           # Add last copy of multiplicand into acc if carry was set
+        RTS()
         # -----------------------------------------------------------------
         #
         # udiv16 (udiv16)
@@ -288,6 +298,7 @@ pn1:    mov     r1, r3
         #
         # Routine returns on divide by zero with carry flag set.
         #
+        
         # ------------------------------------------------------------------
 udiv16:
         mov     r3,r2                   # Save D in r3

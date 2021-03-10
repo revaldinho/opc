@@ -78,7 +78,6 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
         dst_d = 4'b0; // Zero dest addr after reading it in EAD for CMP operations
       else if ( FSM_q == INT )
         {PC_d,PCI_d,PSRI_d,PSR_d[EI]} = {(!int_b[1])?INT_VECTOR1:INT_VECTOR0,PC_q,PSR_q[3:0],1'b0};
-
       addr_d = (vpa_d)? PC_d : RF_sout+din_sxt;
     end
   end
