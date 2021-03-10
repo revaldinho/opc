@@ -1,5 +1,5 @@
-`define PUSHPOP 1
-`define MUL 1
+//`define PUSHPOP 1
+//`define MUL 1
 module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input clken,output vpa,output vda,output vio,output[15:0] dout,output[15:0] address,output rnw);
   parameter MOV=5'h0,AND=5'h1,OR=5'h2,XOR=5'h3,ADD=5'h4,ADC=5'h5,STO=5'h6,LD=5'h7,ROR=5'h8,JSR=5'h9,SUB=5'hA,SBC=5'hB,INC=5'hC,LSR=5'hD,DEC=5'hE,ASR=5'hF;
   parameter HLT=5'h10,BSWP=5'h11,PPSR=5'h12,GPSR=5'h13,RTI=5'h14,NOT=5'h15,OUT=5'h16,IN=5'h17,PUSH=5'h18,POP=5'h19,CMP=5'h1A,CMPC=5'h1B,MUL=5'h1C;
@@ -8,7 +8,6 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   reg [15:0]          OR_q,OR_d,PC_q,PC_d,PCI_q,result;
   reg [19:0]          IR_q, IR_d; (* RAM_STYLE="DISTRIBUTED" *)
   reg [15:0]          RF_q[15:0];
-  reg [15:0]          RF_dout_q, RF_w_p2_q;          
   reg [2:0]           FSM_q,FSM_d;
   reg [3:0]           swiid,PSRI_q;
   reg [7:0]           PSR_q ;
@@ -60,15 +59,6 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
       default: FSM_d = (FSM_q==RDM)? EXEC : FET0;  // Applies to INT and RDM plus undefined states
     endcase
   end
-
-  always @ ( * ) begin
-`ifdef PUSHPOP
-        OR_d <= ((FSM_q==FET0)||(FSM_q==EXEC))?({16{op_d==PUSH}}^({12'b0,(op_d==DEC)||(op_d==INC)?din[7:4]:{3'b0,(op_d==POP)}})):(FSM_q==EAD)?RF_w_p2+OR_q:din;
-`else
-        OR_d <= ((FSM_q==FET0)||(FSM_q==EXEC))?({12'b0,(op_d==DEC)||(op_d==INC)?din[7:4]:4'b0}):(FSM_q==EAD)?RF_w_p2+OR_q:din;
-`endif
-  end
-
   always @ ( * ) begin
     if ( FSM_q == INT )
       PC_d = (!int_b[1])?INT_VECTOR1:INT_VECTOR0 ; // Always clear EI on taking interrupt
@@ -81,12 +71,15 @@ module opc6cpu(input[15:0] din,input clk,input reset_b,input[1:0] int_b,input cl
   end
   always @ ( * ) begin
     IR_d = IR_q;
-    if ((FSM_q==FET0)||(FSM_q==EXEC))
 `ifdef PUSHPOP
+    OR_d <= ((FSM_q==FET0)||(FSM_q==EXEC))?({16{op_d==PUSH}}^({12'b0,(op_d==DEC)||(op_d==INC)?din[7:4]:{3'b0,(op_d==POP)}})):(FSM_q==EAD)?RF_w_p2+OR_q:din;    
+    if ((FSM_q==FET0)||(FSM_q==EXEC))
       IR_d = {(op_d==PUSH)||(op_d==POP),(din[15:13]==3'b001),(din[11:8]==STO)||(op_d==PUSH),(din[11:8]==LD)||(op_d==POP),din};
     else if (((FSM_q==EAD && (IR_q[IRLD]||IR_q[IRSTO]))||(FSM_q==RDM)))
       IR_d[7:0] = {IR_q[3:0],IR_q[7:4]}; // Swap source/dest reg in EA for reads and writes for writeback of 'source' in push/pop .. swap back again in RDMEM
-`else
+`else    
+    OR_d <= ((FSM_q==FET0)||(FSM_q==EXEC))?({12'b0,(op_d==DEC)||(op_d==INC)?din[7:4]:4'b0}):(FSM_q==EAD)?RF_w_p2+OR_q:din;
+    if ((FSM_q==FET0)||(FSM_q==EXEC))
       IR_d = {1'b0,(din[15:13]==3'b001),(din[11:8]==STO),(din[11:8]==LD),din};
 `endif
   end
