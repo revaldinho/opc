@@ -19,14 +19,14 @@
         # routines here need to find the relevant bit in each 32 bit word which holds
         # the marker for any given number. In fact we only ever store 'odd' flags to mem[]
         # so there's another factor of 2 saving. In 64KWords then we can handle up to
-        # 64K x 32 = >4M. 
+        # 64K x 32 = >4M.
         #
         # Register Usage
         #
         # r15 = PC
         # r14 = SP
         # r13 = link
-        # r11 = 32b outer loop counter (ptr) 
+        # r11 = 32b outer loop counter (ptr)
         # r9  = MAX number to sift
         # r7  = inner loop counter (p2)
         # ----------------------------------------------------------------------
@@ -117,7 +117,7 @@ ENDMACRO
         EQU   MAX,1000                         # set max number to sift through
 start:
         PUSH (r13,r14) # for running via monitor
-        mov   r9,r0, MAX 
+        mov   r9,r0, MAX
 
         # Zero all entries first
         mov   r1,r0
@@ -148,7 +148,7 @@ L1:     mov   r1,r11            # Copy pointer val into r1
 
         mov   r7,r11            # p2 <- ptr
 L2:
-        add   r7,r11            # Increment by ptr         
+        add   r7,r11            # Increment by ptr
         mov   r1,r7             # Copy number into r1
         not   r2,r0             # Function: 1 = get_bit, 0=set bit
         JSR   (bit)             # Set the bit
@@ -195,7 +195,7 @@ bit:
         c.sto   r4,r3,results   # Write back the word (C and Z preserved)
         RTS     ()
 
-        # ------------------------------------------------------------        
+        # ------------------------------------------------------------
         # printdec32
         #
         # Print unsigned decimal integer from a 32b number to console
@@ -215,13 +215,13 @@ bit:
         # r3,r4 = Remainder (eventually bits only in r3)
         # ------------------------------------------------------------
 
-printdec32:   
+printdec32:
         PUSHALL    ()          # Save all registers above r4 to stack
 
-        mov r7,r0,0            # leading zero flag     
+        mov r7,r0,0            # leading zero flag
         mov r9,r0,8            # r9 points to end of 9 entry table
         mov r3,r1              # move number into r3 to sav juggling over oswrch call
-pd32_l1:        
+pd32_l1:
         ld r5,r9,pd32_table    # get 32b divisor from table low word first
         mov r8,r0              # set Q = 0
 pd32_l1a:
@@ -230,51 +230,51 @@ pd32_l1a:
         sub r3,r5              # If yes, then do the subtraction
         add r8,r0,1            # Increment the quotient
         lmov pc, pd32_l1a      # Loop again to try another subtraction
-        
+
 pd32_l2:
         mov r1,r8,48           # put ASCII val of quotient in r1
-        add r7,r8              # Add digit into leading zero flag        
+        add r7,r8              # Add digit into leading zero flag
         nz.ljsr r13,oswrch     # Print only if the leading zero flag is non-zero
 
 pd32_l3:
-        sub r9,r0,1            # Point at the next divisor in the table 
+        sub r9,r0,1            # Point at the next divisor in the table
         pl.lmov pc,pd32_l1     # If entry number >= 0 then loop again
         mov r1,r3,48           # otherwise convert remainder low word to ASCII
         JSR   (oswrch)         # and print it
-        
+
 
         POPALL  ()             # Restore all high registers and return
-        RTS()        
+        RTS()
 
 
 newline:
         PUSH  (r1)
         PUSH  (r2)
-        PUSH  (r13)                
+        PUSH  (r13)
         mov   r1, r0, 10       # LF/CR pair to finish
         JSR   (oswrch)
         mov   r1, r0, 13
         JSR   (oswrch)
         POP   (r13)
         POP   (r2)
-        POP   (r1)                
+        POP   (r1)
         RTS()
-         
-        
-        # Divisor table for printdec32, 
+
+
+        # Divisor table for printdec32,
 pd32_table:
-        WORD            10 
-        WORD           100 
-        WORD          1000 
-        WORD         10000 
-        WORD        100000 
-        WORD       1000000 
-        WORD      10000000 
-        WORD     100000000 
-        WORD    1000000000 
+        WORD            10
+        WORD           100
+        WORD          1000
+        WORD         10000
+        WORD        100000
+        WORD       1000000
+        WORD      10000000
+        WORD     100000000
+        WORD    1000000000
 
 
-        
+
         # Bit masks for set_bit, get_bit
 bitmask:
         WORD 0x00000001,0x00000002,0x00000004,0x00000008
@@ -301,7 +301,7 @@ results: WORD   0       # results will go here
         # ---------------------------------------------------------------
 oswrch:
         PUSH    (r3)
-        lmov    r3,0x08000       
+        lmov    r3,0x08000
 oswrch_loop:
         in      r2, r0, 0xfe08
         and     r2, r3

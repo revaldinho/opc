@@ -1,3 +1,4 @@
+`define cpu_opc7 1
 `ifdef cpu_opc7
  `define use_lookahead
 `endif

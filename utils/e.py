@@ -1,5 +1,5 @@
 #
-# Compute digits of e using Rabinowitz & Wagon spigot algorithm 
+# Compute digits of e using Rabinowitz & Wagon spigot algorithm
 #
 # python3 e.py  [digits]
 #
@@ -34,15 +34,15 @@ for j in range(0,digits-1):
         max_n   = max( max_n, n)
 
     result.append( "%d" % q )
-    
+
 result = ''.join(result)
 
 print(result)
 
 print("Cols         : %d" %cols)
-print("Max remainder: 0x%04X" % max_rem ) 
-print("Max Quotient : 0x%04X" % max_quo ) 
-print("Max N        : 0x%04X" % max_n ) 
+print("Max remainder: 0x%04X" % max_rem )
+print("Max Quotient : 0x%04X" % max_quo )
+print("Max N        : 0x%04X" % max_n )
 
 ## Check vs the reference
 

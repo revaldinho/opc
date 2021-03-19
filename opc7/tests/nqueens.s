@@ -64,7 +64,7 @@ MACRO   PUSHALL()
         sto     r10, r14, 6
         sto     r11, r14, 7
         sto     r12, r14, 8
-        sto     r13, r14, 9                        
+        sto     r13, r14, 9
 ENDMACRO
 
 MACRO   POPALL()
@@ -79,7 +79,7 @@ MACRO   POPALL()
         ld      r13, r14, 9
         mov     r14, r14, 9
 ENDMACRO
-        
+
 
 MACRO   JSR ( _addr_ )
         ljsr r13, _addr_
@@ -131,7 +131,7 @@ L90:    sub     r9,r0,1         # Y = Y-1
                                 # IF X-Y != ABS(T) GOTO L90
         sub     r1,r10          # [if ABS(T)-X+Y!=0]
         add     r1,r9           #
-        nz.add  pc,r0,L90-PC       
+        nz.add  pc,r0,L90-PC
 L140:   ld      r1,r10,results  # r1 = A(X)
         sub     r1,r0,1
         sto     r1,r10,results  # A(X) = A(X)-1
@@ -210,14 +210,14 @@ P5:     mov     r1,r0,ord('Q')
 
 
 print_nl:
-        PUSH (r13,r14) 
+        PUSH (r13,r14)
         mov     r1,r0,10
         ljsr    r13,oswrch
         mov     r1,r0,13
         ljsr    r13,oswrch
-        POP (r13,r14) 
+        POP (r13,r14)
         RTS     ()
-        # ------------------------------------------------------------        
+        # ------------------------------------------------------------
         # printdec32
         #
         # Print unsigned decimal integer from a 32b number to console
@@ -237,13 +237,13 @@ print_nl:
         # r3,r4 = Remainder (eventually bits only in r3)
         # ------------------------------------------------------------
 
-printdec32:   
+printdec32:
         PUSHALL    ()          # Save all registers above r4 to stack
 
-        mov r7,r0,0            # leading zero flag     
+        mov r7,r0,0            # leading zero flag
         mov r9,r0,8            # r9 points to end of 9 entry table
         mov r3,r1              # move number into r3 to sav juggling over oswrch call
-pd32_l1:        
+pd32_l1:
         ld r5,r9,pd32_table    # get 32b divisor from table low word first
         mov r8,r0              # set Q = 0
 pd32_l1a:
@@ -252,34 +252,34 @@ pd32_l1a:
         sub r3,r5              # If yes, then do the subtraction
         add r8,r0,1            # Increment the quotient
         lmov pc, pd32_l1a      # Loop again to try another subtraction
-        
+
 pd32_l2:
         mov r1,r8,48           # put ASCII val of quotient in r1
-        add r7,r8              # Add digit into leading zero flag        
+        add r7,r8              # Add digit into leading zero flag
         nz.ljsr r13,oswrch     # Print only if the leading zero flag is non-zero
 
 pd32_l3:
-        sub r9,r0,1            # Point at the next divisor in the table 
+        sub r9,r0,1            # Point at the next divisor in the table
         pl.lmov pc,pd32_l1     # If entry number >= 0 then loop again
         mov r1,r3,48           # otherwise convert remainder low word to ASCII
         JSR   (oswrch)         # and print it
-        
+
 
         POPALL  ()             # Restore all high registers and return
         RTS()
-        
-        # Divisor table for printdec32, 
+
+        # Divisor table for printdec32,
 pd32_table:
-        WORD            10 
-        WORD           100 
-        WORD          1000 
-        WORD         10000 
-        WORD        100000 
-        WORD       1000000 
-        WORD      10000000 
-        WORD     100000000 
+        WORD            10
+        WORD           100
+        WORD          1000
+        WORD         10000
+        WORD        100000
+        WORD       1000000
+        WORD      10000000
+        WORD     100000000
         WORD    1000000000
-        
+
 results: WORD   0       # results will go here
 
 

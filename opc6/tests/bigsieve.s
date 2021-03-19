@@ -35,6 +35,50 @@
 MACRO   RTS ()
         mov     pc,r13
 ENDMACRO
+## MACRO   PUSH( _data_)
+##     mov     r14, r14, -1
+##     sto     _data_, r14, 1
+## ENDMACRO
+## 
+## MACRO   POP( _data_ )
+##     ld      _data_, r14, 1
+##     mov     r14, r14, 1
+## ENDMACRO
+## 
+## MACRO   PUSHALL()
+##         mov     r14,r14, -9
+##         sto     r5, r14, 1
+##         sto     r6, r14, 2
+##         sto     r7, r14, 3
+##         sto     r8, r14, 4
+##         sto     r9, r14, 5
+##         sto     r10, r14, 6
+##         sto     r11, r14, 7
+##         sto     r12, r14, 8
+##         sto     r13, r14, 9
+## ENDMACRO
+## 
+## MACRO   POPALL()
+##         ld      r5, r14, 1
+##         ld      r6, r14, 2
+##         ld      r7, r14, 3
+##         ld      r8, r14, 4
+##         ld      r9, r14, 5
+##         ld      r10, r14, 6
+##         ld      r11, r14, 7
+##         ld      r12, r14, 8
+##         ld      r13, r14, 9
+##         mov     r14, r14, 9
+## ENDMACRO
+
+        
+MACRO   PUSH( _data_)
+     push    _data_, r14
+ENDMACRO
+
+MACRO   POP( _data_ )
+    pop     _data_, r14
+ENDMACRO
 MACRO   PUSHALL()
         push     r13, r14
         push     r12, r14
@@ -74,9 +118,9 @@ ENDMACRO
         mov   pc,r0,start
 
         ORG   0x1000
-        EQU   MAX,1000                          # set max number to sift through (<1.7M)
+        EQU   MAX,1024                        # set max number to sift through (<1.7M)
 start:
-        push  r13,r14                           # for running via monitor
+        PUSH  (r13)                           # for running via monitor
         mov   r10,r0, (MAX & 0xFFFF0000) >> 16  # upper word
         mov   r9, r0, MAX & 0xFFFF              # lower word
 
@@ -130,7 +174,7 @@ L3:     inc   r11,2             # skip even numbers so always increment by 2
         nz.mov pc,r0,L1
 
         halt    r0,r0,0xBEEB
-        pop     r13,r14         # for running via monitor
+        POP     (r13)          # for running via monitor
         RTS     ()
         
         # ----------------------------
@@ -150,7 +194,7 @@ bit:
         lsr     r4,r1           # Check if incoming number is even
         nc.inc  r1,1            # if even then set the NZ flag, preserve C
         nc.mov  pc,r13          # and bail out
-        push    r3,r14          # save the function type
+        PUSH    (r3)            # save the function type
         lsr     r2,r2           # First divide original number by 2 - storing odds only
         ror     r1,r1
         lsr     r4,r2           # Now complete divide by 16 into r4,r3 
@@ -165,7 +209,7 @@ bit:
         and     r1,r0,0x000F    # bit position = remainder from original number div 16
         ld      r1,r1,bitmask   # Get the bitmask for that bit position        
         ld      r4,r3,results   # Load the word into r4
-        pop     r2,r14          # Pop the function type
+        POP     (r2)            # Pop the function type
         ror     r2,r2           # rotate LSB of r2 into carry
         nc.and  r4,r1           # if 'get' then check if bit is set and set Z or NZ (C preserved)
         c.or    r4,r1           # otherwise 'Or' in the bitmask value if carry set (and C preserved)

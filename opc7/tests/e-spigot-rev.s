@@ -44,7 +44,7 @@ MACRO   POP( _data_ )
     mov     r14, r14, 1
 ENDMACRO
 
-  
+
         # r14 = stack pointer
         # r13 = link register
         # r12 = inner loop counter

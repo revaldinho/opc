@@ -22,29 +22,70 @@ ENDMACRO
 MACRO   JSR (_addr_)
         jsr     r13,r0,_addr_
 ENDMACRO
+        
+## MACRO   PUSHALL()
+##         push     r13, r14
+##         push     r12, r14
+##         push     r11, r14
+##         push     r10, r14
+##         push      r9, r14
+##         push      r8, r14
+##         push      r7, r14
+##         push      r6, r14
+##         push      r5, r14
+## ENDMACRO
+## 
+## MACRO   POPALL()
+##         pop     r5, r14
+##         pop     r6, r14
+##         pop     r7, r14
+##         pop     r8, r14
+##         pop     r9, r14
+##         pop    r10, r14
+##         pop    r11, r14
+##         pop    r12, r14
+##         pop    r13, r14
+## ENDMACRO
+
+MACRO   PUSH( _data_)
+    mov     r14, r14, -1
+    sto     _data_, r14, 1
+ENDMACRO
+
+MACRO   POP( _data_ )
+    ld      _data_, r14, 1
+    mov     r14, r14, 1
+ENDMACRO
+
 MACRO   PUSHALL()
-        push     r13, r14
-        push     r12, r14
-        push     r11, r14
-        push     r10, r14
-        push      r9, r14
-        push      r8, r14
-        push      r7, r14
-        push      r6, r14
-        push      r5, r14
+        mov     r14,r14, -9
+        sto     r5, r14, 1
+        sto     r6, r14, 2
+        sto     r7, r14, 3
+        sto     r8, r14, 4
+        sto     r9, r14, 5
+        sto     r10, r14, 6
+        sto     r11, r14, 7
+        sto     r12, r14, 8
+        sto     r13, r14, 9
 ENDMACRO
 
 MACRO   POPALL()
-        pop     r5, r14
-        pop     r6, r14
-        pop     r7, r14
-        pop     r8, r14
-        pop     r9, r14
-        pop    r10, r14
-        pop    r11, r14
-        pop    r12, r14
-        pop    r13, r14
+        ld      r5, r14, 1
+        ld      r6, r14, 2
+        ld      r7, r14, 3
+        ld      r8, r14, 4
+        ld      r9, r14, 5
+        ld      r10, r14, 6
+        ld      r11, r14, 7
+        ld      r12, r14, 8
+        ld      r13, r14, 9
+        mov     r14, r14, 9
 ENDMACRO
+
+
+
+
 MACRO   PRINT_NL()
         jsr     r13,r0,print_nl
 ENDMACRO
