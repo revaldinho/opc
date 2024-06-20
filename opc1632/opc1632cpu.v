@@ -27,6 +27,16 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
   parameter STW  =6'h15;
   parameter LDH  =6'h16;
   parameter STH  =6'h17;
+
+  parameter MUL   =6'h18;
+`ifdef BARREL_SHIFTER
+  parameter BSROR  =6'h19;
+  parameter BSASR  =6'h1A;
+  parameter BSLSL  =6'h1B;
+  parameter BSROL  =6'h1C;
+  parameter BSLSR  =6'h1D;
+`endif
+
   // PREDICATED INSTRUCTIONS (LISTED WITH COND=0/LSBs=0)
   parameter JSR  =6'h20;
   parameter MOV  =6'h28;
@@ -61,15 +71,17 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `define IMM6_b5 14
 `define IMM6_b4 11
 `define IS_COND_d  (din[13]  ==1'b1)
-  reg [31:0]    OR_d,OR_q,PC_d,PC_q,PCI_d,PCI_q,result,RF1_d,RF1_q;
+`define PCI 4'hF
+
+  reg [31:0]    OR_d,OR_q,PC_d,PC_q,result,RF1_d,RF1_q,PCI_q;
   (* RAM_STYLE="DISTRIBUTED" *)
   reg [31:0]    RF_q[15:0];
   reg [7:0]     PSR_d,PSR_q;
   reg [5:0]     op_d,op_q;
   reg [4:0]     FSM_q, FSM_d;
-  reg [3:0]     PSRI_d,PSRI_q,rdst_d,rdst_q,rsrc_d,rsrc_q;
+  reg [3:0]     PSRI_d,PSRI_q,rdst_d,rdst_q,rsrc_d,wdst_q,wdst_d,rsrc_q;
   reg [1:0]     len_d, len_q;
-  reg           carry,rst0_qb,rst1_qb,pred_d,pred_q;
+  reg           carry,pred_d,pred_q;
 
   assign rnw   = !(FSM_d==WRH||FSM_d==WR0||FSM_d==WR1);
   assign dout  = RF1_q ;
@@ -79,7 +91,7 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 
   always @(*) begin
     // defaults
-    {OR_d,PC_d,RF1_d,len_d,op_d,pred_d,rdst_d,rsrc_d,PCI_d,PSRI_d,PSR_d, carry}={OR_q,PC_q,RF1_q,len_q,op_q,pred_q,rdst_q,rsrc_q,PCI_q,PSRI_q,PSR_q, PSR_q[C]};
+    {OR_d,PC_d,RF1_d,len_d,op_d,pred_d,rdst_d,rsrc_d,PSRI_d,PSR_d,wdst_d,carry}={OR_q,PC_q,RF1_q,len_q,op_q,pred_q,rdst_q,rsrc_q,PSRI_q,PSR_q,wdst_q,PSR_q[C]};
 
     case (op_q)
       AND,OR          : result = (op_q==AND)?(RF1_q & OR_q):(RF1_q | OR_q);
@@ -88,7 +100,19 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
       XOR,GPSR        : result = (op_q==GPSR)?{24'b0,PSR_q}: RF1_q ^ OR_q;
       NOT,SXT         : result = (op_q==NOT) ? ~OR_q : {{16{OR_q[15]}},OR_q[15:0]};
       BROR,HROR       : result = (op_q==BROR)? {OR_q[7:0], OR_q[31:8]}: {OR_q[15:0],OR_q[31:16]};
+
+      MUL             : {carry, result} = OR_q[15:0] * RF1_q[15:0] ;
+
+`ifdef BARREL_SHIFTER
+      BSROR           : {result,carry}  = {RF1_q,PSR_q[C],RF1_q,PSR_q[C] } >> OR_q[4:0];         // truncate to bits [32:0] for right shift
+      BSASR           :	{result,carry}  = {{33{RF1_q[31]}},RF1_q,1'b0 } >> OR_q[4:0];            // truncate to bits [32:0] for right shift
+      BSLSR           : {result,carry}  = {33'b0,RF1_q,1'b0 } >> OR_q[4:0] ;                     // truncate to bits [32:0] for right shift
+      BSROL           : {carry, result} = ({PSR_q[C],RF1_q,PSR_q[C],RF1_q} << OR_q[4:0]) >> 33 ; // get MSBs [65:33] for left shift
+      BSLSL           : {carry, result} = ({PSR_q[C], RF1_q, 33'b0 } << OR_q[4:0]) >>33 ;        // get MSBs [65:33] for left shift
+`endif
+
       ROR,ASR,LSR     :{result,carry} = {(op_q==ROR)?PSR_q[C]:(op_q==ASR)?OR_q[31]:1'b0,OR_q};
+
       default         : result = OR_q;
       //LD,MOV,STO,JSR and everything else
     endcase // case (op_q)
@@ -108,24 +132,23 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
         rdst_d = din[3:0];
       end
       FET1 : begin
-        FSM_d = (len_q[0]) ? FET2 : (!pred_q)? FET0 : EAD;
+        FSM_d = (len_q[0]) ? FET2 : EAD;
         PC_d = PC_q+1;
         OR_d = {{16{din[15]}}, din};
       end
       FET2  : begin
-        FSM_d = (!pred_q)? FET0 : EAD;
+        FSM_d = EAD;
         PC_d = PC_q+1;
         OR_d = {OR_q[15:0], din};
       end
       EAD  : begin
         FSM_d = (!pred_q)? ((op_q==LDH)?RDH: ((op_q==LDW)?RD0: ((op_q==STH)?WRH: ((op_q==STW)?WR0: EXEC)))): FET0;
-        OR_d = ((rsrc_q==4'hF)?PC_q: {32{(rsrc_q!=4'h0)}} & RF_q[rsrc_q]) + OR_q;
-        // Port 2 always reads source reg
-        RF1_d = ((rdst_q==4'hF)?PC_q: {32{(rdst_q!=4'h0)}} & RF_q[rdst_q]);
-        // Port 1 always reads dest reg
+        OR_d = ((rsrc_q==4'hF)?PC_q: {32{(rsrc_q!=4'h0)}} & RF_q[rsrc_q]) + OR_q; // Port 2 always reads source reg
+        RF1_d = ((rdst_q==4'hF)?PC_q: {32{(rdst_q!=4'h0)}} & RF_q[rdst_q]);       // Port 1 always reads dest reg
+	wdst_d = ( op_q==CMP|| op_q==CMPC || op_q==STW || op_q==STH || op_q==PPSR ) ? 4'b0 : rdst_q;
       end
       EXEC  : begin
-        PC_d = (op_q==RTI)?PCI_q: ((rdst_q==4'hF)||(op_q==JSR)) ? result: PC_q;
+        PC_d = (op_q==RTI)? PCI_q: ((rdst_q==4'hF)||(op_q==JSR)) ? result: PC_q;
         FSM_d = ((!(&int_b) & PSR_q[EI])||((op_q==PPSR) && (|PSR_q[7:4])))?INT: FET0; // PSR_q[7:4]==swi id
         PSR_d = (op_q==RTI)?{4'b0,PSRI_q}:(op_q==PPSR)?OR_q[7:0]: (rdst_q!=4'hF)? {PSR_q[7:3],result[31],carry,!(|result)}: PSR_q;
         // Clear SWI bits on return
@@ -148,7 +171,6 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
       INT  : begin
         FSM_d   = FET0;
         PC_d   = (!int_b[1])?INT_VECTOR1:INT_VECTOR0;
-        PCI_d   = PC_q;
         PSRI_d  = PSR_q[3:0];
         PSR_d[EI] = 1'b0;
         // Always clear EI on taking interrupt
@@ -157,13 +179,15 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
     endcase
   end
 
-  always @(posedge clk)
-    if (clken) begin
-      if (!rst1_qb) {PC_q,PSR_q,FSM_q} <= {32'b0,8'b0,FET0};
-      else begin
-        {rst0_qb,rst1_qb, FSM_q, PC_q,PCI_q,PSRI_q,PSR_q} <= {rst_b,rst0_qb, FSM_d, PC_d,PCI_d,PSRI_d,PSR_d};
-        {OR_q,PC_q,RF1_q,len_q,op_q,pred_q,rdst_q,rsrc_q}={OR_d,PC_d,RF1_d,len_d,op_d,pred_d,rdst_d,rsrc_d};
-        if ( (FSM_q==EXEC) && (!((op_q==CMP)||(op_q==CMPC)))) RF_q[rdst_q]<=(op_q==JSR)? PC_q : result;
+  always @(posedge clk or negedge rst_b)
+    if (!rst_b) {PC_q,PSR_q,FSM_q} <= {32'b0,8'b0,FET0};
+    else if (clken) begin
+      begin
+	{FSM_q,PSRI_q,PSR_q} <= {FSM_d,PSRI_d,PSR_d};
+	{OR_q,PC_q,RF1_q,len_q,op_q,pred_q,rdst_q,rsrc_q,wdst_q}<={OR_d,PC_d,RF1_d,len_d,op_d,pred_d,rdst_d,rsrc_d,wdst_d};
+	if ( FSM_q==EXEC) RF_q[wdst_q] <= (op_q==JSR)? PC_q : result;
+	if (FSM_q==INT) PCI_q <= PC_q;
       end
     end
-endmodule
+
+endmodule // opc1632cpu
