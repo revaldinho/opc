@@ -79,7 +79,7 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
   reg [7:0]     PSR_d,PSR_q;
   reg [5:0]     op_d,op_q;
   reg [4:0]     FSM_q, FSM_d;
-  reg [3:0]     PSRI_d,PSRI_q,rdst_d,rdst_q,rsrc_d,wdst_q,wdst_d,rsrc_q;
+  reg [3:0]     PSRI_d,PSRI_q,rdst_d,rdst_q,rsrc_d,rsrc_q;
   reg [1:0]     len_d, len_q;
   reg           carry,pred_d,pred_q;
 
@@ -91,7 +91,7 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 
   always @(*) begin
     // defaults
-    {OR_d,PC_d,RF1_d,len_d,op_d,pred_d,rdst_d,rsrc_d,PSRI_d,PSR_d,wdst_d,carry}={OR_q,PC_q,RF1_q,len_q,op_q,pred_q,rdst_q,rsrc_q,PSRI_q,PSR_q,wdst_q,PSR_q[C]};
+    {OR_d,PC_d,RF1_d,len_d,op_d,pred_d,rdst_d,rsrc_d,PSRI_d,PSR_d,carry}={OR_q,PC_q,RF1_q,len_q,op_q,pred_q,rdst_q,rsrc_q,PSRI_q,PSR_q,PSR_q[C]};
 
     case (op_q)
       AND,OR          : result = (op_q==AND)?(RF1_q & OR_q):(RF1_q | OR_q);
@@ -145,7 +145,6 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
         FSM_d = (!pred_q)? ((op_q==LDH)?RDH: ((op_q==LDW)?RD0: ((op_q==STH)?WRH: ((op_q==STW)?WR0: EXEC)))): FET0;
         OR_d = ((rsrc_q==4'hF)?PC_q: {32{(rsrc_q!=4'h0)}} & RF_q[rsrc_q]) + OR_q; // Port 2 always reads source reg
         RF1_d = ((rdst_q==4'hF)?PC_q: {32{(rdst_q!=4'h0)}} & RF_q[rdst_q]);       // Port 1 always reads dest reg
-	wdst_d = ( op_q==CMP|| op_q==CMPC || op_q==STW || op_q==STH || op_q==PPSR ) ? 4'b0 : rdst_q;
       end
       EXEC  : begin
         PC_d = (op_q==RTI)? PCI_q: ((rdst_q==4'hF)||(op_q==JSR)) ? result: PC_q;
@@ -184,8 +183,9 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
     else if (clken) begin
       begin
 	{FSM_q,PSRI_q,PSR_q} <= {FSM_d,PSRI_d,PSR_d};
-	{OR_q,PC_q,RF1_q,len_q,op_q,pred_q,rdst_q,rsrc_q,wdst_q}<={OR_d,PC_d,RF1_d,len_d,op_d,pred_d,rdst_d,rsrc_d,wdst_d};
-	if ( FSM_q==EXEC) RF_q[wdst_q] <= (op_q==JSR)? PC_q : result;
+	{OR_q,PC_q,RF1_q,len_q,op_q,pred_q,rdst_q,rsrc_q}<={OR_d,PC_d,RF1_d,len_d,op_d,pred_d,rdst_d,rsrc_d};
+//	if ( FSM_q==EXEC) RF_q[wdst_q] <= (op_q==JSR)? PC_q : result;
+	if ( (FSM_q==EXEC) && !(op_q==CMP|| op_q==CMPC || op_q==STW || op_q==STH || op_q==PPSR) )RF_q[rdst_q] <= (op_q==JSR)? PC_q : result;
 	if (FSM_q==INT) PCI_q <= PC_q;
       end
     end
