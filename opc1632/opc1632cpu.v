@@ -1,8 +1,9 @@
 `define BARREL_SHIFTER 1
 `define MULTIPLIER     1
 `define OPTIONAL_ISA   1
+`define PUSHPOP        1
 
-module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input clken,output vpa,output vda,output[15:0] dout,output[31:0] address,output rnw);
+module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input clken,output vpa,output vda,output[15:0] dout,output reg [31:0] address,output rnw);
   // Non-Predicated Instructions
   parameter AND  =6'h00;
   parameter OR   =6'h01;
@@ -38,10 +39,15 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
   parameter STW  =6'h15;
   parameter LDH  =6'h16;
   parameter STH  =6'h17;
-`ifdef OPTIONAL_ISA
+
 `ifdef MULTIPLIER
   parameter MUL  =6'h18;
 `endif
+`ifdef PUSHPOP
+  parameter PUSHW =6'h1A;
+  parameter POPW  =6'h1B;
+`endif
+`ifdef OPTIONAL_ISA
   parameter XRB   =6'h19;
 `endif
 
@@ -51,18 +57,25 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
   parameter INC  =6'h30;
   parameter INC2 =6'h38;
   // FSM States
-  parameter FET0 =5'h00;
-  parameter FET1 =5'h01;
-  parameter FET2 =5'h02;
-  parameter EAD  =5'h03;
-  parameter RD0  =5'h04;
-  parameter RD1  =5'h05;
-  parameter EXEC =5'h06;
-  parameter WR0  =5'h07;
-  parameter WR1  =5'h08;
-  parameter INT  =5'h09;
-  parameter WRH  =5'h10;
-  parameter RDH  =5'h11;
+  parameter FET0  =5'h00;
+  parameter FET1  =5'h01;
+  parameter FET2  =5'h02;
+  parameter EAD   =5'h03;
+  parameter RD0   =5'h04;
+  parameter RD1   =5'h05;
+  parameter EXEC  =5'h06;
+  parameter WR0   =5'h07;
+  parameter WR1   =5'h08;
+  parameter INT   =5'h09;
+  parameter WRH   =5'h0A;
+  parameter RDH   =5'h0B;
+`ifdef PUSHPOP
+  parameter POP0  =5'h0C;
+  parameter POP1  =5'h0D;
+  parameter POP2  =5'h0E;
+  parameter PUSH0 =5'h0F;
+  parameter PUSH1 =5'h10;
+`endif
   // Flags
   parameter     BANK = 4;
   parameter     EI   =3;
@@ -82,7 +95,12 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `define IS_COND_d  (din[13]  ==1'b1)
 `define PCI 4'hF
 
-  reg [31:0]    OR_d,OR_q,PC_d,PC_q,result,RF1_d,RF1_q,PCI_q;
+  reg [31:0]     OR_d,OR_q,PC_d,PC_q,result,RF1_d,RF1_q,PCI_q;
+
+`ifdef PUSHPOP
+  reg [31:0]           addr_inc_d, addr_inc_q;
+`endif
+
   // (* RAM_STYLE="DISTRIBUTED" *)
   (* RAM_STYLE="BLOCK" *)
   reg [31:0]    RF_q[31:0];
@@ -94,15 +112,25 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
   reg [1:0]     len_d, len_q;
   reg           carry,pred_d,pred_q;
 
+`ifdef PUSHPOP
+  assign rnw   = !(FSM_d==WRH||FSM_d==WR0||FSM_d==WR1||FSM_d==PUSH0||FSM_d==PUSH1);
+  assign vda   = (FSM_d==RDH)||(FSM_d==RD0)||(FSM_d==RD1)||(FSM_d==WRH)||(FSM_d==WR0)||(FSM_d==WR1)||(FSM_d==PUSH0)||(FSM_d==PUSH1)||(FSM_d==POP0)||(FSM_d==POP1);
+`else
   assign rnw   = !(FSM_d==WRH||FSM_d==WR0||FSM_d==WR1);
-  assign dout  = RF1_q ;
-  assign address = (FSM_d==WRH||FSM_d==RDH)? OR_q: (FSM_d==WR0||FSM_d==RD0)? OR_q & 32'hFFFFFFFE: (FSM_d==WR1||FSM_d==RD1)? OR_q | 32'h00000001: PC_q;
-  assign vpa   = (FSM_d==FET0)||(FSM_d==FET1)||(FSM_d==FET2);
   assign vda   = (FSM_d==RDH)||(FSM_d==RD0)||(FSM_d==RD1)||(FSM_d==WRH)||(FSM_d==WR0)||(FSM_d==WR1);
+`endif
+  assign dout  = RF1_q ;
+  assign vpa   = (FSM_d==FET0)||(FSM_d==FET1)||(FSM_d==FET2);
 
   always @(*) begin
     // defaults
     {OR_d,PC_d,RF1_d,len_d,op_d,pred_d,rdst_d,rsrc_d,PSRI_d,PSR_d,carry}={OR_q,PC_q,RF1_q,len_q,op_q,pred_q,rdst_q,rsrc_q,PSRI_q,PSR_q,PSR_q[C]};
+    result = OR_q; // default
+    address = PC_q;
+
+`ifdef PUSHPOP
+    addr_inc_d = addr_inc_q;
+`endif
 
     case (op_q)
       AND,OR          : result = (op_q==AND)?(RF1_q & OR_q):(RF1_q | OR_q);
@@ -128,11 +156,10 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
       BROR,HROR       : result = (op_q==BROR)? {OR_q[7:0], OR_q[31:8]}: {OR_q[15:0],OR_q[31:16]};
       ROR,ASR,LSR     :{result,carry} = {(op_q==ROR)?PSR_q[C]:(op_q==ASR)?OR_q[31]:1'b0,OR_q};
 `endif
-
-
       default         : result = OR_q;
       //LD,MOV,STO,JSR and everything else
     endcase // case (op_q)
+
 
     case (FSM_q)
       FET0 : begin
@@ -159,7 +186,21 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
         OR_d = {OR_q[15:0], din};
       end
       EAD  : begin
-        FSM_d = (!pred_q)? ((op_q==LDH)?RDH: ((op_q==LDW)?RD0: ((op_q==STH)?WRH: ((op_q==STW)?WR0: EXEC)))): FET0;
+        if (pred_q)
+          case (op_q)
+            LDH:   begin FSM_d = RDH; address = OR_q ; end
+            LDW:   begin FSM_d = RD0; address = OR_q & 32'hFFFFFFFE; end
+            STH:   begin FSM_d = WRH; address = OR_q ; end
+            STW:   begin FSM_d = WR0; address = OR_q & 32'hFFFFFFFE; end
+`ifdef PUSHPOP
+            POPW:  begin FSM_d = POP0;  addr_inc_d = OR_q ; address = RF1_q & 32'hFFFFFFFE; end // Use rsrc directly for address output (post increment)
+            PUSHW: begin FSM_d = PUSH0; addr_inc_d = OR_q ; address = OR_q & 32'hFFFFFFFE; end
+`endif
+            default: FSM_d=EXEC;
+          endcase // case (op_q )
+        else
+          FSM_d = FET0;
+
         OR_d  = ((rsrc_q[3:0]==4'hF)?PC_q: {32{(rsrc_q[3:0]!=4'h0)}} & RF_q[rsrc_q]) + OR_q; // Port 2 always reads source reg
         RF1_d = ((rdst_q[3:0]==4'hF)?PC_q: {32{(rdst_q[3:0]!=4'h0)}} & RF_q[rdst_q]);        // Port 1 always reads dest reg
       end
@@ -169,13 +210,49 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
         PSR_d = (op_q==RTI)?{3'b0,PSRI_q}:(op_q==PPSR)?OR_q[7:0]: (rdst_q[3:0]!=4'hF)? {PSR_q[7:3],result[31],carry,!(|result)}: PSR_q;
         // Clear SWI bits and restore register bank bit plus flags on return from Interrupt
       end
-      WR0  : FSM_d = WR1;
+
+      WR0  : begin
+        FSM_d = WR1;
+        address = OR_q | 32'h00000001;
+      end
       WR1  : FSM_d = (!(&int_b) & PSR_q[EI])?INT:FET0;
       WRH  : FSM_d = (!(&int_b) & PSR_q[EI])?INT:FET0;
+
+`ifdef PUSHPOP
+      POP0: begin
+        FSM_d = POP1;
+        address = RF1_q | 32'h00000001;
+        OR_d = {{16{din[15]}}, din};
+      end
+      POP1: begin
+        FSM_d = POP2;
+        OR_d = {OR_q[15:0], din};
+        // swap over dest and source for writeback of pointer
+        rdst_d = rsrc_q;
+        rsrc_d = rdst_q;
+      end
+      POP2: begin
+        // Write back rsrc <- rsrc + 2 in this state before going to EXEC to write OR_q into rdest
+        // swap over dest and source again for writeback of data
+        rdst_d = rsrc_q;
+        rsrc_d = rdst_q;
+        FSM_d = EXEC;
+      end
+      PUSH0: begin
+        FSM_d = PUSH1;
+        address = OR_q | 32'h00000001;
+      end
+      PUSH1: begin
+        // Set write back register to be the source (pointer) ready for write back in EXEC as usual
+        rdst_d = rsrc_q;
+        FSM_d = EXEC;
+      end
+`endif
 
       RD0  : begin
         FSM_d = RD1;
         OR_d = {{16{din[15]}}, din};
+        address = OR_q | 32'h00000001;
       end
       RD1  : begin
         FSM_d = EXEC;
@@ -202,8 +279,14 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
     else if (clken) begin
       begin
 	{FSM_q,PSRI_q,PSR_q} <= {FSM_d,PSRI_d,PSR_d};
+`ifdef PUSHPOP
+        addr_inc_q <= addr_inc_d;
+`endif
 	{OR_q,PC_q,RF1_q,len_q,op_q,pred_q,rdst_q,rsrc_q}<={OR_d,PC_d,RF1_d,len_d,op_d,pred_d,rdst_d,rsrc_d};
 	if ( (FSM_q==EXEC) && !(op_q==CMP|| op_q==CMPC || op_q==STW || op_q==STH || op_q==PPSR) )RF_q[rdst_q] <= (op_q==JSR)? PC_q : result;
+`ifdef PUSHPOP
+        else if ( FSM_q==POP2) RF_q[rdst_q] <= addr_inc_q;
+`endif
 	if (FSM_q==INT) PCI_q <= PC_q;
       end
     end
