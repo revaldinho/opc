@@ -1,5 +1,8 @@
-module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input clken,output vpa,output vda,output[15:0] dout,output[31:0] address,output rnw);
+`define BARREL_SHIFTER 1
+`define MULTIPLIER     1
+`define OPTIONAL_ISA   1
 
+module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input clken,output vpa,output vda,output[15:0] dout,output[31:0] address,output rnw);
   // Non-Predicated Instructions
   parameter AND  =6'h00;
   parameter OR   =6'h01;
@@ -10,13 +13,21 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
   parameter SBC  =6'h06;
   parameter CMP  =6'h07;
   parameter CMPC =6'h08;
-  parameter ROR  =6'h09;
-  parameter LSR  =6'h0A;
-  parameter ASR  =6'h0B;
-  parameter SXT  =6'h0C;
-  parameter BROR =6'h0D;
-  parameter HROR =6'h0E;
-  parameter NOT  =6'h0F;
+  parameter NOT  =6'h09;
+  parameter SXT  =6'h0A;
+`ifdef BARREL_SHIFTER
+  parameter BSROR  =6'h0B;
+  parameter BSLSR  =6'h0C;
+  parameter BSASR  =6'h0D;
+  parameter BSROL  =6'h0E;
+  parameter BSASL  =6'h0F;
+`else
+  parameter ROR  =6'h0B;
+  parameter LSR  =6'h0C;
+  parameter ASR  =6'h0D;
+  parameter BROR =6'h0E;
+  parameter HROR =6'h0F;
+`endif
   // NON-PREDICATED INSTRUCTIONS
   parameter HLT  =6'h10;
   parameter PPSR =6'h11;
@@ -27,14 +38,11 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
   parameter STW  =6'h15;
   parameter LDH  =6'h16;
   parameter STH  =6'h17;
-
-  parameter MUL   =6'h18;
-`ifdef BARREL_SHIFTER
-  parameter BSROR  =6'h19;
-  parameter BSASR  =6'h1A;
-  parameter BSLSL  =6'h1B;
-  parameter BSROL  =6'h1C;
-  parameter BSLSR  =6'h1D;
+`ifdef OPTIONAL_ISA
+`ifdef MULTIPLIER
+  parameter MUL  =6'h18;
+`endif
+  parameter XRB   =6'h19;
 `endif
 
   // PREDICATED INSTRUCTIONS (LISTED WITH COND=0/LSBs=0)
@@ -56,10 +64,11 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
   parameter WRH  =5'h10;
   parameter RDH  =5'h11;
   // Flags
-  parameter     EI =3;
-  parameter     S  =2;
-  parameter     C  =1;
-  parameter     Z  =0;
+  parameter     BANK = 4;
+  parameter     EI   =3;
+  parameter     S    =2;
+  parameter     C    =1;
+  parameter     Z    =0;
   // Predicate bits are 3 LSBs of the opcode field
   parameter     P0  =10;
   parameter     P1  = 9;
@@ -74,12 +83,14 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `define PCI 4'hF
 
   reg [31:0]    OR_d,OR_q,PC_d,PC_q,result,RF1_d,RF1_q,PCI_q;
-  (* RAM_STYLE="DISTRIBUTED" *)
-  reg [31:0]    RF_q[15:0];
+  // (* RAM_STYLE="DISTRIBUTED" *)
+  (* RAM_STYLE="BLOCK" *)
+  reg [31:0]    RF_q[31:0];
   reg [7:0]     PSR_d,PSR_q;
   reg [5:0]     op_d,op_q;
   reg [4:0]     FSM_q, FSM_d;
-  reg [3:0]     PSRI_d,PSRI_q,rdst_d,rdst_q,rsrc_d,rsrc_q;
+  reg [4:0]     PSRI_d,PSRI_q;
+  reg [4:0]     rdst_d,rdst_q,rsrc_d,rsrc_q;
   reg [1:0]     len_d, len_q;
   reg           carry,pred_d,pred_q;
 
@@ -99,19 +110,25 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
       SUB,SBC,CMP,CMPC:{carry,result} = RF1_q + (OR_q ^ 32'hFFFF) + (op_q==SBC||op_q==CMPC)?PSR_q[C]:1;
       XOR,GPSR        : result = (op_q==GPSR)?{24'b0,PSR_q}: RF1_q ^ OR_q;
       NOT,SXT         : result = (op_q==NOT) ? ~OR_q : {{16{OR_q[15]}},OR_q[15:0]};
-      BROR,HROR       : result = (op_q==BROR)? {OR_q[7:0], OR_q[31:8]}: {OR_q[15:0],OR_q[31:16]};
 
+`ifdef OPTIONAL_ISA
+      XRB 	      : PSR_d[BANK] = !PSR_q[BANK];
+`endif
+
+`ifdef MULTIPLIER
       MUL             : {carry, result} = OR_q[15:0] * RF1_q[15:0] ;
-
+`endif
 `ifdef BARREL_SHIFTER
       BSROR           : {result,carry}  = {RF1_q,PSR_q[C],RF1_q,PSR_q[C] } >> OR_q[4:0];         // truncate to bits [32:0] for right shift
       BSASR           :	{result,carry}  = {{33{RF1_q[31]}},RF1_q,1'b0 } >> OR_q[4:0];            // truncate to bits [32:0] for right shift
       BSLSR           : {result,carry}  = {33'b0,RF1_q,1'b0 } >> OR_q[4:0] ;                     // truncate to bits [32:0] for right shift
       BSROL           : {carry, result} = ({PSR_q[C],RF1_q,PSR_q[C],RF1_q} << OR_q[4:0]) >> 33 ; // get MSBs [65:33] for left shift
-      BSLSL           : {carry, result} = ({PSR_q[C], RF1_q, 33'b0 } << OR_q[4:0]) >>33 ;        // get MSBs [65:33] for left shift
+      BSASL           : {carry, result} = ({PSR_q[C], RF1_q, 33'b0 } << OR_q[4:0]) >>33 ;        // get MSBs [65:33] for left shift
+`else
+      BROR,HROR       : result = (op_q==BROR)? {OR_q[7:0], OR_q[31:8]}: {OR_q[15:0],OR_q[31:16]};
+      ROR,ASR,LSR     :{result,carry} = {(op_q==ROR)?PSR_q[C]:(op_q==ASR)?OR_q[31]:1'b0,OR_q};
 `endif
 
-      ROR,ASR,LSR     :{result,carry} = {(op_q==ROR)?PSR_q[C]:(op_q==ASR)?OR_q[31]:1'b0,OR_q};
 
       default         : result = OR_q;
       //LD,MOV,STO,JSR and everything else
@@ -127,9 +144,9 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
         // Re-map INC2->INC, Zero LSBs opcodes with cond. or imm bits
         pred_d = (! `IS_COND_d)||(din[P2] ^ (din[P1]?(din[P0]?PSR_q[S]:PSR_q[Z]):(din[P0]?PSR_q[C]:1)));
         // New data,old flags (in fetch0), always TRUE if non-predicated instr
-        rsrc_d = (din[13:12]==INC[5:4])? din[3:0] : din[7:4] ;
+        rsrc_d = (din[13:12]==INC[5:4])? {PSR_q[BANK] & !(din[3]&din[2]),din[3:0]} : {PSR_q[BANK] & !(din[7]&din[6]),din[7:4]} ;
         // INC implies Rd as source and dest
-        rdst_d = din[3:0];
+        rdst_d = {PSR_q[BANK] & !(din[3]&din[2]) ,din[3:0]}; // Only lower registers get remapped by the bank bit
       end
       FET1 : begin
         FSM_d = (len_q[0]) ? FET2 : EAD;
@@ -143,18 +160,19 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
       end
       EAD  : begin
         FSM_d = (!pred_q)? ((op_q==LDH)?RDH: ((op_q==LDW)?RD0: ((op_q==STH)?WRH: ((op_q==STW)?WR0: EXEC)))): FET0;
-        OR_d = ((rsrc_q==4'hF)?PC_q: {32{(rsrc_q!=4'h0)}} & RF_q[rsrc_q]) + OR_q; // Port 2 always reads source reg
-        RF1_d = ((rdst_q==4'hF)?PC_q: {32{(rdst_q!=4'h0)}} & RF_q[rdst_q]);       // Port 1 always reads dest reg
+        OR_d  = ((rsrc_q[3:0]==4'hF)?PC_q: {32{(rsrc_q[3:0]!=4'h0)}} & RF_q[rsrc_q]) + OR_q; // Port 2 always reads source reg
+        RF1_d = ((rdst_q[3:0]==4'hF)?PC_q: {32{(rdst_q[3:0]!=4'h0)}} & RF_q[rdst_q]);        // Port 1 always reads dest reg
       end
       EXEC  : begin
-        PC_d = (op_q==RTI)? PCI_q: ((rdst_q==4'hF)||(op_q==JSR)) ? result: PC_q;
-        FSM_d = ((!(&int_b) & PSR_q[EI])||((op_q==PPSR) && (|PSR_q[7:4])))?INT: FET0; // PSR_q[7:4]==swi id
-        PSR_d = (op_q==RTI)?{4'b0,PSRI_q}:(op_q==PPSR)?OR_q[7:0]: (rdst_q!=4'hF)? {PSR_q[7:3],result[31],carry,!(|result)}: PSR_q;
-        // Clear SWI bits on return
+        PC_d = (op_q==RTI)? PCI_q: ((rdst_q[3:0]==4'hF)||(op_q==JSR)) ? result: PC_q;
+        FSM_d = ((!(&int_b) & PSR_q[EI])||((op_q==PPSR) && (|PSR_q[7:5])))?INT: FET0; // PSR_q[7:5]==swi id
+        PSR_d = (op_q==RTI)?{3'b0,PSRI_q}:(op_q==PPSR)?OR_q[7:0]: (rdst_q[3:0]!=4'hF)? {PSR_q[7:3],result[31],carry,!(|result)}: PSR_q;
+        // Clear SWI bits and restore register bank bit plus flags on return from Interrupt
       end
       WR0  : FSM_d = WR1;
       WR1  : FSM_d = (!(&int_b) & PSR_q[EI])?INT:FET0;
       WRH  : FSM_d = (!(&int_b) & PSR_q[EI])?INT:FET0;
+
       RD0  : begin
         FSM_d = RD1;
         OR_d = {{16{din[15]}}, din};
@@ -170,8 +188,9 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
       INT  : begin
         FSM_d   = FET0;
         PC_d   = (!int_b[1])?INT_VECTOR1:INT_VECTOR0;
-        PSRI_d  = PSR_q[3:0];
+        PSRI_d  = PSR_q[4:0]; //bit 4 is register bank bit
         PSR_d[EI] = 1'b0;
+	PSR_d[BANK] = 1'b1;
         // Always clear EI on taking interrupt
       end
       default: FSM_d = FET0;
@@ -184,10 +203,10 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
       begin
 	{FSM_q,PSRI_q,PSR_q} <= {FSM_d,PSRI_d,PSR_d};
 	{OR_q,PC_q,RF1_q,len_q,op_q,pred_q,rdst_q,rsrc_q}<={OR_d,PC_d,RF1_d,len_d,op_d,pred_d,rdst_d,rsrc_d};
-//	if ( FSM_q==EXEC) RF_q[wdst_q] <= (op_q==JSR)? PC_q : result;
 	if ( (FSM_q==EXEC) && !(op_q==CMP|| op_q==CMPC || op_q==STW || op_q==STH || op_q==PPSR) )RF_q[rdst_q] <= (op_q==JSR)? PC_q : result;
 	if (FSM_q==INT) PCI_q <= PC_q;
       end
     end
+
 
 endmodule // opc1632cpu
