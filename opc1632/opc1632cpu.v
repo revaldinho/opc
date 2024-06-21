@@ -115,11 +115,14 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `ifdef PUSHPOP
   assign rnw   = !(FSM_d==WRH||FSM_d==WR0||FSM_d==WR1||FSM_d==PUSH0||FSM_d==PUSH1);
   assign vda   = (FSM_d==RDH)||(FSM_d==RD0)||(FSM_d==RD1)||(FSM_d==WRH)||(FSM_d==WR0)||(FSM_d==WR1)||(FSM_d==PUSH0)||(FSM_d==PUSH1)||(FSM_d==POP0)||(FSM_d==POP1);
+  assign dout  = ((FSM_d==WRH)||(FSM_d==WR0)||(FSM_d==PUSH0))?RF1_q[15:0] : RF1_q[31:16] ;
 `else
   assign rnw   = !(FSM_d==WRH||FSM_d==WR0||FSM_d==WR1);
   assign vda   = (FSM_d==RDH)||(FSM_d==RD0)||(FSM_d==RD1)||(FSM_d==WRH)||(FSM_d==WR0)||(FSM_d==WR1);
+  assign dout  = ((FSM_d==WRH)||(FSM_d==WR0))?RF1_q[15:0] : RF1_q[31:16] ;
 `endif
-  assign dout  = RF1_q ;
+
+
   assign vpa   = (FSM_d==FET0)||(FSM_d==FET1)||(FSM_d==FET2);
 
   always @(*) begin
@@ -193,6 +196,8 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
             STH:   begin FSM_d = WRH; address = OR_q ; end
             STW:   begin FSM_d = WR0; address = OR_q & 32'hFFFFFFFE; end
 `ifdef PUSHPOP
+            // NB POPW  is really popw  rd, rs, +2  .. and rs+2 is computed and put in OR_q as usual .. but use the pre-incr address initially
+            //    PUSHW is really pushw rd, rs, -2  .. and rs-2 is computed and put in OR_q as usual and used immediately here
             POPW:  begin FSM_d = POP0;  addr_inc_d = OR_q ; address = RF1_q & 32'hFFFFFFFE; end // Use rsrc directly for address output (post increment)
             PUSHW: begin FSM_d = PUSH0; addr_inc_d = OR_q ; address = OR_q & 32'hFFFFFFFE; end
 `endif
