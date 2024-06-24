@@ -143,12 +143,13 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
       NOT,SXT         : result = (op_q==NOT) ? ~OR_q : {{16{OR_q[15]}},OR_q[15:0]};
 
 `ifdef OPTIONAL_ISA
-      XRB 	      : PSR_d[BANK] = !PSR_q[BANK];
+      XRB 	      : {carry, PSR_d[BANK]} = {2{!PSR_q[BANK]}}; // switch bank and return the new bank number in C
 `endif
 
 `ifdef MULTIPLIER
       MUL             : {carry, result} = OR_q[15:0] * RF1_q[15:0] ;
 `endif
+
 `ifdef BARREL_SHIFTER
       BSROR           : {result,carry}  = {RF1_q,PSR_q[C],RF1_q,PSR_q[C] } >> OR_q[4:0];         // truncate to bits [32:0] for right shift
       BSASR           :	{result,carry}  = {{33{RF1_q[31]}},RF1_q,1'b0 } >> OR_q[4:0];            // truncate to bits [32:0] for right shift
@@ -160,7 +161,7 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
       ROR,ASR,LSR     :{result,carry} = {(op_q==ROR)?PSR_q[C]:(op_q==ASR)?OR_q[31]:1'b0,OR_q};
 `endif
       default         : result = OR_q;
-      //LD,MOV,STO,JSR and everything else
+      //LD,MOV,STO,JSR,PUSH and everything else
     endcase // case (op_q)
 
 
@@ -189,6 +190,8 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
         OR_d = {OR_q[15:0], din};
       end
       EAD  : begin
+        OR_d  = ((rsrc_q[3:0]==4'hF)?PC_q: {32{(rsrc_q[3:0]!=4'h0)}} & RF_q[rsrc_q]) + OR_q; // Port 2 always reads source reg
+        RF1_d = ((rdst_q[3:0]==4'hF)?PC_q: {32{(rdst_q[3:0]!=4'h0)}} & RF_q[rdst_q]);        // Port 1 always reads dest reg
         if (pred_q)
           case (op_q)
             LDH:   begin FSM_d = RDH; address = OR_q ; end
@@ -198,16 +201,14 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `ifdef PUSHPOP
             // NB POPW  is really popw  rd, rs, +2  .. and rs+2 is computed and put in OR_q as usual .. but use the pre-incr address initially
             //    PUSHW is really pushw rd, rs, -2  .. and rs-2 is computed and put in OR_q as usual and used immediately here
-            POPW:  begin FSM_d = POP0;  addr_inc_d = OR_q ; address = RF1_q & 32'hFFFFFFFE; end // Use rsrc directly for address output (post increment)
-            PUSHW: begin FSM_d = PUSH0; addr_inc_d = OR_q ; address = OR_q & 32'hFFFFFFFE; end
+            POPW:  begin FSM_d = POP0;  address = RF1_q & 32'hFFFFFFFE; end // Use rsrc directly for address output (post increment)
+            PUSHW: begin FSM_d = PUSH0; address = OR_q & 32'hFFFFFFFE; end
 `endif
             default: FSM_d=EXEC;
           endcase // case (op_q )
         else
           FSM_d = FET0;
 
-        OR_d  = ((rsrc_q[3:0]==4'hF)?PC_q: {32{(rsrc_q[3:0]!=4'h0)}} & RF_q[rsrc_q]) + OR_q; // Port 2 always reads source reg
-        RF1_d = ((rdst_q[3:0]==4'hF)?PC_q: {32{(rdst_q[3:0]!=4'h0)}} & RF_q[rdst_q]);        // Port 1 always reads dest reg
       end
       EXEC  : begin
         PC_d = (op_q==RTI)? PCI_q: ((rdst_q[3:0]==4'hF)||(op_q==JSR)) ? result: PC_q;
@@ -226,6 +227,7 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `ifdef PUSHPOP
       POP0: begin
         FSM_d = POP1;
+        addr_inc_d = OR_q ; // Save OR_q at this point as it is overwritten during the read
         address = RF1_q | 32'h00000001;
         OR_d = {{16{din[15]}}, din};
       end
