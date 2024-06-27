@@ -1,6 +1,7 @@
 //`define BARREL_SHIFTER 1
 //`define MULTIPLIER     1
 //`define MUL32          1
+//`define MUL32_MC       1
 //`define OPTIONAL_ISA   1
 //`define PUSHPOP        1
 
@@ -84,6 +85,13 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `ifdef MUL32
   parameter MUL0 =5'h11;
   parameter MUL1 =5'h12;
+`elsif MUL32_MC
+  parameter MUL0 =5'h11;
+  parameter MUL1 =5'h12;
+  parameter MUL2 =5'h13;
+  parameter MUL3 =5'h14;
+  parameter MUL4 =5'h15;
+  parameter MUL5 =5'h16;
 `endif
 `endif
   // Flags
@@ -109,7 +117,13 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `endif
   // (* RAM_STYLE="DISTRIBUTED" *)
   (* RAM_STYLE="BLOCK" *)
+`ifdef MULTIPLIER
   reg [64:0]    mul_d, mul_q;
+`endif
+`ifdef MUL32_MC
+  reg [31:0]    mres_d, mres_q;
+  reg [15:0]    ma_d, ma_q, mb_d, mb_q;
+`endif
   reg [31:0]    RF_q[31:0];
   reg [31:0]    OR_d,OR_q,PC_d,PC_q,result,RF1_d,RF1_q,PCI_q;
   reg [7:0]     PSR_d,PSR_q;
@@ -117,6 +131,8 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
   reg [4:0]     FSM_q, FSM_d,PSRI_d,PSRI_q,rdst_d,rdst_q,rsrc_d,rsrc_q;
   reg [1:0]     len_d, len_q;
   reg           carry,pred_d,pred_q;
+
+
 
 `ifdef PUSHPOP
   assign rnw   = !(FSM_d==WRH||FSM_d==WR0||FSM_d==WR1||FSM_d==PUSH0||FSM_d==PUSH1);
@@ -135,11 +151,16 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `ifdef MULTIPLIER
 `ifdef MUL32
     mul_d = mul_q ;
+`elsif MUL32_MC
+    mul_d = mul_q;
+    mres_d = mres_q;
+    ma_d = ma_q;
+    mb_d = mb_q;
 `endif
 `endif
     simm_d = simm_q;
     result = OR_q; // default
-    address = PC_q;
+    address = PC_d; // next PC state is default (e.g. for jumps)
 
 `ifdef PUSHPOP
     addr_inc_d = addr_inc_q;
@@ -159,14 +180,16 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `ifdef MULTIPLIER
   `ifdef MUL32
       MUL             : {carry, result} = { mul_q[64], mul_q[31:0]} ;
+  `elsif MUL32_MC
+      MUL             : {carry, result} = { mul_q[64], mul_q[31:0]} ;
   `else
       MUL             : {carry, result} = OR_q[15:0] * RF1_q[15:0] ;
   `endif
 `endif
 `ifdef BARREL_SHIFTER
-      BSROR           : {result,carry}  = {RF1_q,PSR_q[C],RF1_q,PSR_q[C] } >> simm_q[4:0];         // truncate to bits [32:0] for right shift
-      BSASR           :	{result,carry}  = {{33{RF1_q[31]}},RF1_q,1'b0 }    >> simm_q[4:0];         // truncate to bits [32:0] for right shift
-      BSLSR           : {result,carry}  = {33'b0,RF1_q,1'b0 }              >> simm_q[4:0];         // truncate to bits [32:0] for right shift
+      BSROR           : {result,carry}  = ({RF1_q,PSR_q[C],RF1_q,PSR_q[C] } >> simm_q[4:0]);         // truncate to bits [32:0] for right shift
+      BSASR           :	{result,carry}  = ({{33{RF1_q[31]}},RF1_q,1'b0 }    >> simm_q[4:0]);         // truncate to bits [32:0] for right shift
+      BSLSR           : {result,carry}  = ({33'b0,RF1_q,1'b0 }              >> simm_q[4:0]);         // truncate to bits [32:0] for right shift
       BSROL           : {carry, result} = ({PSR_q[C],RF1_q,PSR_q[C],RF1_q} << simm_q[4:0]) >> 33 ; // get MSBs [65:33] for left shift
       BSASL           : {carry, result} = ({PSR_q[C], RF1_q, 33'b0 }       << simm_q[4:0]) >> 33 ; // get MSBs [65:33] for left shift
 `else
@@ -209,6 +232,8 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
           case (op_q)
 `ifdef MUL32
 	    MUL:   begin FSM_d = MUL0; end
+`elsif MUL32_MC
+	    MUL:   begin FSM_d = MUL0; ma_d = RF1_q[15:0] ; mb_d = OR_q[15:0] ; mres_d = 0 ; mul_d = 0; end
 `endif
             LDH:   begin FSM_d = RDH; address = OR_q ; end
             LDW:   begin FSM_d = RD0; address = OR_q & 32'hFFFFFFFE; end
@@ -241,6 +266,13 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `ifdef MUL32
       MUL0 : begin FSM_d = MUL1; mul_d = RF1_q * OR_q; end
       MUL1 : begin FSM_d = EXEC; rdst_d = rdst_q + 1; mul_d = {mul_q[64:32], mul_q[63:32]} ; end
+`elsif MUL32_MC
+      MUL0 : begin FSM_d = MUL1; mres_d = ma_q * mb_q; mul_d = mul_q + mres_q      ; ma_d = RF1_q[31:0]>>16 ; mb_d = mb_q ;end
+      MUL1 : begin FSM_d = MUL2; mres_d = ma_q * mb_q; mul_d = mul_q + mres_q      ; ma_d = RF1_q[15:0]     ; mb_d = OR_q[31:16] ; end
+      MUL2 : begin FSM_d = MUL3; mres_d = ma_q * mb_q; mul_d = mul_q + (mres_q<<16); ma_d = RF1_q[31:16]    ; mb_d = OR_q[31:16] ; end
+      MUL3 : begin FSM_d = MUL4; mres_d = ma_q * mb_q; mul_d = mul_q + (mres_q<<16); end
+      MUL4 : begin FSM_d = MUL5;                     ; mul_d = mul_q + (mres_q<<32); end
+      MUL5 : begin FSM_d = EXEC; rdst_d = rdst_q + 1 ; mul_d = {mul_q[64:32], mul_q[63:32]}; end
 `endif
 `endif
 `ifdef PUSHPOP
@@ -310,6 +342,8 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `ifdef MULTIPLIER
 `ifdef MUL32
 	mul_q <= mul_d;
+`elsif MUL32_MC
+	{mul_q, mres_q, ma_q, mb_q}   <= {mul_d, mres_d, ma_d, ma_d};
 `endif
 `endif
 	simm_q <= simm_d;
@@ -321,7 +355,9 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `endif
 `ifdef MULTIPLIER
 `ifdef MUL32
-	else if (FSM_q==MUL1) RF_q[rdst_q]<=mul_q;
+	else if (FSM_q==MUL1) RF_q[rdst_q]<=mul_q[31:0];
+`elsif MUL32_MC
+	else if (FSM_q==MUL5) RF_q[rdst_q]<=mul_q[31:0];
 `endif
 `endif
 `ifdef PUSHPOP
