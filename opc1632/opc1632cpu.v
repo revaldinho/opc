@@ -389,7 +389,7 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `ifdef MUL32
 	mul_q <= mul_d;
 `elsif MUL32_MC
-	{mul_q, mres_q, ma_q, mb_q}   <= {mul_d, mres_d, ma_d, ma_d};
+	{mul_q, mres_q, ma_q, mb_q}   <= {mul_d, mres_d, ma_d, mb_d};
 `elsif MUL32_BITWISE
 	{mul_q, ma_q, mb_q}   <= {mul_d, ma_d, mb_d};
 `endif
