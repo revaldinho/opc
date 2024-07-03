@@ -2,8 +2,11 @@
 //`define MULTIPLIER     1
 //`define MUL32          1
 //`define MUL32_MC       1
+//`define MUL32_BITWISE  1
 //`define OPTIONAL_ISA   1
 //`define PUSHPOP        1
+// BYTE PERM is alternative to HROR, BROR and can't be combined with Barrel shifter
+//`define BYTEPERM       1
 
 module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input clken,output vpa,output vda,output[15:0] dout,output reg [31:0] address,output rnw);
   // Non-Predicated Instructions
@@ -28,8 +31,12 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
   parameter ROR  =6'h0B;
   parameter LSR  =6'h0C;
   parameter ASR  =6'h0D;
+`ifdef BYTEPERM
+  parameter BPERM =6'h0E;
+`else
   parameter BROR =6'h0E;
   parameter HROR =6'h0F;
+`endif
 `endif
   // NON-PREDICATED INSTRUCTIONS
   parameter HLT  =6'h10;
@@ -92,6 +99,9 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
   parameter MUL3 =5'h14;
   parameter MUL4 =5'h15;
   parameter MUL5 =5'h16;
+`elsif MUL32_BITWISE
+  parameter MUL0 =5'h11;
+  parameter MUL1 =5'h12;
 `endif
 `endif
   // Flags
@@ -124,6 +134,10 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
   reg [31:0]    mres_d, mres_q;
   reg [15:0]    ma_d, ma_q, mb_d, mb_q;
 `endif
+`ifdef MUL32_BITWISE
+  reg [31:0]    ma_d, ma_q, mb_d, mb_q;
+`endif
+
   reg [31:0]    RF_q[31:0];
   reg [31:0]    OR_d,OR_q,PC_d,PC_q,result,RF1_d,RF1_q,PCI_q;
   reg [7:0]     PSR_d,PSR_q;
@@ -145,6 +159,13 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `endif
   assign vpa   = (FSM_d==FET0)||(FSM_d==FET1)||(FSM_d==FET2);
 
+`ifdef BYTEPERM
+  wire [7:0]  bytes0     = {8{~OR_q[2] }} & ((OR_q[1])?  ((OR_q[0]) ?RF1_q[31:24] :RF1_q[23:16]):(OR_q[0]) ? RF1_q[15:8]:RF1_q[7:0]);
+  wire [7:0]  bytes1     = {8{~OR_q[6] }} & ((OR_q[5])?  ((OR_q[4]) ?RF1_q[31:24] :RF1_q[23:16]):(OR_q[4]) ? RF1_q[15:8]:RF1_q[7:0]);
+  wire [7:0]  bytes2     = {8{~OR_q[10]}} & ((OR_q[9])?  ((OR_q[8]) ?RF1_q[31:24] :RF1_q[23:16]):(OR_q[8]) ? RF1_q[15:8]:RF1_q[7:0]);
+  wire [7:0]  bytes3     = {8{~OR_q[14]}} & ((OR_q[13])? ((OR_q[12])?RF1_q[31:24] :RF1_q[23:16]):(OR_q[12])? RF1_q[15:8]:RF1_q[7:0]);
+`endif
+
   always @(*) begin
     // defaults
     {OR_d,PC_d,RF1_d,len_d,op_d,pred_d,rdst_d,rsrc_d,PSRI_d,PSR_d,carry}={OR_q,PC_q,RF1_q,len_q,op_q,pred_q,rdst_q,rsrc_q,PSRI_q,PSR_q,PSR_q[C]};
@@ -154,6 +175,10 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `elsif MUL32_MC
     mul_d = mul_q;
     mres_d = mres_q;
+    ma_d = ma_q;
+    mb_d = mb_q;
+`elsif MUL32_BITWISE
+    mul_d = mul_q;
     ma_d = ma_q;
     mb_d = mb_q;
 `endif
@@ -182,6 +207,8 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
       MUL             : {carry, result} = { mul_q[64], mul_q[31:0]} ;
   `elsif MUL32_MC
       MUL             : {carry, result} = { mul_q[64], mul_q[31:0]} ;
+  `elsif MUL32_BITWISE
+      MUL             : {carry, result} = { mul_q[64], mul_q[31:0]} ;
   `else
       MUL             : {carry, result} = OR_q[15:0] * RF1_q[15:0] ;
   `endif
@@ -193,7 +220,11 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
       BSROL           : {carry, result} = ({PSR_q[C],RF1_q,PSR_q[C],RF1_q} << simm_q[4:0]) >> 33 ; // get MSBs [65:33] for left shift
       BSASL           : {carry, result} = ({PSR_q[C], RF1_q, 33'b0 }       << simm_q[4:0]) >> 33 ; // get MSBs [65:33] for left shift
 `else
+  `ifdef BYTEPERM
+      BPERM           : result = {bytes3,bytes2,bytes1,bytes0};
+  `else
       BROR,HROR       : result = (op_q==BROR)? {OR_q[7:0], OR_q[31:8]}: {OR_q[15:0],OR_q[31:16]};
+  `endif
       ROR,ASR,LSR     :{result,carry} = {(op_q==ROR)?PSR_q[C]:(op_q==ASR)?OR_q[31]:1'b0,OR_q};
 `endif
       default         : result = OR_q;
@@ -234,6 +265,8 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 	    MUL:   begin FSM_d = MUL0; end
 `elsif MUL32_MC
 	    MUL:   begin FSM_d = MUL0; ma_d = RF1_q[15:0] ; mb_d = OR_q[15:0] ; mres_d = 0 ; mul_d = 0; end
+`elsif MUL32_BITWISE
+	    MUL:   begin FSM_d = MUL0; ma_d = RF1_q ; mb_d = OR_q ; mul_d = 0; end
 `endif
             LDH:   begin FSM_d = RDH; address = OR_q ; end
             LDW:   begin FSM_d = RD0; address = OR_q & 32'hFFFFFFFE; end
@@ -256,12 +289,6 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
         PSR_d = (op_q==RTI)?{3'b0,PSRI_q}:(op_q==PPSR)?OR_q[7:0]: (rdst_q[3:0]!=4'hF)? {PSR_q[7:3],result[31],carry,!(|result)}: PSR_q;
         // Clear SWI bits and restore register bank bit plus flags on return from Interrupt
       end
-      WR0  : begin
-        FSM_d = WR1;
-        address = OR_q | 32'h00000001;
-      end
-      WR1  : FSM_d = (!(&int_b) & PSR_q[EI])?INT:FET0;
-      WRH  : FSM_d = (!(&int_b) & PSR_q[EI])?INT:FET0;
 `ifdef MULTIPLIER
 `ifdef MUL32
       MUL0 : begin FSM_d = MUL1; mul_d = RF1_q * OR_q; end
@@ -273,7 +300,26 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
       MUL3 : begin FSM_d = MUL4; mres_d = ma_q * mb_q; mul_d = mul_q + (mres_q<<16); end
       MUL4 : begin FSM_d = MUL5;                     ; mul_d = mul_q + (mres_q<<32); end
       MUL5 : begin FSM_d = EXEC; rdst_d = rdst_q + 1 ; mul_d = {mul_q[64:32], mul_q[63:32]}; end
+`elsif MUL32_BITWISE
+      MUL0 : begin
+	mul_d = mul_q + ((ma_q[0]) ? mb_q: 0);
+	mb_d = mb_q << 1;
+	ma_d = ma_q >> 1;
+	FSM_d = (  !(&ma_d)) ? MUL1 : MUL0;
+      end
+      MUL1 : begin
+	FSM_d = EXEC;
+	// lower 32b written back in this state, upper 32 will be written back in usual EXEC cycle
+	rdst_d = rdst_q + 1;
+	mul_d = {mul_q[64:32], mul_q[63:32]};
+      end
 `endif
+      WR0  : begin
+        FSM_d = WR1;
+        address = OR_q | 32'h00000001;
+      end
+      WR1  : FSM_d = (!(&int_b) & PSR_q[EI])?INT:FET0;
+      WRH  : FSM_d = (!(&int_b) & PSR_q[EI])?INT:FET0;
 `endif
 `ifdef PUSHPOP
       POP0: begin
@@ -344,6 +390,8 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 	mul_q <= mul_d;
 `elsif MUL32_MC
 	{mul_q, mres_q, ma_q, mb_q}   <= {mul_d, mres_d, ma_d, ma_d};
+`elsif MUL32_BITWISE
+	{mul_q, ma_q, mb_q}   <= {mul_d, ma_d, mb_d};
 `endif
 `endif
 	simm_q <= simm_d;
@@ -358,6 +406,8 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 	else if (FSM_q==MUL1) RF_q[rdst_q]<=mul_q[31:0];
 `elsif MUL32_MC
 	else if (FSM_q==MUL5) RF_q[rdst_q]<=mul_q[31:0];
+`elsif MUL32_BITWISE
+	else if (FSM_q==MUL1) RF_q[rdst_q]<=mul_q[31:0];
 `endif
 `endif
 `ifdef PUSHPOP
