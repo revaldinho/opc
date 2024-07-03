@@ -1,0 +1,7 @@
+
+# Compile with all options or just basic machine
+#read_verilog   -DMUL32_MC -DMUL32_BITWISE -DMULTIPLIER -DBARREL_SHIFTER -DOPTIONAL_ISA -DPUSHPOP -D BYTEPERM../opc1632cpu.v
+read_verilog   -DMULTIPLIER -DMUL32_BITWISE  -DOPTIONAL_ISA -DPUSHPOP -DBYTEPERM ../opc1632cpu.v
+synth_gowin
+opt
+write_json  opc1632cpu_synth.json
