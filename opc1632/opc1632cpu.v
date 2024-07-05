@@ -7,6 +7,7 @@
 //`define PUSHPOP        1
 // BYTE PERM is alternative to HROR, BROR and can't be combined with Barrel shifter
 //`define BYTEPERM       1
+//`define UDIV32         1
 
 module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input clken,output vpa,output vda,output[15:0] dout,output reg [31:0] address,output rnw);
   // Non-Predicated Instructions
@@ -72,6 +73,9 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
   parameter BCLR  =6'h1B;
   parameter BSET  =6'h1C;
 `endif
+`ifdef UDIV32
+  parameter UDIV = 6'h1D;
+`endif
 
   // PREDICATED INSTRUCTIONS (LISTED WITH COND=0/LSBs=0)
   parameter JSR  =6'h20;
@@ -112,6 +116,12 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
   parameter MUL0 =5'h11;
   parameter MUL1 =5'h12;
 `endif
+
+`ifdef UDIV32
+  parameter DIVSTEP = 5'h17;
+  parameter DIV1 = 5'h18;
+`endif
+
   // Flags
   parameter     BANK = 4;
   parameter     EI   =3;
@@ -146,6 +156,13 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `ifdef MUL32_BITWISE
   reg [64:0]    mul_d, mul_q;
   reg [31:0]    ma_d, ma_q, mb_d, mb_q;
+`endif
+`ifdef UDIV32
+  reg [31:0] div_NQ_d, div_NQ_q;
+  reg [31:0] div_R_d, div_R_q;
+  reg [31:0] div_D_d, div_D_q;
+  reg [3:0] div_ct_d, div_ct_q;
+  reg [31:0] div_tmp_d;
 `endif
 
   reg [31:0]    RF_q[31:0];
@@ -190,6 +207,12 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
     mul_d = mul_q;
     ma_d = ma_q;
     mb_d = mb_q;
+`endif
+`ifdef UDIV32
+    div_NQ_d = div_NQ_q;
+    div_R_d = div_R_q;
+    div_D_d = div_D_q;
+    div_ct_d = div_ct_q;
 `endif
     simm_d = simm_q;
     result = OR_q; // default
@@ -277,6 +300,9 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
             // Best if ma_d/q is loaded from the rsrc register which will often be a (small) constant
 	    MUL:   begin FSM_d = MUL0; mb_d = RF1_q ; ma_d = OR_q ; mul_d = 0; end
 `endif
+`ifdef UDIV32
+	    UDIV: begin FSM_d = DIVSTEP ; div_NQ_d = RF1_q ; div_R_d = 0 ; div_D_d = OR_d ; div_ct_d = 4'hF ; end
+`endif
             LDH:   begin FSM_d = RDH; address = OR_q ; end
             LDW:   begin FSM_d = RD0; address = OR_q & 32'hFFFFFFFE; end
             STH:   begin FSM_d = WRH; address = OR_q ; end
@@ -322,6 +348,29 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 	mul_d = {mul_q[64:32], mul_q[63:32]};
       end
 `endif
+`ifdef UDIV32
+      DIVSTEP: begin
+	div_NQ_d = div_NQ_q << 1;
+	div_R_d = (div_R_q << 1 ) | div_NQ_q[31]; // MSB of NQ goes into LSB of R
+	div_tmp_d = div_R_d - div_D_q;
+	if ( div_tmp_d[31]==0 ) begin
+	  div_R_d  = div_tmp_d;
+	  div_NQ_d = div_NQ_q | 1; // add one to NQ but since LSB is always 0 (after shift left) cheaper to OR it in
+	end
+	div_ct_d = div_ct_q - 1 ;
+	FSM_d = ( (|div_ct_q) && (|div_D_q)) ? DIVSTEP : DIV1;
+      end
+      DIV1: begin
+	// write back R_q to rdest _in this cycle_
+	// prepare OR_d to write back R_q to rdest+1 in the next cycle (EXEC)
+	PSR_d[C] = (div_D_q == 0);
+	FSM_d = EXEC;
+	OR_d = div_R_q;
+	rdst_d = rdst_q + 1;
+      end
+`endif
+
+
 
 `ifdef PUSHPOP
       POP0: begin
@@ -401,6 +450,9 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `elsif MUL32_BITWISE
 	{mul_q, ma_q, mb_q}   <= {mul_d, ma_d, mb_d};
 `endif
+`ifdef UDIV32
+	{div_NQ_q, div_R_q, div_D_q, div_ct_q } <= {div_NQ_d, div_R_d, div_D_d, div_ct_d } ;
+`endif
 	simm_q <= simm_d;
 	{OR_q,PC_q,RF1_q,len_q,op_q,pred_q,rdst_q,rsrc_q}<={OR_d,PC_d,RF1_d,len_d,op_d,pred_d,rdst_d,rsrc_d};
 `ifdef OPTIONAL_ISA
@@ -415,6 +467,11 @@ module opc1632cpu(input[15:0] din,input clk,input rst_b,input[1:0] int_b,input c
 `elsif MUL32_BITWISE
 	else if (FSM_q==MUL1) RF_q[rdst_q]<=mul_q[31:0];
 `endif
+`ifdef UDIV32
+	else if (FSM_q==DIV1) RF_q[rdst_q]<=div_NQ_q;
+`endif
+
+
 `ifdef PUSHPOP
         else if ( FSM_q==POP2) RF_q[rdst_q] <= addr_inc_q;
 `endif
