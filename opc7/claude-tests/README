@@ -1,0 +1,49 @@
+Tests for sial2opc.py written while fixing it (October 2026).
+
+Each .b test prints results that are compared with the output of the same
+program run natively under cintsys; the native output is in <name>.expected.
+
+  cmptest.b     Signed comparisons, as values (LET t = a<b) and as conditional
+                jumps (TEST a<b), for every pair of 11 edge values including
+                32767/-32768, where a 16 bit subtraction overflows. Also constant
+                shifts that the -o optimiser rewrites. Use on OPC6 and OPC7.
+  optest.b      Opcodes added 23/10/2026: ikl (STATIC +:=), goto (computed
+                GOTO), selld/selst/xselst (SLCT field selectors within 16 bits).
+                Prints low 16 bits only, so use on OPC6 and OPC7.
+  optest32.b    32 bit selector fields and large ikl constants, which need the
+                large constant register r8. OPC7 only.
+  writefmt.b    writef formats in the OPC bcpllib (extended 23/10/2026): widths
+                before the letter (%11i), after it (%i5, %ib), %d and %n.mD
+                fixed point. Use on OPC6 and OPC7.
+  flt.b         Uses floating point; sial2opc.py must stop with an error
+                (exit status 1) naming the unsupported opcode.
+  jge0m_mlab_nop.sial
+                Hand-written SIAL for jge0m, mlab and nop, which the current
+                compiler no longer generates. Check the translation by eye:
+                  python3 ../../bcpl/sial2opc.py --opc7 -n -f jge0m_mlab_nop.sial -g ../../bcpl/ext_sial.h
+
+Running the tests, with the BCPL environment variables set:
+
+  make                 all tests on OPC7, printing PASS/FAIL for each
+  make ARCH=opc6       the tests that fit in 16 bits, on OPC6
+  make check-all       clean, OPC6, clean, OPC7 (outputs share file names,
+                       so run 'make clean' when switching ARCH by hand)
+  make clean
+
+make exits non-zero if any test fails.
+
+The steps make runs for one test (here optest on OPC7; use 6 for OPC6):
+
+  cintsys -c bcpl2sial optest.b to optest.sial
+  python3 ../../bcpl/sial2opc.py --opc7 -f optest.sial -f ../bcpltests/bcpllib.sial \
+      -s ../../bcpl/opc7_syslib.s -g ../../bcpl/ext_sial.h -o > optest.tmp.s
+  cat ../../include/opc7/macros.s optest.tmp.s ../../bcpl/opc7_rom.s > optest.s
+  python3 ../opc7asm.py optest.s optest.hex > optest.lst
+  python3 ../opc7emu.py optest.hex optest.dump | grep OUT | ../../utils/show_stdout.py --opc7 > optest.out
+  diff optest.expected optest.out
+
+For OPC6 use ../../opc6/opc6asm.py and ../../opc6/opc6emu.py, the opc6 syslib,
+rom and macros, and --opc6 for show_stdout.py.
+
+Note: write a comparison as a separate LET (LET t = a<b) to get the value
+opcodes; the multiple form LET t1, t2 = a<b, a>b compiles to jumps.
