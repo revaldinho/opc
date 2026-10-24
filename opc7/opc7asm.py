@@ -75,7 +75,7 @@ def usage():
 
 def expand_macro(line, macro, mnum):  # recursively expand macros, passing on instances not (yet) defined
     global nextmnum
-    (text,mobj)=([line],re.match("^(?P<label>\w*\:)?\s*(?P<name>\w+)\s*?\((?P<params>.*?)\)",line))
+    (text,mobj)=([line],re.match(r"^(?P<label>\w*\:)?\s*(?P<name>\w+)\s*?\((?P<params>.*?)\)",line))
     if mobj and mobj.groupdict()["name"] in macro:
         (label,instname,paramstr)= (mobj.groupdict()["label"],mobj.groupdict()["name"],mobj.groupdict()["params"])
         (text, instparams,mnum,nextmnum) = (["#%s" % line], [x.strip() for x in paramstr.split(",")],nextmnum,nextmnum+1)
@@ -92,10 +92,10 @@ def preprocess( filename ) :
     global errors, warnings, nextmnum
     (newtext,macro,macroname,mnum)=([],dict(),None,0)
     for line in open(filename, "r").readlines():
-        mobj =  re.match("\s*?MACRO\s*(?P<name>\w*)\s*?\((?P<params>.*)\)", line, re.IGNORECASE)
+        mobj =  re.match(r"\s*?MACRO\s*(?P<name>\w*)\s*?\((?P<params>.*)\)", line, re.IGNORECASE)
         if mobj:
             (macroname,macro[macroname])=(mobj.groupdict()["name"],([x.strip() for x in (mobj.groupdict()["params"]).split(",")],[]))
-        elif re.match("\s*?ENDMACRO.*", line, re.IGNORECASE):
+        elif re.match(r"\s*?ENDMACRO.*", line, re.IGNORECASE):
             (macroname, line) = (None, '# ' + line)
         elif macroname:
             macro[macroname][1].append(line)
@@ -108,7 +108,7 @@ def assemble( filename, listingon=True):
     op = "mov movt xor and or not cmp sub add bperm ror lsr jsr asr rol s0F halt rti putpsr getpsr s13 s15 push pop out in sto ld ljsr lmov lsto lld".split()
     symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
     pdict = {"1":0x0,"z":0x4,"nz":0x6,"c":0x8,"nc":0xA,"mi":0xC,"pl":0xE,"":0x0}
-    reg_re = re.compile("(r\d*|psr|pc)")
+    reg_re = re.compile(r"(r\d*|psr|pc)")
     (wordmem,wcount)=([0x00000000]*1024*1024,0)
 
     newtext = preprocess(filename)
@@ -116,7 +116,7 @@ def assemble( filename, listingon=True):
     for iteration in range (0,2): # Two pass assembly
         (wcount,nextmem) = (0,0)
         for line in newtext:
-            mobj = re.match('^(?:(?P<label>\w+):)?\s*((?:(?P<pred>((pl)|(mi)|(nc)|(nz)|(c)|(z)|(1)?)?)\.))?(?P<inst>\w+)?\s*(?P<operands>.*)',re.sub("#.*","",line))
+            mobj = re.match(r'^(?:(?P<label>\w+):)?\s*((?:(?P<pred>((pl)|(mi)|(nc)|(nz)|(c)|(z)|(1)?)?)\.))?(?P<inst>\w+)?\s*(?P<operands>.*)',re.sub(r"#.*","",line))
             (label, pred, inst,operands) = [ mobj.groupdict()[item] for item in ("label","pred", "inst","operands")]
             (pred, opfields,words, memptr) = ("1" if pred==None else pred, [ x.strip() for x in operands.split(",")],[], nextmem)
             if (iteration==0 and (label and label != "None") or (inst=="EQU")):
@@ -137,7 +137,7 @@ def assemble( filename, listingon=True):
                     nextmem += 1
             elif inst in op or inst in ("BYTE","HALF","WORD","STRING","BSTRING","PBSTRING"):
                 if  inst in("STRING","BSTRING","PBSTRING"):
-                    strings = re.match('.*STRING\s*\"(.*?)\"(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?.*?', line.rstrip())
+                    strings = re.match(r'.*STRING\s*\"(.*?)\"(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?(?:\s*?,\s*?\"(.*?)\")?.*?', line.rstrip())
                     string_data = codecs.decode(''.join([ x for x in strings.groups() if x != None]),  'unicode_escape')
                     string_len = chr(len( string_data ) & 0xFF) if inst=="PBSTRING" else ''    # limit string length to 255 for PBSTRINGS
                     if inst in ("BSTRING","PBSTRING") :
@@ -184,7 +184,7 @@ def assemble( filename, listingon=True):
                 print("%08x  %-36s  %s"%(memptr,' '.join([("%08x" % i) for i in words]),line.rstrip()))
 
     print ("\nAssembled %d words of code with %d error%s and %d warning%s." % (wcount,len(errors),'' if len(errors)==1 else 's',len(warnings),'' if len(warnings)==1 else 's'))
-    print ("\nSymbol Table:\n\n%s\n\n%s\n%s" % ('\n'.join(["%-32s 0x%08X (%08d)" % (k,v,v) for k,v in sorted(symtab.items()) if not re.match("r\d|r\d\d|pc|psr",k)]),'\n'.join(errors),'\n'.join(warnings)))
+    print (r"\nSymbol Table:\n\n%s\n\n%s\n%s" % ('\n'.join(["%-32s 0x%08X (%08d)" % (k,v,v) for k,v in sorted(symtab.items()) if not re.match(r"r\d|r\d\d|pc|psr",k)]),'\n'.join(errors),'\n'.join(warnings)))
 
     return wordmem
 
