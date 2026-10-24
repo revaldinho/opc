@@ -1,0 +1,63 @@
+Setting 5000 words of data for shell23 sort
+Entering shell23 sort routine
+m = 4608  swaps =  204
+m = 4374  swaps =  183
+m = 4096  swaps =  216
+m = 3888  swaps =  220
+m = 3456  swaps =  370
+m = 3072  swaps =  434
+m = 2916  swaps =  298
+m = 2592  swaps =  397
+m = 2304  swaps =  399
+m = 2187  swaps =  307
+m = 2048  swaps =  301
+m = 1944  swaps =  276
+m = 1728  swaps =  333
+m = 1536  swaps =  401
+m = 1458  swaps =  322
+m = 1296  swaps =  350
+m = 1152  swaps =  382
+m = 1024  swaps =  385
+m =  972  swaps =  304
+m =  864  swaps =  342
+m =  768  swaps =  414
+m =  729  swaps =  316
+m =  648  swaps =  329
+m =  576  swaps =  361
+m =  512  swaps =  397
+m =  486  swaps =  306
+m =  432  swaps =  339
+m =  384  swaps =  356
+m =  324  swaps =  426
+m =  288  swaps =  442
+m =  256  swaps =  414
+m =  243  swaps =  357
+m =  216  swaps =  391
+m =  192  swaps =  390
+m =  162  swaps =  517
+m =  144  swaps =  443
+m =  128  swaps =  448
+m =  108  swaps =  516
+m =   96  swaps =  476
+m =   81  swaps =  535
+m =   72  swaps =  504
+m =   64  swaps =  543
+m =   54  swaps =  546
+m =   48  swaps =  521
+m =   36  swaps =  589
+m =   32  swaps =  655
+m =   27  swaps =  647
+m =   24  swaps =  530
+m =   18  swaps =  724
+m =   16  swaps =  742
+m =   12  swaps =  743
+m =    9  swaps =  870
+m =    8  swaps =  801
+m =    6  swaps =  752
+m =    4  swaps =  936
+m =    3  swaps =  929
+m =    2  swaps =  884
+m =    1  swaps =  953
+Sorting complete
+The data is now sorted
+End of test

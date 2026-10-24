@@ -1,0 +1,13 @@
+Setting 2000 words of data for mrsort sort
+Entering mrsort sort routine
+Compare count = 92473
+Swap count    = 46021
+Sorting complete
+The data is now sorted
+Setting 2000 words of data for quick sort
+Entering quick sort routine
+Compare count = 23764
+Swap count    = 5536
+Sorting complete
+The data is now sorted
+End of test

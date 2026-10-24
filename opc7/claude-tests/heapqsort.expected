@@ -1,0 +1,25 @@
+Setting 50000 words of data for quicksort
+Setting random data with upb 5000000
+Entering quicksort routine
+Compare count     =      901202
+Swap count        =      218114
+The data is now sorted
+Setting 50000 words of data for heapsortold
+Setting random data with upb 5000000
+Entering heapsortold routine
+Compare count     =     1409844
+Swap count        =      762233
+The data is now sorted
+Setting 50000 words of data for heapsort
+Setting random data with upb 5000000
+Entering heapsort routine
+Compare count     =      811572
+Swap count        =      779677
+The data is now sorted
+Setting 50000 words of data for heapquicksort
+Setting random data with upb 5000000
+Entering heapquicksort routine
+Compare count     =      848719
+Swap count        =      655005
+The data is now sorted
+End of test

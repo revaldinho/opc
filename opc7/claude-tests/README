@@ -1,7 +1,11 @@
-Tests for sial2opc.py written while fixing it (October 2026).
+Tests for sial2opc.py and the OPC bcpllib written while fixing them (October 2026).
 
 Each .b test prints results that are compared with the output of the same
 program run natively under cintsys; the native output is in <name>.expected.
+The emulator runs under pypy3 with -q (no trace) by default; use
+'make TRACE=1 <name>.emu.stdout' to keep the full trace in <name>.trace,
+and 'make DUMP=1 <name>.emu.stdout' for the emulator's memory dump in
+<name>.emu.dump (the Verilog testbench writes its own to <name>.dump).
 
   cmptest.b     Signed comparisons, as values (LET t = a<b) and as conditional
                 jumps (TEST a<b), for every pair of 11 edge values including
@@ -15,6 +19,20 @@ program run natively under cintsys; the native output is in <name>.expected.
   writefmt.b    writef formats in the OPC bcpllib (extended 23/10/2026): widths
                 before the letter (%11i), after it (%i5, %ib), %d and %n.mD
                 fixed point. Use on OPC6 and OPC7.
+  Sort programs from the BCPL distribution (copied from ../bcpltests/sort),
+  OPC7 only, run by 'make check-sort' (a few minutes):
+    shell23.b sortdemo.b heapsort.b mrsort2.b nqsort.b pesort.b heapqsort.b
+                Larger runs (up to 100,000 words) of the same opcodes. Their data
+                comes from randno, which in the OPC bcpllib is the native generator,
+                so their .expected files are plain native runs ('make sort-expected'
+                regenerates them). Blank lines and heapsort's "Sorting complete in
+                N msecs" timings are ignored.
+  randtest.b    randno/setseed (the native generator since 24/10/2026), unseeded
+                (start seed 12345 as in cintsys) and seeded; must equal a plain
+                native run. OPC7 only.
+  rand16.b      The 16 bit form of the same generator on OPC6; rand16.expected
+                comes from a model of it, as there is no native 16 bit system.
+                OPC6 only.
   flt.b         Uses floating point; sial2opc.py must stop with an error
                 (exit status 1) naming the unsupported opcode.
   jge0m_mlab_nop.sial
@@ -26,8 +44,11 @@ Running the tests, with the BCPL environment variables set:
 
   make                 all tests on OPC7, printing PASS/FAIL for each
   make ARCH=opc6       the tests that fit in 16 bits, on OPC6
-  make check-all       clean, OPC6, clean, OPC7 (outputs share file names,
-                       so run 'make clean' when switching ARCH by hand)
+  make check-all       clean, OPC6, clean, OPC7 including the sort programs
+                       (outputs share file names, so run 'make clean' when
+                       switching ARCH by hand)
+  make check-sort      only the sort programs (OPC7)
+  make sort-expected   regenerate the sort programs' .expected files
   make clean
 
 make exits non-zero if any test fails.

@@ -8,7 +8,9 @@ ROOT= ../..
 #
 #   make              run the tests for ARCH (default opc7)
 #   make ARCH=opc6    run the tests that fit in 16 bits on OPC6
-#   make check-all    clean, run on OPC6, clean, run on OPC7
+#   make check-all    clean, run on OPC6, clean, run on OPC7 (inc. check-sort)
+#   make check-sort   the longer sort programs, OPC7 only (a few minutes)
+#   make sort-expected   regenerate the sort .expected files natively
 #
 # Outputs for the two architectures share file names, so run 'make clean' when
 # switching ARCH (check-all does this).
@@ -17,16 +19,23 @@ ARCH ?= opc7
 assembler ?= $(ROOT)/$(ARCH)/$(ARCH)asm.py
 emulator  ?= $(ROOT)/$(ARCH)/$(ARCH)emu.py
 
-TESTS_opc6 = cmptest optest writefmt
-TESTS_opc7 = cmptest optest optest32 writefmt
+TESTS_opc6 = cmptest optest writefmt rand16
+TESTS_opc7 = cmptest optest optest32 writefmt randtest
 TESTS      = $(TESTS_$(ARCH))
 TESTSRCS   = $(addsuffix .b,$(TESTS))
+
+# Sort programs from the BCPL distribution (via ../bcpltests/sort). Their data
+# comes from randno, which in the OPC bcpllib is the native generator, so their
+# .expected files are plain native cintsys runs (see sort-expected). Blank lines
+# and the "Sorting complete in N msecs" timings are ignored when comparing.
+SORTTESTS  = shell23 sortdemo heapsort mrsort2 nqsort pesort heapqsort
+SORTNORM   = sed -E -e '/^[[:space:]]*$$/d' -e 's/in [0-9]+ msecs/in N msecs/'
 
 .DEFAULT_GOAL := check
 
 include $(ROOT)/bcpl/Makefile_bcpl.inc
 
-.PHONY: check check-all flt-check sial-check clean-extra
+.PHONY: check check-all check-sort sort-expected flt-check sial-check clean-extra
 
 check: $(EMUSTDOUTS) flt-check sial-check
 	@fail=0; for t in $(TESTS); do \
@@ -49,9 +58,28 @@ sial-check: jge0m_mlab_nop.sial
 	else echo "FAIL jge0m/mlab/nop ($(ARCH)): see sial-check.s"; exit 1; fi
 
 check-all:
-	$(MAKE) clean && $(MAKE) ARCH=opc6 check && $(MAKE) clean && $(MAKE) ARCH=opc7 check
+	$(MAKE) clean && $(MAKE) ARCH=opc6 check && $(MAKE) clean && $(MAKE) ARCH=opc7 check check-sort
+
+check-sort: $(addsuffix .emu.stdout,$(SORTTESTS))
+	@if [ "$(ARCH)" != "opc7" ]; then echo "check-sort: the sort tests are for OPC7 only"; exit 1; fi
+	@fail=0; for t in $(SORTTESTS); do \
+	  if $(SORTNORM) $$t.emu.stdout | cmp -s - $$t.expected; then echo "PASS $$t ($(ARCH))"; \
+	  else echo "FAIL $$t ($(ARCH)): diff $$t.expected $$t.emu.stdout"; fail=1; fi; \
+	done; exit $$fail
+
+# Run each sort program natively under cintsys
+sort-expected:
+	@for t in $(SORTTESTS); do \
+	  cintsys -c bcpl $$t.b to $${t}_native > /dev/null; \
+	  cintsys -c $${t}_native | tr -d '\r' | sed -E 's/^[0-9.]+> ?//' | \
+	    grep -v -E '^BCPL 32|README|Estimated' | $(SORTNORM) > $$t.expected; \
+	  echo "$$t.expected: `wc -l < $$t.expected` lines"; \
+	done
 
 clean: clean-extra
 
 clean-extra:
-	rm -f flt flt.sial flt.err sial-check.s optest32 optest32.sial
+	rm -f flt flt.sial flt.err sial-check.s
+	for t in optest32 randtest rand16 $(SORTTESTS); do \
+	  rm -f $$t $$t.sial $$t.s $$t.hex $$t.lst $$t.dump $$t.emu.dump $$t.emu.stdout $${t}_native; \
+	done

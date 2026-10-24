@@ -1,0 +1,19 @@
+Setting 100000 words of data for quick sort
+Entering quick sort routine
+Compare count = 1852953
+Swap count    = 423245
+Sorting complete
+The data is now sorted
+Setting 100000 words of data for pesort sort
+Entering pesort sort routine
+Compare count = 1668395
+Swap count    = 451424
+Sorting complete
+The data is now sorted
+Setting 100000 words of data for psort sort
+Entering psort sort routine
+Compare count = 1741793
+Swap count    = 600746
+Sorting complete
+The data is now sorted
+End of test

@@ -1,0 +1,29 @@
+Setting 15000 words of data for heap sort
+Entering heap sort routine
+Sorting complete in N msecs
+The data is now sorted
+Setting 15000 words of data for heap3 sort
+Entering heap3 sort routine
+Sorting complete in N msecs
+The data is now sorted
+Setting 15000 words of data for heap4 sort
+Entering heap4 sort routine
+Sorting complete in N msecs
+The data is now sorted
+Setting 15000 words of data for heap6 sort
+Entering heap6 sort routine
+Sorting complete in N msecs
+The data is now sorted
+Setting 15000 words of data for heap8 sort
+Entering heap8 sort routine
+Sorting complete in N msecs
+The data is now sorted
+Setting 15000 words of data for heap12 sort
+Entering heap12 sort routine
+Sorting complete in N msecs
+The data is now sorted
+Setting 15000 words of data for heap16 sort
+Entering heap16 sort routine
+Sorting complete in N msecs
+The data is now sorted
+End of test
