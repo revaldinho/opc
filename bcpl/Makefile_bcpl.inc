@@ -4,6 +4,20 @@ pyexec ?= python3
 
 OPT ?= -o
 
+# The emulator runs under pypy3 when it is installed (several times faster than
+# python3), with the per-instruction trace switched off by -q. To debug, run
+# with the full trace saved in <prog>.trace, eg
+#   make TRACE=1 fact.emu.stdout
+# or override EMUFLAGS and/or emuexec directly.
+emuexec ?= $(if $(shell command -v pypy3 2>/dev/null),PYPY_GC_NURSERY=4M pypy3,python3)
+ifdef TRACE
+EMUFLAGS ?=
+EMUTRACE  = tee $*.trace |
+else
+EMUFLAGS ?= -q
+EMUTRACE  =
+endif
+
 
 ALLSRCS    ?= $(wildcard *.b)
 TESTSRCS   ?= $(shell ls -1 *b | egrep -v '(bcpllib|beeb|empty|mandset)'  )
@@ -39,8 +53,8 @@ bcpllib.sial : bcpllib.b
 	${pyexec} ${assembler} $*.s $*.hex  > $*.lst
 
 %.emu.stdout %.dump : %.hex ${emulator}
-	if [ -e $*.stdin ] ; then ${pyexec} ${emulator} $*.hex $*.dump $*.stdin | grep OUT | ../../utils/show_stdout.py --${ARCH} | tee $*.emu.stdout ; \
-	else ${pyexec} ${emulator} $*.hex $*.dump  | grep OUT | ../../utils/show_stdout.py --${ARCH}| tee $*.emu.stdout ; fi
+	if [ -e $*.stdin ] ; then ${emuexec} ${emulator} ${EMUFLAGS} $*.hex $*.dump $*.stdin | ${EMUTRACE} grep OUT | ../../utils/show_stdout.py --${ARCH} | tee $*.emu.stdout ; \
+	else ${emuexec} ${emulator} ${EMUFLAGS} $*.hex $*.dump  | ${EMUTRACE} grep OUT | ../../utils/show_stdout.py --${ARCH}| tee $*.emu.stdout ; fi
 
 %.diff: %.sim.stdout %.emu.stdout 
 	diff -a -s $*.emu.stdout $*.sim.stdout | tee $*.diff
