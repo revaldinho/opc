@@ -57,7 +57,26 @@ SECTION "BLIB"
  
 GET "libhdr"
 
-GLOBAL { lfsr  } 
+// Random number state for randno and setseed (changed 24/10/2026). randno is
+// the native BCPL generator (as in sysb/blib.b), a 32 bit linear congruential
+// generator, so OPC7 gives exactly the same sequence as cintsys. It replaces a
+// 16 bit LFSR whose state was GLOBAL { lfsr }: global 0, the same slot as
+// globsize, so its start value depended on the code layout.
+//
+// The constants 2147001325 (#x7FF8A3ED) and 715136305 (#x2AA01D31) are kept
+// as 16 bit halves and combined on the first call, because a 32 bit literal,
+// or a constant expression the compiler would fold into one, cannot be
+// translated for OPC6. On OPC6 hi<<16 is 0, leaving the low halves: the
+// multiplier #xA3ED (= 1 mod 4) and the odd increment #x1D31 give a full
+// period 16 bit generator, the low 16 bits of the same sequence.
+//
+// The state is a STATIC, local to this section, rather than the native global
+// randseed, because a global cannot be given an initial value in SIAL.
+STATIC { rseed  = 12345              // the native CLI does setseed(12345)
+         rmulhi = #x7FF8; rmullo = #xA3ED
+         rinchi = #x2AA0; rinclo = #x1D31
+         rmul   = 0;      rinc   = 0  // built on the first call of randno
+       }
 
 LET dummy() = VALOF {
     RESULTIS TRUE
@@ -922,40 +941,19 @@ $)
 // }
 // 
 
-AND randno(num) = VALOF {
-    // 170927 REv.
-    //
-    // Return random number in the range 1 to num using an LFSR register
-    // implementing the primitive polynomial 
-    // 
-    //          x^16+x^15+x^13+x^4+1 
-    // 
-    // to guarantee maximal sequence before repetition.
-    //
-    LET r1 = lfsr
-    LET feedback = 0
-
-    r1 := r1 >> 3
-    feedback := r1 & 1
-    r1 := r1 >> 9
-    feedback := feedback XOR (r1 & 1)
-    r1 := r1 >> 2
-    feedback := feedback XOR (r1 & 1)
-    r1 := r1 >> 1
-    feedback := feedback XOR (r1 & 1)
-
-    lfsr := ((lfsr<<1) XOR feedback) & #xFFFF
-
-    RESULTIS ABS( lfsr MOD (num)) + 1
+AND randno(upb) = VALOF  // Return a random number in the range 1 to upb
+{ IF rmul = 0 DO
+  { rmul := rmulhi<<16 | rmullo  // 2147001325 on OPC7, #xA3ED on OPC6
+    rinc := rinchi<<16 | rinclo  //  715136305 on OPC7, #x1D31 on OPC6
+  }
+  rseed := rseed*rmul + rinc
+  RESULTIS (ABS(rseed/3)) MOD upb + 1
 }
 
-AND setseed(num) = VALOF { 
-    LET oldseed = lfsr
-    TEST num ~= 0 THEN 
-       lfsr := ABS (num)
-    ELSE
-       writes("Warning: cannot set random seed to zero *n*c")
-    RESULTIS oldseed
+AND setseed(newseed) = VALOF
+{ LET oldseed = rseed
+  rseed := newseed
+  RESULTIS oldseed
 }
 
 // 
