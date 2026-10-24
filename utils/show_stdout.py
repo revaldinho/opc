@@ -9,7 +9,7 @@ OR
 Process an OPC trace file from emulation to create a stdout type file from
 data sent to the specified output port or memory address.
 
-By default alll 'OUT' traffic is logged. 
+By default all 'OUT' traffic is logged. 
 
 This can be filtered by providing a specific OUT address.
 
@@ -29,11 +29,11 @@ def showUsageAndExit() :
 def process_file(filename, adr=-1, mem_not_io=False, opc7=False):
     iostr = 'STORE' if mem_not_io else 'OUT'
     if opc7:
-        adrstr = '0x.*?' if adr==-1 else '0x%04x' % adr
-        stdout_re = re.compile("\s*?%s :\s*Address : %s .*?Data : 0x.*? \(\s*?(\d*)\).*?" % (iostr,adrstr))        
+        adrstr = '0x.*?' if adr==-1 else '0x%08x' % adr
+        stdout_re = re.compile(r"\s*?%s :\s*Address : %s .*?Data : 0x.*? \(\s*?(\d*)\).*?" % (iostr,adrstr))        
     else:
-        adrstr = '0x.*?' if adr==-1 else '0x%05x' % adr
-        stdout_re = re.compile("\s*?%s:\s*Address : %s .*?Data : 0x.*? \(\s*?(\d*)\).*?" % (iostr,adrstr))
+        adrstr = '0x.*?' if adr==-1 else '0x%04x' % adr
+        stdout_re = re.compile(r"\s*?%s:\s*Address : %s .*?Data : 0x.*? \(\s*?(\d*)\).*?" % (iostr,adrstr))
 
 
     try:
@@ -48,7 +48,7 @@ def process_file(filename, adr=-1, mem_not_io=False, opc7=False):
     for l in f:
         mobj = stdout_re.match(l)
         if mobj:
-            ch = chr( int(mobj.group(1)) )            
+            ch = chr( int(mobj.group(1)) & 255 )            
             if ( ch != '\r' ) :
                 print(ch, end="")
         pass
