@@ -8,11 +8,11 @@ MANIFEST {
 }
 
 LET start() = VALOF {
-//  TEST istubeplatform(1) THEN {
+  TEST istubeplatform(1) THEN {
     bbcsphere()
-//  } ELSE {
-//    testsphere()
-//  }
+  } ELSE {
+    testsphere()
+  }
 }
 
 AND testsphere() BE {
