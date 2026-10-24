@@ -46,15 +46,14 @@ OPTIONAL SWITCHES ::
   -n  --noheader            Suppress the standard start up sequence at the head of assembler
                             output
 
-  -o  --optimize            Specify the sial2opc process to make optimizations of the SIAL
+  -o  --opt                 Specify the sial2opc process to make optimizations of the SIAL
                             source code to better match the OPC target machine. Use of this
                             option requires the provided header file ext_sial.h which defines
                             additional opcodes for the SIAL machine.
   
   -7  --opc7                Select target CPU. Default is OPC6.
   -6  --opc6 
-  -5  --opc5ls                
-  -8  --opc8 
+  -5  --opc5ls  (or --opc5)
 
 All output is sent to stdout.
 
@@ -85,13 +84,13 @@ import os
 import re
 import codecs
 
-addsub_re  = re.compile("(\w*:)?\s*(?:z.|1.|0.|nz.|c.|nc.|pl.|mi.)?(add|sub)\s*(pc|r\d*)\s*,\s*r0,\s*(\-?(?:\w*|\d.*))($|\s.*)")
-jsr_re     = re.compile("((?:\w*\:?)\s*)(\w*\.)?(jsr)\s*(r\d*|pc)\s*,\s*(?:r0)\s*,\s*(.*)")
-mov_re     = re.compile("((?:\w*\:?)\s*)(\w*\.)?(mov)\s*(r\d*|pc)\s*,\s*(?:r0)\s*,\s*(.*)")
-sto_re     = re.compile("((?:\w*\:?)\s*)(\w*\.)?(sto)\s*(r\d*|pc)\s*,\s*(?:r0)\s*,\s*(.*)")
-ld_re      = re.compile("((?:\w*\:?)\s*)(\w*\.)?(ld)\s*(r\d*|pc)\s*,\s*(?:r0)\s*,\s*(.*)")
-incdec_re  = re.compile("((?:\w*\:?)\s*)(\w*\.)?(inc|dec)\s*(r\d*|pc)\s*,(.*)")
-pushpop_re = re.compile("((?:\w*\:?)\s*)(push|pop)\s*(r\d*|pc)\s*,\s*(.*?)((?:#|$).*)") 
+addsub_re  = re.compile(r"(\w*:)?\s*(?:z\.|1\.|0\.|nz\.|c\.|nc\.|pl\.|mi\.)?(add|sub)\s*(pc|r\d*)\s*,\s*r0,\s*(\-?(?:\w*|\d.*))($|\s.*)")
+jsr_re     = re.compile(r"((?:\w*\:?)\s*)(\w*\.)?(jsr)\s*(r\d*|pc)\s*,\s*(?:r0)\s*,\s*(.*)")
+mov_re     = re.compile(r"((?:\w*\:?)\s*)(\w*\.)?(mov)\s*(r\d*|pc)\s*,\s*(?:r0)\s*,\s*(.*)")
+sto_re     = re.compile(r"((?:\w*\:?)\s*)(\w*\.)?(sto)\s*(r\d*|pc)\s*,\s*(?:r0)\s*,\s*(.*)")
+ld_re      = re.compile(r"((?:\w*\:?)\s*)(\w*\.)?(ld)\s*(r\d*|pc)\s*,\s*(?:r0)\s*,\s*(.*)")
+incdec_re  = re.compile(r"((?:\w*\:?)\s*)(\w*\.)?(inc|dec)\s*(r\d*|pc)\s*,(.*)")
+pushpop_re = re.compile(r"((?:\w*\:?)\s*)(push|pop)\s*(r\d*|pc)\s*,\s*(.*?)((?:#|$).*)")
 
 sialop = dict() 
 cpu_target = "opc6"
@@ -103,10 +102,12 @@ def showUsageAndExit() :
 
 def getstring( s_list):
     # Convert string in format[ "K<len>", "C<char>" ...] into string
+    # Non-printing characters, '"' and '\' are written as octal escapes because the
+    # assembler ends a string at the first '"' and decodes it with 'unicode_escape'
     str = []
     for i in range (1, len(s_list)):
         c = int(s_list[i][1:]) & 0xFF
-        if c < 32:
+        if c < 32 or c > 126 or chr(c) in '"\\':
             c = '\\%03o' % c
         else:
             c = chr(c)
@@ -119,7 +120,7 @@ def getnum( str, ignore_errors=False ):
     if not ignore_errors:
         if cpu_target in("opc6","opc5ls") and (num & 0xFFFF0000) and num > 0:
             raise BaseException("Error - getnum - found constant larger than 16bits: 0x%08X" % num)
-        elif cpu_target == "opc7" and (0x7FFF < num < 0x0FFFF8000):
+        elif cpu_target == "opc7" and (num < -0x8000 or 0x7FFF < num < 0x0FFFF8000):
             raise BaseException("Error - getnum - found constant in illegal range: 0x%08X (%s)" % (num,str) )
     return (num)
 
@@ -127,7 +128,7 @@ def getnum20( str, ignore_errors=False ):
     # Convert literal of form K<n> to number
     num = int(str[1:])
     if not ignore_errors:
-        if cpu_target == "opc7" and (0x7FFFF < num < 0x0FFF80000):
+        if cpu_target == "opc7" and (num < -0x80000 or 0x7FFFF < num < 0x0FFF80000):
             raise BaseException("Error - getnum20 - found constant in illegal range: 0x%08X (%s)" % (num,str) )
     return (num)
 
@@ -149,14 +150,14 @@ def addsubtoincdec( s ) :
         try:
             n = int(mobj.group(4),0)
             if ( 0 < n < 16) :
-                c1 =  (re.sub( ",\s*r0\s*", "", s))
-                c2 =  (re.sub( "add ", "inc ", c1))
-                rstr =  (re.sub( "sub ", "dec ", c2))
+                c1 =  (re.sub( r",\s*r0\s*", "", s))
+                c2 =  (re.sub( r"add ", "inc ", c1))
+                rstr =  (re.sub( r"sub ", "dec ", c2))
             elif ( -16 < n < 0) :
-                c1 =  (re.sub( ",\s*r0\s*", "", s))
-                c2 =  (re.sub( "add ", "dec ", c1))
-                c3 =  (re.sub( "sub ", "inc ", c2))
-                rstr =  (re.sub( "\-", "", c3))
+                c1 =  (re.sub( r",\s*r0\s*", "", s))
+                c2 =  (re.sub( r"add ", "dec ", c1))
+                c3 =  (re.sub( r"sub ", "inc ", c2))
+                rstr =  (re.sub( r"\-", "", c3))
         except ValueError:            
             pass
     return rstr
@@ -183,7 +184,7 @@ def opc6to7( s):
 
 def code ( codestring, source=""):
     # Remove trailing zeros where possible
-    newcodestring = re.sub('((?:\w*\.)?\w*)\s*(r\d*|pc|psr)\s?,\s?(r\d+|pc|psr)\s?,\s?0($|\s+)', r'\1 \2,\3', codestring)
+    newcodestring = re.sub(r'((?:\w*\.)?\w*)\s*(r\d*|pc|psr)\s?,\s?(r\d+|pc|psr)\s?,\s?0($|\s+)', r'\1 \2,\3', codestring)
     if cpu_target == "opc6":        
         newcodestring = addsubtoincdec(newcodestring)
     elif cpu_target == "opc7":
@@ -199,12 +200,61 @@ def code ( codestring, source=""):
         trailing = ""
     print( "%s%-48s%s # %s" % (leading,newcodestring,trailing,source))
 
+def signed_ge( x, y, source=""):
+    # Set the sign bit of r4, and so the S flag, iff signed x >= y. Exact for all
+    # values, unlike testing the sign of x-y which is wrong when x-y overflows:
+    #   x >= y (signed) == (x >= y unsigned) ^ sign(x) ^ sign(y)
+    # and the unsigned result is the carry from cmp. mov and xor leave the carry
+    # alone; ror rotates it into the sign bit. Uses r4,r5 as temporaries.
+    code("mov r4,%s" % x, source)
+    code("xor r4,%s" % y)        # sign bit of r4 = sign(x) ^ sign(y)
+    code("cmp %s,%s" % (x, y))   # C set iff x >= y unsigned
+    code("ror r5,r0")            # r5 = C in the sign bit, all other bits zero
+    code("xor r4,r5")            # sign bit of r4 set iff x >= y signed
+
+def signed_compare( x, y, want_ge, source=""):
+    # a := TRUE if signed x >= y (want_ge) or signed x < y (not want_ge), else FALSE
+    signed_ge(x, y, source)
+    code("add r4,r4")            # C = sign bit of r4
+    code("mov r1,r0")            # default answer FALSE (mov leaves C alone)
+    code("%s.mov r1,r0,-1" % ("c" if want_ge else "nc"))
+
+def signed_jump( x, y, want_ge, label, source=""):
+    # Jump to label if signed x >= y (want_ge) or signed x < y (not want_ge)
+    signed_ge(x, y, source)
+    code("%s.mov pc,r0,%s" % ("mi" if want_ge else "pl", label))
+
+def word_bits():
+    return 16 if cpu_target in ("opc6","opc5ls") else 32
+
+def shift_const( reg, n, left):
+    # Shift reg by a constant n places (logical shift for right shifts); OPC only
+    # shifts by one place per instruction
+    for i in range(n):
+        code(("add %s,%s" if left else "LSR (%s,%s)") % (reg, reg))
+
+def and_const( reg, value):
+    # reg := reg & value for any word-sized constant. OPC7 sign-extends 16 bit
+    # immediates, so values that don't fit in 15 bits go via the large constant
+    # register r8
+    value &= (1 << word_bits()) - 1
+    if word_bits() == 16 or value <= 0x7FFF:
+        code("and %s,r0,0x%04X" % (reg, value))
+    else:
+        for s in getlongnum("K%d" % value):
+            code(s)
+        code("and %s,r8" % reg)
+
 def print_wrapper():
     ## OPC6 STACK at F7FF
     ## Allow 512 words of stack = 200h
     stack_setup             = "mov r14,r0,0xF7FF" if cpu_target in("opc6","opc5ls") else "lmov r14,0xFFFFFFFF"
     ## Need to allow space for TUBE ROM at top of address map for OPC6
-    initial_free_memory_ptr = "mov r10,r0,0xF5FF" if cpu_target in("opc6","opc5ls") else "lmov r10,0xFFFFEFFF"
+    ## OPC7 uses 20 bit addresses, so start at 0x000FEFFF rather than 0xFFFFEFFF: the same
+    ## memory, but getvec then returns positive addresses as BCPL programs expect (eg a
+    ## midpoint (l+r)/2 of two addresses rounds differently if they are negative). lmov
+    ## sign extends its 20 bit operand, so the top half is set with movt.
+    initial_free_memory_ptr = "mov r10,r0,0xF5FF" if cpu_target in("opc6","opc5ls") else "lmov r10,0x0EFFF\n        movt r10,r0,0x000F"
     print('''
         ## --------------------------------------------------------------
         ## OPC assembly code generated from SIAL using sial2opc.py
@@ -284,9 +334,13 @@ def read_sial_header( sialhdr):
     global sialop
     with open(sialhdr,"r") as f:
         for l in f.readlines() :
-            line = re.sub("//.*", "", l)
-            if not re.match(".*({|}|MANIFEST).*", line):
+            line = re.sub(r"//.*", "", l)
+            if not re.match(r".*({|}|MANIFEST).*", line):
                 exec( line.strip(), globals(), sialop )
+    # Headers before the 14/01/2019 renumbering call f_mod/f_xmod f_rem/f_xrem
+    for (new, old) in (('f_mod','f_rem'), ('f_xmod','f_xrem')):
+        if new not in sialop and old in sialop:
+            sialop[new] = sialop[old]
     return sialop
 
 def preprocess_sial( filename):
@@ -369,37 +423,33 @@ def optimize_sial( sialtext):
             prev_opcode = opcode
   
     # OPT-2: Look for loading A with constant to be used in shift of B by 'A' places
-    prev_line = sialtext[0]
+    # Builds a new list rather than inserting into sialtext while iterating over it,
+    # which would leave the last lines unvisited. Lines deleted by OPT-1 are dropped here.
+    newtext = []
     prev_fields = None
     prev_opcode = 0
-    for i in range (1,len(sialtext)):        
-        line = sialtext[i]
+    for line in sialtext:
         fields = line.split()
         if len(fields)>0 and fields[0].startswith("F"):
-            opcode = int(fields[0][1:])            
+            opcode = int(fields[0][1:])
             if opcode in (sialop['f_lsh'],sialop['f_rsh']):
-                if prev_opcode == sialop['f_atbl'] and prev_fields[1] == "K1" :                    
+                shift_a = "F%d" % (sialop['f_ext_lsr_a'] if opcode==sialop["f_rsh"] else sialop['f_ext_asl_a'])
+                if prev_opcode == sialop['f_atbl'] and prev_fields[1] == "K1" :
                     #print ("# OPT-2a: Found ATB; load constant A + shift by A. Constant = %d" % getnum(prev_fields[1]))
-                    #print ("#  %s ; %s " % (prev_fields[0], fields[0]))                    
-                    sialtext[i-1] = ""  
-                    sialtext[i] = "F%d" % (sialop['f_ext_lsr_a'] if opcode==sialop["f_rsh"] else sialop['f_ext_asl_a'])
+                    # Replace the ATBL K1 with a single shift of A by 1
+                    newtext[-1] = shift_a
+                    line = None
                 elif prev_opcode == sialop['f_l'] and prev_fields[1].startswith("K") and (0<getnum(prev_fields[1])<8):
                     shift_dist =  getnum(prev_fields[1])
                     #print ("# OPT-2b: Found load constant A + shift B by A. Constant = %d" % shift_dist )
-                    #print ("#  %s ; %s " % (prev_fields[0], fields[0]))                    
-                    # First shift is A := B shift by 1
-                    sialtext[i-1] = "F%d" % (sialop['f_ext_lsr'] if opcode==sialop["f_rsh"] else sialop['f_ext_asl'])
-                    sialtext[i] = ""
-                    if shift_dist > 1:  # subsequent shifts are A := A shift by 1                         
-                        sialtext[i:i] = ["F%d" % (sialop['f_ext_lsr_a'] if opcode==sialop["f_rsh"] else sialop['f_ext_asl_a'])] * (shift_dist-1)
-            prev_line = line
+                    # First shift is A := B shift by 1, subsequent shifts are A := A shift by 1
+                    newtext[-1] = "F%d" % (sialop['f_ext_lsr'] if opcode==sialop["f_rsh"] else sialop['f_ext_asl'])
+                    newtext.extend([shift_a] * (shift_dist-1))
+                    line = None
             prev_fields = fields
             prev_opcode = opcode
-                              
-    newtext = []
-    for i in sialtext:
-        if i != "":
-            newtext.append(i)
+        if line:
+            newtext.append(line)
     return newtext
 
 def process_sial(sialtext):
@@ -411,18 +461,19 @@ def process_sial(sialtext):
     global_vector = ["BLIB_abort"] * 0x1000
     global_vector[3] = "__sys" # will be defined in syslib.s
     gv_hightide = 0
+    b_offset = sialop.get('b_offset', 250) # only defined in ext_sial.h
 
     for i in sialtext:
-        line = re.sub( '(?P<label>(L|M)\d*?)', '%s_\g<label>' % sectionname, i.strip())
+        line = re.sub( r'\b(?P<label>(L|M)\d+)', r'%s_\g<label>' % sectionname, i.strip())
         fields = line.split()
         if len(fields)>0 and i.startswith("F"):
             opcode = int(fields[0][1:])
 
-            if opcode >= sialop['b_offset']:
-                dest_r = "r2"                
+            if opcode >= b_offset:
+                dest_r = "r2"
                 src_r = "r1"
                 unarysrc_r = "r1"
-                opcode  = opcode - sialop['b_offset']
+                opcode  = opcode - b_offset
             else:
                 dest_r = "r1"
                 unarysrc_r = "r1"                
@@ -567,8 +618,8 @@ def process_sial(sialtext):
                     code("not r4,%s,-1" % unarysrc_r, line)   # 2's complement A                                        
                     code("pl.mov %s,r4" % dest_r)             # if positive then get the positive version
                 else:   ## b := ABS a  or c := ABS a
-                    code("not %s,%s,-1" % dest_r, unarysrc_r, line)   # 2's complement A into dest                                                       
-                    code("mi.mov %s,%s" % dest_r, unarysrc_r)         # if negative then get the original instead
+                    code("not %s,%s,-1" % (dest_r, unarysrc_r), line)   # 2's complement A into dest
+                    code("mi.mov %s,%s" % (dest_r, unarysrc_r))         # if negative then get the original instead
             elif opcode in (sialop['f_lsh'],sialop['f_rsh']):
                 # lsh                  a := b << a            
                 # rsh                  a := b >> a
@@ -638,29 +689,68 @@ def process_sial(sialtext):
                 else: 
                     print("__start:")                   
                 firstlabel = True
-            elif opcode == sialop['f_j'] :       # j        Ln         Jump to Ln 
+            elif opcode == sialop['f_j'] :       # j        Ln         Jump to Ln
                 code("mov pc,r0,%s" % fields[1], line)
+            elif opcode == sialop['f_goto'] :    # goto                 Jump to the address in a
+                # Added 23/10/2026
+                code("mov pc,r1", line)
+            elif opcode == sialop['f_jge0m'] :   # jge0m    Mn         Jump to Mn if a >= 0
+                # Added 23/10/2026
+                code("cmp r1,r0", line)
+                code("pl.mov pc,r0,%s" % fields[1])
+            elif opcode == sialop['f_mlab'] :    # mlab     Mn         Destination of jge0m
+                # Added 23/10/2026
+                code("%s:" % fields[1], line)
+            elif opcode == sialop['f_nop'] :     # nop                  No operation
+                # Added 23/10/2026
+                code("", line + " [no code for nop]")
+            elif opcode == sialop['f_selld'] :   # selld    Klen Ksh   a := SLCT len:sh:0 OF a
+                # Added 23/10/2026
+                # a := (!a >> sh) & mask with a logical shift; len=0 means all bits above sh
+                (length, sh) = (getnum(fields[1]), getnum(fields[2]))
+                if length + sh > word_bits():
+                    raise BaseException("Error - selld field len %d sh %d does not fit in a %d bit word" % (length, sh, word_bits()))
+                code("ld r1,r1", line)
+                shift_const("r1", sh, False)
+                if 0 < length < word_bits():
+                    and_const("r1", (1 << length) - 1)
+            elif opcode in (sialop['f_selst'], sialop['f_xselst']) :
+                # selst    Kop Klen Ksh   SLCT len:sh:0 OF a := b
+                # xselst   Kop Klen Ksh   SLCT len:sh:0 OF b := a
+                # Added 23/10/2026
+                # Only op = sf_none (0) is generated for standard BCPL; other ops are xbcpl's
+                # op:= assignments
+                (sfop, length, sh) = (getnum(fields[1]), getnum(fields[2]), getnum(fields[3]))
+                if sfop != 0:
+                    raise BaseException("Error - selst/xselst with op %d (xbcpl op:= assignment) is not supported" % sfop)
+                if length + sh > word_bits():
+                    raise BaseException("Error - selst field len %d sh %d does not fit in a %d bit word" % (length, sh, word_bits()))
+                (addr_r, val_r) = ("r1", "r2") if opcode == sialop['f_selst'] else ("r2", "r1")
+                allones = (1 << word_bits()) - 1
+                fieldmask = (((1 << length) - 1 if length else allones) << sh) & allones
+                code("mov r5,%s" % val_r, line)
+                shift_const("r5", sh, True)
+                and_const("r5", fieldmask)           # new field value in place
+                code("ld r4,%s" % addr_r)
+                and_const("r4", ~fieldmask)          # clear the old field
+                code("or r4,r5")
+                code("sto r4,%s" % addr_r)
             elif opcode == sialop['f_jeq'] :     # jeq      Ln         Jump to Ln if a == b
                 code("cmp r1,r2",line)
                 code("z.mov pc,r0,%s" % fields[1])
             elif opcode == sialop['f_jne'] :     # jne      Ln         Jump to Ln if a != b
                 code("cmp r1,r2",line)
                 code("nz.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_jge'] :     # jge      Ln         Jump to Ln if b >= a 
-                code("cmp r2,r1",line)
-                code("pl.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_jgr'] :     # jgr      Ln         Jump to Ln if b > a [ ie a < b ] 
-                code("cmp r1,r2",line)
-                code("mi.mov pc,r0,%s" % fields[1])
+            elif opcode == sialop['f_jge'] :     # jge      Ln         Jump to Ln if b >= a
+                signed_jump("r2", "r1", True, fields[1], line)
+            elif opcode == sialop['f_jgr'] :     # jgr      Ln         Jump to Ln if b > a [ ie a < b ]
+                signed_jump("r1", "r2", False, fields[1], line)
             elif opcode == sialop['f_jgr0'] :     # jgr0      Ln       Jump to Ln if a > 0  [ie if 0 < a]
-                code("cmp r0,r1",line)
-                code("mi.mov pc,r0,%s" % fields[1])
+                signed_jump("r0", "r1", False, fields[1], line)
             elif opcode == sialop['f_jle'] :     # jle      Ln         Jump to Ln if b <= a [ie a >= b]
-                code("cmp r1,r2",line)
-                code("pl.mov pc,r0,%s" % fields[1])
-            elif opcode == sialop['f_jls'] :     # jls      Ln         Jump to Ln if b < a 
-                code("cmp r2,r1",line)
-                code("mi.mov pc,r0,%s" % fields[1])
+                signed_jump("r1", "r2", True, fields[1], line)
+            elif opcode == sialop['f_jls'] :     # jls      Ln         Jump to Ln if b < a
+                signed_jump("r2", "r1", False, fields[1], line)
             elif opcode == sialop['f_jeq0'] :     # jeq0      Ln         Jump to Ln if a == 0
                 code("cmp r1,r0",line)
                 code("z.mov pc,r0,%s" % fields[1])
@@ -674,8 +764,7 @@ def process_sial(sialtext):
                 code("cmp r1,r0",line)
                 code("mi.mov pc,r0,%s" % fields[1])
             elif opcode == sialop['f_jle0'] :     # jle0      Ln         Jump to Ln if a <= 0 [or 0>=a]
-                code("cmp r0,r1",line)
-                code("pl.mov pc,r0,%s" % fields[1])
+                signed_jump("r0", "r1", True, fields[1], line)
             elif opcode == sialop['f_ip'] :      # ip        Pn           a := P!n + a; P!n := a
                 code("ld r4,r11,%d" % getnum(fields[1]) ,line)
                 code("add r1,r4")
@@ -703,6 +792,19 @@ def process_sial(sialtext):
                             code(s);
                         code("add r1,r8" )                            
                 code("sto r1,%s,%d" % (ptr,getnum(fields[2])))
+            elif opcode == sialop['f_ikl'] :     # ikl       Kk Ln      a := !Ln + k; !Ln := a
+                # Added 23/10/2026
+                code("ld r1,r0,%s" % fields[2], line)
+                try:
+                    code("add r1,r0,%d" % getnum(fields[1]))
+                except BaseException as e:
+                    if cpu_target == "opc7":
+                        for s in getlongnum(fields[1]):
+                            code(s)
+                        code("add r1,r8")
+                    else:
+                        raise e
+                code("sto r1,r0,%s" % fields[2])
             elif opcode == sialop['f_k'] :        #  k         Pn         Call  a(b,...) incrementing P by n and leaving b in A             
                 code("mov r3,r11,%d" % getnum( fields[1]), line)
                 ## Need to ensure that B is transferred to A on entry to the routine
@@ -735,9 +837,9 @@ def process_sial(sialtext):
                 code("mov r1,r2")
                 code("mov r2,r4")
                 code("jsr r13,r0,__div")     # need to have signed division routine here for a/b
-            elif opcode == sialop['f_rem'] :      # rem                  a := b REM a
-                code("jsr r13,r0,__mod", line)     
-            elif opcode == sialop['f_xrem'] :      # xrem                  a := a REM b ; c := ?            
+            elif opcode == sialop['f_mod'] :      # mod                  a := b MOD a
+                code("jsr r13,r0,__mod", line)
+            elif opcode == sialop['f_xmod'] :      # xmod                  a := a MOD b ; c := ?
                 code("jsr r13,r0,__xmod", line)
             elif opcode in ( sialop['f_eq'], sialop['f_ne'], sialop['f_eq0'], sialop['f_ne0']) :
                 # f_eq     a := b = a
@@ -750,38 +852,24 @@ def process_sial(sialtext):
                 if opcode in (sialop['f_eq'], sialop['f_eq0']) :
                     code("not r1,r1")                     # invert answer for equal case
 
-            elif opcode == sialop['f_ls'] :  # ls                     a := b < a  [ie !(b >= a)]
-                code ("cmp r2,r1")            # compare b with a
-                code ("c.mov r1,r0")          # Carry set if b>= a so return zero
-                code ("nc.mov r1,r0,0xFFFF")  # Carry not set if b < a so return true
-            elif opcode == sialop['f_gr'] :           # ls                     a := b > a  [ie !(a >= b)]
-                code ("cmp r1,r2")         
-                code ("c.mov r1,r0")          # C set if a >= b, answer = FALSE
-                code ("nc.mov r1,r0,0xFFFF")  # C not set if b < a, answer = TRUE
-            elif opcode == sialop['f_le'] :           # ls                     a := b <= a  [ie !(a<b)]
-                code ("cmp r1,r2")         # compare a with b
-                code ("c.mov r1,r0")       # C set if a < b zero answer if a < b
-                code ("nc r1, r0,0xFFFF")   
-            elif opcode == sialop['f_ge'] :           # ge                     a := b >= a  
-                code ("cmp r2,r1")          # compare b with a
-                code ("c.mov r1,r0,0xFFFF") # C set if b >= a so return true
-                code ("nc.mov r1, r0")      # C not set if b < a so return false
-            elif opcode == sialop['f_ge0'] :           # ge0                     a := a >= 0  [ ie !(0 >a) ]
-                code ("cmp r1,r0", line)          
-                code ("c.mov r1,r0,0xFFFF") # C set if a >= 0 so return true
-                code ("nc.mov r1, r0")      # C not set if 0 < a so return false
+            elif opcode == sialop['f_ls'] :           # ls                     a := b < a
+                signed_compare("r2", "r1", False, line)
+            elif opcode == sialop['f_gr'] :           # gr                     a := b > a  [ie a < b]
+                signed_compare("r1", "r2", False, line)
+            elif opcode == sialop['f_le'] :           # le                     a := b <= a  [ie a >= b]
+                signed_compare("r1", "r2", True, line)
+            elif opcode == sialop['f_ge'] :           # ge                     a := b >= a
+                signed_compare("r2", "r1", True, line)
+            elif opcode == sialop['f_ge0'] :          # ge0                    a := a >= 0
+                signed_compare("r1", "r0", True, line)
             elif opcode == sialop['f_ls0'] :           # ls0                     a := a < 0  [ ie !(0 <= a) ]
                 code ("cmp r1,r0", line)           
                 code ("mi.mov r1,r0,0xFFFF") # If negative result set r1 all 1's
                 code ("pl.mov r1,r0")        # If positive result set r1 all 0's (won't be triggered by previous condition)
-            elif opcode == sialop['f_le0'] :           # le0                     a := a <= 0  
-                code ("cmp r0,r1", line)         
-                code ("c.mov r1,r0,0xFFFF")      
-                code ("nc.mov r1,r0")
-            elif opcode == sialop['f_gr0'] :           # gr0                     a := a > 0  [ ie !(0 >= a) ]
-                code ("cmp r0,r1", line)   # compare 0 with a
-                code ("c.mov r1,r0")       # C set if 0 >= a, return false
-                code ("nc.mov r1,r0,0xFFFF") # C not set if 0<a. return true
+            elif opcode == sialop['f_le0'] :          # le0                    a := a <= 0  [ie 0 >= a]
+                signed_compare("r0", "r1", True, line)
+            elif opcode == sialop['f_gr0'] :          # gr0                    a := a > 0  [ie 0 < a]
+                signed_compare("r0", "r1", False, line)
             elif opcode == sialop['f_rtn'] : # procedure return
                 code("ld r4,r11,1", line)  # get return address
                 code("ld r11,r11" )        # restore P pointer
@@ -856,7 +944,13 @@ def process_sial(sialtext):
             elif opcode in (sialop['f_res'],sialop['f_ldres']):
                 code("", line + " [no code for %s]" % fields[0])
             else:
-                print("** Opcode Not Handled - %s # %s" % (opcode,line))
+                # Stop rather than emit a comment line: the assembler ignores such lines,
+                # which would silently leave the operation out of the program
+                names = [k for (k,v) in sialop.items() if v == opcode and k.startswith("f_")]
+                name  = names[0][2:] if names else "unknown"
+                note  = " (floating point is not supported)" if name.startswith(("f","jf")) else ""
+                sys.stderr.write("sial2opc.py: Error - SIAL opcode %d (%s) is not supported%s\n    at: %s\n" % (opcode, name, note, line))
+                sys.exit(1)
     return(global_vector, gv_hightide)
 
 
@@ -864,8 +958,9 @@ if __name__ == "__main__" :
     sialtext = []
     filename = []
     sialhdr = "" 
-    if os.path.exists(os.path.join(os.environ['BCPLHDRS'],'sial.h')):
-        sialhdr = os.path.join(os.environ['BCPLHDRS'],'sial.h')
+    bcplhdrs = os.environ.get('BCPLHDRS', '')
+    if bcplhdrs and os.path.exists(os.path.join(bcplhdrs,'sial.h')):
+        sialhdr = os.path.join(bcplhdrs,'sial.h')
 
     syslib = ""
     optimize = False
