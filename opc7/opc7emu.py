@@ -1,4 +1,7 @@
 import sys, re, functools
+# -q: quiet mode, no per-instruction trace (memory and I/O accesses are still printed)
+trace = "-q" not in sys.argv
+sys.argv = [a for a in sys.argv if a != "-q"]
 mnemonics="mov movt xor and or not cmp sub add bperm ror lsr jsr asr rol s0F halt rti putpsr getpsr s13 s15 s16 s17 out in sto ld ljsr lmov lsto lld".split()
 op = dict([(opcode,mnemonics.index(opcode)) for opcode in mnemonics])
 dis = dict([(mnemonics.index(opcode),opcode) for opcode in mnemonics])
@@ -16,7 +19,7 @@ else:
 with open(sys.argv[1],"r") as f:
     wordmem = [ (int(x,16) & 0xFFFFFFFF) for x in f.read().split() ]
 (regfile, v, acc, c, z, pcreg, c_save, s, ei, swiid, interrupt, iomem) = ([0]*16,0,0,0,0,15,0,0,0,0,0, [0]*65536)
-print ("PC     : Mem      : Instruction            : V SWI I S C Z : %s\n%s" % (''.join(["  r%2d    " % d for d in range(0,16)]), '-'*202))
+if trace: print ("PC     : Mem      : Instruction            : V SWI I S C Z : %s\n%s" % (''.join(["  r%2d    " % d for d in range(0,16)]), '-'*202))
 while True:
     (pc_save,flag_save,regfile[0]) = (regfile[pcreg],(v,swiid,ei,s,c,z),0)    # always overwrite r0 and then dont care about assignments
     instr_word = wordmem[regfile[pcreg] & 0xFFFFF] &  0xFFFFFFFF
@@ -30,8 +33,8 @@ while True:
     else:
         operand = (operand | 0xFFFF0000)  if (operand & 0x8000 != 0) else operand
 
-    instr_str = "%s%s r%d,r%d,0x%05X" % ((pred_dict[p0<<2 | p1<<1 | p2] if (p0,p1,p2)!=(0,0,1) else ""),dis[opcode],dest,source,(operand & 0xFFFFF))
-    instr_str = re.sub("r0","psr",instr_str,1) if (opcode in (op["putpsr"],op["getpsr"])) else instr_str
+    if trace: instr_str = "%s%s r%d,r%d,0x%05X" % ((pred_dict[p0<<2 | p1<<1 | p2] if (p0,p1,p2)!=(0,0,1) else ""),dis[opcode],dest,source,(operand & 0xFFFFF))
+    if trace: instr_str = re.sub("r0","psr",instr_str,1) if (opcode in (op["putpsr"],op["getpsr"])) else instr_str
 
     regfile[pcreg] += 1
     if ( opcode==op["bperm"]):
@@ -48,8 +51,8 @@ while True:
     if interrupt : # software interrupts dont care about EI bit
         (interrupt, regfile[pcreg], pc_int, psr_int , ei) = (0, 0x00000002, pc_save, (v,swiid,ei,s,c,z), 0)
     else:
-        print ("%08x : %08X : %-22s : %d  %1X  %d %d %d %d : " % (pc_save, instr_word, instr_str, v, swiid ,ei, s, c, z), end='')
-        print (' '.join(["%08X" % r for r in regfile ]))
+        if trace: print ("%08x : %08X : %-22s : %d  %1X  %d %d %d %d : " % (pc_save, instr_word, instr_str, v, swiid ,ei, s, c, z), end='')
+        if trace: print (' '.join(["%08X" % r for r in regfile ]))
         if (bool(p2) ^ (bool(s if p0==1 else z) if p1==1 else bool(c if p0==1 else 1))):
             if opcode == (op["halt"]):
                 print("Stopped on halt instruction at %08x with halt number 0x%04x" % (regfile[pcreg], operand) )
