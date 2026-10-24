@@ -14,6 +14,13 @@ ASMFLAGS ?= $(if $(filter opc7,$(ARCH)),-g sparse)
 #   make TRACE=1 fact.emu.stdout
 # or override EMUFLAGS and/or emuexec directly.
 emuexec ?= $(if $(shell command -v pypy3 2>/dev/null),PYPY_GC_NURSERY=4M pypy3,python3)
+
+ifdef cemulator
+EMULATORRUN = ${cemulator}
+else
+EMULATORRUN = ${emuexec} ${emulator}
+endif
+
 ifdef TRACE
 EMUFLAGS ?=
 EMUTRACE  = tee $*.trace |
@@ -30,14 +37,14 @@ EMUDUMP = $(if $(filter opc7,$(ARCH)),$(if $(DUMP),$*.emu.dump,-),$*.dump)
 
 
 ALLSRCS    ?= $(wildcard *.b)
-TESTSRCS   ?= $(shell ls -1 *b | egrep -v '(bcpllib|beeb|empty|mandset)'  )
+TESTSRCS   ?= $(shell ls -1 *b | egrep -v '(bcpllib|beeb|empty|mandset|sphere)'  )
 SIALS      ?= $(patsubst %.b,%.sial,$(TESTSRCS))
 ASMS       ?= $(patsubst %.b,%.s,$(TESTSRCS))
 HEXS       ?= $(patsubst %.b,%.hex,$(TESTSRCS))
 BCPLEXECS  ?= $(patsubst %.b,%,$(TESTSRCS))
 EMUSTDOUTS ?= $(patsubst %.b,%.emu.stdout,$(TESTSRCS))
 
-SIMSRCS     ?= $(shell ls -1 *.b | egrep -v '(bcpllib|beeb|enigma|empty|mandset)'  )
+SIMSRCS     ?= $(shell ls -1 *.b | egrep -v '(bcpllib|beeb|enigma|empty|mandset|sphere)'  )
 SIMS        ?= $(patsubst %.b,%.sim,${SIMSRCS})
 SIMSTDOUTS  ?= $(patsubst %.b,%.sim.stdout,${SIMSRCS})
 DIFFS       ?= $(patsubst %.b,%.diff,${SIMSRCS})
@@ -63,8 +70,8 @@ bcpllib.sial : bcpllib.b
 	${pyexec} ${assembler} ${ASMFLAGS} $*.s $*.hex  > $*.lst
 
 %.emu.stdout : %.hex ${emulator}
-	if [ -e $*.stdin ] ; then ${emuexec} ${emulator} ${EMUFLAGS} $*.hex ${EMUDUMP} $*.stdin | ${EMUTRACE} grep OUT | ../../utils/show_stdout.py --${ARCH} | tee $*.emu.stdout ; \
-	else ${emuexec} ${emulator} ${EMUFLAGS} $*.hex ${EMUDUMP}  | ${EMUTRACE} grep OUT | ../../utils/show_stdout.py --${ARCH}| tee $*.emu.stdout ; fi
+	if [ -e $*.stdin ] ; then ${EMULATORRUN} ${EMUFLAGS} $*.hex ${EMUDUMP} $*.stdin | ${EMUTRACE} grep OUT | ../../utils/show_stdout.py --${ARCH} | tee $*.emu.stdout ; \
+	else ${EMULATORRUN} ${EMUFLAGS} $*.hex ${EMUDUMP}  | ${EMUTRACE} grep OUT | ../../utils/show_stdout.py --${ARCH}| tee $*.emu.stdout ; fi
 
 %.diff: %.sim.stdout %.emu.stdout 
 	diff -a -s $*.emu.stdout $*.sim.stdout | tee $*.diff
@@ -76,7 +83,7 @@ bcpllib.sial : bcpllib.b
 # the Verilog testbench's (<prog>.dump, written by the simulation), eg
 #   make fact.dumpdiff
 %.dumpdiff: %.sim %.hex ${emulator}
-	${emuexec} ${emulator} -q $*.hex $*.emu.dump $(wildcard $*.stdin) > /dev/null
+	${EMULATORRUN} -q $*.hex $*.emu.dump $(wildcard $*.stdin) > /dev/null
 	${pyexec} ../../utils/cmp_dump.py -x $*.emu.dump $*.dump > $@ ; st=$$? ; cat $@ ; exit $$st
 
 %.exe : ../${ARCH}tb.v ../${ARCH}cpu.v

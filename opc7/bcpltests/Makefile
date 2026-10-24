@@ -7,6 +7,8 @@ ROOT= ../..
 ARCH ?= opc7
 assembler ?= ../${ARCH}asm.py
 emulator ?= ../${ARCH}emu.py
+# if cemulator is defined then this will be used in preference to the python
+cemulator ?=
 
 TESTSRCS   ?= $(shell ls -1 *b | egrep -v '(bcpllib|beeblib|empty|bombe|sudoku16|sphere)'  )
 
