@@ -4,6 +4,10 @@ pyexec ?= python3
 
 OPT ?= -o
 
+# OPC7 hex files are written sparse (only non-zero blocks, in $readmemh '@addr'
+# format), which opc7emu.py and opc7tb.v read; other CPUs keep the full format
+ASMFLAGS ?= $(if $(filter opc7,$(ARCH)),-g sparse)
+
 # The emulator runs under pypy3 when it is installed (several times faster than
 # python3), with the per-instruction trace switched off by -q. To debug, run
 # with the full trace saved in <prog>.trace, eg
@@ -17,6 +21,12 @@ else
 EMUFLAGS ?= -q
 EMUTRACE  =
 endif
+
+# The OPC7 emulator only writes its memory dump with DUMP=1, eg
+#   make DUMP=1 fact.emu.stdout
+# as <prog>.emu.dump so it doesn't clash with the <prog>.dump written by the
+# Verilog testbench; other CPUs' emulators always write <prog>.dump
+EMUDUMP = $(if $(filter opc7,$(ARCH)),$(if $(DUMP),$*.emu.dump,-),$*.dump)
 
 
 ALLSRCS    ?= $(wildcard *.b)
@@ -50,17 +60,24 @@ bcpllib.sial : bcpllib.b
 	rm $*.tmp.s
 
 %.hex %.lst : %.s ${assembler}
-	${pyexec} ${assembler} $*.s $*.hex  > $*.lst
+	${pyexec} ${assembler} ${ASMFLAGS} $*.s $*.hex  > $*.lst
 
-%.emu.stdout %.dump : %.hex ${emulator}
-	if [ -e $*.stdin ] ; then ${emuexec} ${emulator} ${EMUFLAGS} $*.hex $*.dump $*.stdin | ${EMUTRACE} grep OUT | ../../utils/show_stdout.py --${ARCH} | tee $*.emu.stdout ; \
-	else ${emuexec} ${emulator} ${EMUFLAGS} $*.hex $*.dump  | ${EMUTRACE} grep OUT | ../../utils/show_stdout.py --${ARCH}| tee $*.emu.stdout ; fi
+%.emu.stdout : %.hex ${emulator}
+	if [ -e $*.stdin ] ; then ${emuexec} ${emulator} ${EMUFLAGS} $*.hex ${EMUDUMP} $*.stdin | ${EMUTRACE} grep OUT | ../../utils/show_stdout.py --${ARCH} | tee $*.emu.stdout ; \
+	else ${emuexec} ${emulator} ${EMUFLAGS} $*.hex ${EMUDUMP}  | ${EMUTRACE} grep OUT | ../../utils/show_stdout.py --${ARCH}| tee $*.emu.stdout ; fi
 
 %.diff: %.sim.stdout %.emu.stdout 
 	diff -a -s $*.emu.stdout $*.sim.stdout | tee $*.diff
 
 %.sim : %.hex %.exe
 	./$*.exe > $@
+
+# Optional: compare the final memory of the emulator (<prog>.emu.dump) with
+# the Verilog testbench's (<prog>.dump, written by the simulation), eg
+#   make fact.dumpdiff
+%.dumpdiff: %.sim %.hex ${emulator}
+	${emuexec} ${emulator} -q $*.hex $*.emu.dump $(wildcard $*.stdin) > /dev/null
+	${pyexec} ../../utils/cmp_dump.py -x $*.emu.dump $*.dump > $@ ; st=$$? ; cat $@ ; exit $$st
 
 %.exe : ../${ARCH}tb.v ../${ARCH}cpu.v
 	perl -pale 's/test\.(hex|dump|vcd)/$*\.\1/g' ../${ARCH}tb.v > $*_tb.v

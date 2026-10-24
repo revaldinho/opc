@@ -33,8 +33,12 @@ OPTIONAL SWITCHES ::
 
   -o --output    <filename>      specify file name for assembled code
 
-  -g --format    <bin|hex>       set the file format for the assembled code
-                                 - default is hex
+  -g --format    <bin|hex|sparse> set the file format for the assembled code
+                                 - default is hex, every word of memory
+                                 - sparse is the Verilog $readmemh format with
+                                   '@addr' lines for the non-zero 16 word blocks
+                                   only, read by opc7emu.py and opc7tb.v (but not
+                                   by the FPGA .mem rules, which need hex)
 
   -n --nolisting                 suppress the listing to stdout while the
                                  program runs
@@ -222,7 +226,7 @@ if __name__ == "__main__":
         elif opt in ( "-z", "--size" ) :
             size = int(arg,0)
         elif opt in ( "-g", "--format" ) :
-            if (arg in ("hex", "bin")):
+            if (arg in ("hex", "bin", "sparse")):
                 output_format = arg
             else:
                 usage()
@@ -242,6 +246,9 @@ if __name__ == "__main__":
             if output_format == "hex":
                 with open(output_filename,"w" ) as f:
                     f.write( '\n'.join([''.join("%08x " % d for d in wordmem[j:j+12]) for j in [i for i in range(0,len(wordmem),12)]]))
+            elif output_format == "sparse":
+                with open(output_filename,"w" ) as f:  # $readmemh format: '@addr' then the words of each non-zero 16 word block
+                    f.write(''.join("@%05x %s\n" % (a, ' '.join("%08x" % d for d in wordmem[a:a+16])) for a in range(0,len(wordmem),16) if any(wordmem[a:a+16])))
             else:
                 with open(output_filename,"wb" ) as f:
                     # Write binary in little endian order

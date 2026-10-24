@@ -15,6 +15,7 @@ module opc7tb() ;
   wire [31:0] data0 ;
   wire [31:0] dout;
   integer     seed = 10;
+  integer     memi;
   wire mem_cs  = vpa||vda;
   wire mem_we  = !rnw;  
   
@@ -51,6 +52,7 @@ module opc7tb() ;
     $dumpfile("test.vcd");
     $dumpvars;	
 `endif
+    for (memi = 0; memi < 1048576; memi = memi + 1) mem[memi] = 0;  // sparse hex files list only non-zero blocks
     $readmemh("test.hex", mem); // Problems with readmemb - use readmemh for now
     iomem[16'hfe08] = 32'h00000000; 
     { clk, int_clk, reset_b}  = 0;

@@ -16,8 +16,10 @@ if len(sys.argv) > 3:
 else:
     input_text = iter([chr(0)]*100000)
 
-with open(sys.argv[1],"r") as f:
-    wordmem = [ (int(x,16) & 0xFFFFFFFF) for x in f.read().split() ]
+(wordmem, adr) = ([0]*0x100000, 0)
+for x in open(sys.argv[1]).read().split():  # $readmemh format: hex words, '@addr' sets the load address
+    if x[0] == '@': adr = int(x[1:],16)
+    else: (wordmem[adr], adr) = (int(x,16) & 0xFFFFFFFF, adr+1)
 (regfile, v, acc, c, z, pcreg, c_save, s, ei, swiid, interrupt, iomem) = ([0]*16,0,0,0,0,15,0,0,0,0,0, [0]*65536)
 if trace: print ("PC     : Mem      : Instruction            : V SWI I S C Z : %s\n%s" % (''.join(["  r%2d    " % d for d in range(0,16)]), '-'*202))
 while True:
@@ -106,6 +108,6 @@ while True:
                 (v,swiid,ei,s,c,z) = flag_save
             else:
                 (v, swiid,ei,s,c,z) = (v,swiid,ei,(regfile[dest]>>31) & 1, c, 1 if (regfile[dest]==0) else 0)
-if len(sys.argv) > 2:  # Dump memory for inspection if required
+if len(sys.argv) > 2 and sys.argv[2] != "-":  # Dump memory for inspection if required ('-' for no dump)
     with open(sys.argv[2],"w" ) as f:
         f.write( '\n'.join([''.join("%08x " % d for d in wordmem[j:j+12]) for j in [i for i in range(0,len(wordmem),12)]]))

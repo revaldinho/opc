@@ -4,8 +4,9 @@ SRCS = $(wildcard *.s)
 
 HEXS  = $(patsubst %.s,%.hex,$(SRCS))
 EXES  = $(patsubst %.s,%.exe,$(SRCS))
-DUMPS = $(patsubst %.s,%.dump,$(SRCS))
+EMUSTDOUTS = $(patsubst %.s,%.emu.stdout,$(SRCS))
 DIFFS = $(patsubst %.s,%.diff,$(SRCS))
+DUMPDIFFS = $(patsubst %.s,%.dumpdiff,$(SRCS))
 SIMS  = $(patsubst %.s,%.sim,$(SRCS))
 DYNSTATS  = $(patsubst %.s,%.dynstats,$(SRCS))
 STASTATS  = $(patsubst %.s,%.stastats,$(SRCS))
@@ -21,15 +22,27 @@ vcd_option =
 #vcd_option = -DPRED_IN_EAD_ONLY=1
 #-D_dumpvcd=1
 
+# -g sparse: only the non-zero blocks of memory, in $readmemh '@addr' format
 %.hex %.lst : %.s opc7asm.py
-	python3 ${assembler} $< $*.hex >  $*.lst
+	python3 ${assembler} -g sparse $< $*.hex >  $*.lst
 
-%.emu.stdout %.dump : %.hex opc7emu.py
-	${pyexec} ${emulator} $< $*.dump | tee  $*.trace | ${pyexec} ${show_stdout} -7 >  $*.emu.stdout
+# The emulator's memory dump is only written with DUMP=1, eg 'make DUMP=1 fib.emu.stdout',
+# as <prog>.emu.dump so it doesn't clash with the <prog>.dump the Verilog testbench writes
+EMUDUMP = $(if $(DUMP),$*.emu.dump,-)
+
+%.emu.stdout : %.hex opc7emu.py
+	${pyexec} ${emulator} $< $(EMUDUMP) | tee  $*.trace | ${pyexec} ${show_stdout} -7 >  $*.emu.stdout
 	gzip -f $*.trace
 
-%.diff: %.sim.stdout %.emu.stdout 
+%.diff: %.sim.stdout %.emu.stdout
 	diff -a -s $*.emu.stdout $*.sim.stdout > $@
+
+# Optional: compare the final memory of the emulator (<prog>.emu.dump) with
+# the Verilog testbench's (<prog>.dump, written by the simulation), eg
+#   make fib.dumpdiff      or      make all_dumpdiff
+%.dumpdiff: %.sim %.hex opc7emu.py
+	${pyexec} ${emulator} -q $*.hex $*.emu.dump > /dev/null
+	${pyexec} ../../utils/cmp_dump.py -x $*.emu.dump $*.dump > $@ ; st=$$? ; cat $@ ; exit $$st
 
 %.sim : %.hex %.exe
 	./$*.exe > $@
@@ -57,11 +70,13 @@ all_exe: ${EXES}
 
 all_simulation: all_stdout all_sim all_exe
 
-all_emulation: opc7asm.py opc7emu.py ${DUMPS} ${HEXS}
+all_emulation: opc7asm.py opc7emu.py ${EMUSTDOUTS} ${HEXS}
 
 all_sim: opc7cpu.v opc7tb.v ${SIMS}
 
 all_diff: ${DIFFS}
+
+all_dumpdiff: ${DUMPDIFFS}
 
 all_stdout: ${STDOUTS}
 
