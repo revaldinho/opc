@@ -12,11 +12,19 @@ DYNSTATS  = $(patsubst %.s,%.dynstats,$(SRCS))
 STASTATS  = $(patsubst %.s,%.stastats,$(SRCS))
 STDOUTS  = $(patsubst %.s,%.sim.stdout,$(SRCS))
 
+
 pyexec ?= python3
 assembler ?= ../opc7asm.py
 emulator ?= ../opc7emu.py
 show_stdout ?= ../../utils/show_stdout.py
 histogram ?= ../../utils/histogram.py
+
+# use    DUMP =1
+# for more debugging options (Trace is needed for dynamic and static stats generation)
+EMUFLAGS ?=
+EMUTRACE  = tee $*.trace |
+EMUDUMP = $(if $(filter opc7,$(ARCH)),$(if $(DUMP),$*.emu.dump,-),$*.dump)
+
 
 vcd_option =
 #vcd_option = -DPRED_IN_EAD_ONLY=1
@@ -30,9 +38,10 @@ vcd_option =
 # as <prog>.emu.dump so it doesn't clash with the <prog>.dump the Verilog testbench writes
 EMUDUMP = $(if $(DUMP),$*.emu.dump,-)
 
-%.emu.stdout : %.hex opc7emu.py
-	${pyexec} ${emulator} $< $(EMUDUMP) | tee  $*.trace | ${pyexec} ${show_stdout} -7 >  $*.emu.stdout
+%.emu.stdout %.trace.gz : %.hex opc7emu.py
+	${pyexec} ${emulator} ${EMUFLAGS} $< $(EMUDUMP) | ${EMUTRACE} grep OUT | ${pyexec} ${show_stdout} -7 >  $*.emu.stdout
 	gzip -f $*.trace
+
 
 %.diff: %.sim.stdout %.emu.stdout
 	diff -a -s $*.emu.stdout $*.sim.stdout > $@
@@ -64,7 +73,7 @@ EMUDUMP = $(if $(DUMP),$*.emu.dump,-)
 
 # -D_dumpvcd=1        
 
-all: all_diff all_stats  all_emulation all_simulation all_exe all_sim 
+all: all_diff all_stats all_emulation all_simulation all_exe all_sim 
 
 all_exe: ${EXES}
 
