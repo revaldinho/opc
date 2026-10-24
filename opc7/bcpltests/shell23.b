@@ -25,32 +25,31 @@ $( LET m = ?
          LET vi, vj = v!i, v!j
          IF vj>vi DO v!j, v!i, k := vi, vj, k+1
       $)
-      writef("m = %i4  swaps = %i4*n*c", m, k)
+      writef("m = %i4  swaps = %i4*n", m, k)
    $) REPEATUNTIL m=1
 $)
 
 
-MANIFEST $( upb = 2000  $)
+MANIFEST $( upb = 5000  $)
 
 LET start() BE
 $( LET v = getvec(upb)
 
    try("shell23", shellsort, v, upb)
 
-   writes("*n*cEnd of test*n*c")
+   writes("*nEnd of test*n")
    freevec(v)
 $)
 
 AND try(name, sortroutine, v, upb) BE
-$( writef("*n*cSetting %n words of data for %s sort*n*c", upb, name)
-   setseed(#x1234)        // initialise random number system 
+$( writef("*nSetting %n words of data for %s sort*n", upb, name)
    FOR i = 1 TO upb DO v!i := randno(10000)
-   writef("Entering %s sort routine*n*c", name)
+   writef("Entering %s sort routine*n", name)
    sortroutine(v, upb)
-   writes("Sorting complete*n*c")
+   writes("Sorting complete*n")
    TEST sorted(v, upb)
-   THEN writes("The data is now sorted*n*c")
-   ELSE writef("### ERROR: %s sort does not work*n*c", name)
+   THEN writes("The data is now sorted*n")
+   ELSE writef("### ERROR: %s sort does not work*n", name)
 $)
 
 AND sorted(v, n) = VALOF
