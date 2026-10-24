@@ -724,9 +724,29 @@ $( LET t = @ a
 
       TEST k='%'
            THEN $( LET f, arg, n = 0, t!0, 0
-                   LET type      = ?
+                   LET frac       = 0
+                   LET widthgiven = FALSE
+                   LET type       = ?
                    p    := p + 1
                    type := capitalch(format%p)
+                   // Added 23/10/2026: as in the native write_format, a width
+                   // may be given as decimal digits before the letter (eg %11i),
+                   // optionally followed by .m for %n.mD; %i5 style still works
+                   WHILE '0' <= type <= '9' DO
+                   $( n := 10*n + type - '0'
+                      widthgiven := TRUE
+                      p := p + 1
+                      type := capitalch(format%p)
+                   $)
+                   IF widthgiven & type='.' DO
+                   $( p := p + 1
+                      type := capitalch(format%p)
+                      WHILE '0' <= type <= '9' DO
+                      $( frac := 10*frac + type - '0'
+                         p := p + 1
+                         type := capitalch(format%p)
+                      $)
+                   $)
                    SWITCHON type INTO
                    $( DEFAULT: wrch(type); ENDCASE
 
@@ -734,16 +754,30 @@ $( LET t = @ a
                       CASE 'T': f := writet  ; GOTO m
                       CASE 'C': f := wrch    ; GOTO l
                       CASE 'O': f := writeoct; GOTO m
-                      CASE 'B': f := writebin; GOTO m                      
+                      CASE 'B': f := writebin; GOTO m
                       CASE 'X': f := writehex; GOTO m
+                      CASE 'D': // Added 23/10/2026: %n.mD writes arg scaled
+                                // by 10^m as a fixed point number, eg %6.2D
+                                // writes 1234 as " 12.34"; %Dn is %In
+                                IF widthgiven DO
+                                $( LET scale = 1
+                                   FOR i = 1 TO frac DO scale := scale * 10
+                                   writedz(arg/scale, n-1-frac, FALSE, arg<0)
+                                   wrch('.')
+                                   writez(ABS arg MOD scale, frac)
+                                   t := t + 1
+                                   ENDCASE
+                                $)
                       CASE 'I': f := writed  ; GOTO m
-                      CASE 'Z': f := writez  ; GOTO m                      
+                      CASE 'Z': f := writez  ; GOTO m
                       CASE 'N': f := writen  ; GOTO l
                       CASE 'U': f := writeu  ; GOTO m
 
-                      m: p := p + 1
-                         n := format%p
-                         n := '0' <= n <= '9' -> n-'0', 10+n-'A'
+                      m: UNLESS widthgiven DO
+                         $( p := p + 1
+                            n := capitalch(format%p)
+                            n := '0' <= n <= '9' -> n-'0', 10+n-'A'
+                         $)
 
                       l: f(arg, n)
 
