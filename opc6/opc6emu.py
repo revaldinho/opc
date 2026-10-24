@@ -1,4 +1,7 @@
 import sys, re
+# -q: quiet mode, no per-instruction trace (memory and I/O accesses are still printed)
+trace = "-q" not in sys.argv
+sys.argv = [a for a in sys.argv if a != "-q"]
 mnemonics="mov,and,or,xor,add,adc,sto,ld,ror,jsr,sub,sbc,inc,lsr,dec,asr,halt,bswp,putpsr,getpsr,rti,not,out,in,push,pop,cmp,cmpc".split(",")
 op = dict([(opcode,mnemonics.index(opcode)) for opcode in mnemonics])
 dis = dict([(mnemonics.index(opcode),opcode) for opcode in mnemonics])
@@ -14,7 +17,7 @@ def print_memory_access( type, address, data):
 with open(sys.argv[1],"r") as f: 
     wordmem = [ (int(x,16) & 0xFFFF) for x in f.read().split() ]
 (regfile, acc, c, z, pcreg, c_save, s, ei, swiid, interrupt, iomem) = ([0]*16,0,0,0,15,0,0,0,0,0, [0]*65536) # initialise machine state inc PC = reg[15]
-print ("PC   : Mem       : Instruction            : SWI I S C Z : %s\n%s" % (''.join([" r%2d " % d for d in range(0,16)]), '-'*130))
+if trace: print ("PC   : Mem       : Instruction            : SWI I S C Z : %s\n%s" % (''.join([" r%2d " % d for d in range(0,16)]), '-'*130))
 while True:
     (pc_save,flag_save,regfile[0],preserve_flag) = (regfile[pcreg],(swiid,ei,s,c,z),0,False)    # always overwrite regfile location 0 and then dont care about assignments
     instr_word = wordmem[regfile[pcreg] & 0xFFFF ] &  0xFFFF
@@ -22,9 +25,9 @@ while True:
     (opcode, source, dest) = (((instr_word & 0xF00) >> 8) | (0x10 if (p0,p1,p2)==(0,0,1) else 0x00), (instr_word & 0xF0) >>4, instr_word & 0xF)
     (instr_len, rdmem, preserve_flag) = (2 if (instr_word & 0x1000) else 1, (opcode in(op["ld"],op["in"],op["pop"])), (dest==pcreg))
     operand = wordmem[regfile[pcreg]+1] if (instr_len==2) else (source if opcode in [op["dec"],op["inc"]] else ((opcode==op["pop"])-(opcode==op["push"])))
-    instr_str = "%s%s r%d," % ((pred_dict[p0<<2 | p1<<1 | p2] if (p0,p1,p2)!=(0,0,1) else ""),dis[opcode],dest)
-    instr_str += ("%s%d%s" % (("r" if opcode not in (op["inc"],op["dec"]) else ""),source, (",0x%04x" % operand) if instr_len==2 else ''))
-    instr_str = re.sub("r0","psr",instr_str,1) if (opcode in (op["putpsr"],op["getpsr"])) else instr_str
+    if trace: instr_str = "%s%s r%d," % ((pred_dict[p0<<2 | p1<<1 | p2] if (p0,p1,p2)!=(0,0,1) else ""),dis[opcode],dest)
+    if trace: instr_str += ("%s%d%s" % (("r" if opcode not in (op["inc"],op["dec"]) else ""),source, (",0x%04x" % operand) if instr_len==2 else ''))
+    if trace: instr_str = re.sub("r0","psr",instr_str,1) if (opcode in (op["putpsr"],op["getpsr"])) else instr_str
     (mem_str, source) = (" %04x %4s " % (instr_word, "%04x" % (operand) if instr_len==2 else ''), (0 if opcode in (op["dec"],op["inc"]) else source))
     regfile[15] += instr_len
     eff_addr = (regfile[source] + operand*(opcode!=op["pop"]))&0xFFFF  # EA_ED must be computed after PC is brought up to date
@@ -37,7 +40,7 @@ while True:
     if interrupt : # software interrupts dont care about EI bit
         (interrupt, regfile[pcreg], pc_int, psr_int , ei) = (0, 0x0002, pc_save, (swiid,ei,s,c,z), 0)
     else:
-        print ("%04x :%s: %-22s :  %1X  %d %d %d %d : %s" % (pc_save, mem_str, instr_str, swiid ,ei, s, c, z, ' '.join(["%04x" % i for i in regfile])))
+        if trace: print ("%04x :%s: %-22s :  %1X  %d %d %d %d : %s" % (pc_save, mem_str, instr_str, swiid ,ei, s, c, z, ' '.join(["%04x" % i for i in regfile])))
         if ( ( (p0,p1,p2)==(0,0,1) )  or  (bool(p2) ^ (bool(s if p0==1 else z) if p1==1 else bool(c if p0==1 else 1)))):
             if opcode == (op["halt"]):
                 print("Stopped on halt instruction at %04x with halt number 0x%04x" % (regfile[15]-(instr_len), operand) )
