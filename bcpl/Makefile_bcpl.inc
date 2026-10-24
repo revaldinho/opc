@@ -37,14 +37,14 @@ EMUDUMP = $(if $(filter opc7,$(ARCH)),$(if $(DUMP),$*.emu.dump,-),$*.dump)
 
 
 ALLSRCS    ?= $(wildcard *.b)
-TESTSRCS   ?= $(shell ls -1 *b | egrep -v '(bcpllib|beeb|empty|mandset|sphere)'  )
+TESTSRCS   ?= $(shell ls -1 *b | egrep -v '(bcpllib|beeb|empty|mandset)'  )
 SIALS      ?= $(patsubst %.b,%.sial,$(TESTSRCS))
 ASMS       ?= $(patsubst %.b,%.s,$(TESTSRCS))
 HEXS       ?= $(patsubst %.b,%.hex,$(TESTSRCS))
 BCPLEXECS  ?= $(patsubst %.b,%,$(TESTSRCS))
 EMUSTDOUTS ?= $(patsubst %.b,%.emu.stdout,$(TESTSRCS))
 
-SIMSRCS     ?= $(shell ls -1 *.b | egrep -v '(bcpllib|beeb|enigma|empty|mandset|sphere)'  )
+SIMSRCS     ?= $(shell ls -1 *.b | egrep -v '(bcpllib|beeb|enigma|empty|mandset)'  )
 SIMS        ?= $(patsubst %.b,%.sim,${SIMSRCS})
 SIMSTDOUTS  ?= $(patsubst %.b,%.sim.stdout,${SIMSRCS})
 DIFFS       ?= $(patsubst %.b,%.diff,${SIMSRCS})
