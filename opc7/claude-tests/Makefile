@@ -20,7 +20,7 @@ assembler ?= $(ROOT)/$(ARCH)/$(ARCH)asm.py
 emulator  ?= $(ROOT)/$(ARCH)/$(ARCH)emu.py
 
 TESTS_opc6 = cmptest optest writefmt rand16
-TESTS_opc7 = cmptest optest optest32 writefmt randtest
+TESTS_opc7 = cmptest optest optest32 writefmt randtest divtest
 TESTS      = $(TESTS_$(ARCH))
 TESTSRCS   = $(addsuffix .b,$(TESTS))
 

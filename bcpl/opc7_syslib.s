@@ -346,13 +346,13 @@ qm32_1:
         # - R1 holds Quotient
         # - R2 holds remainder         
         # - C = 0 if successful ; C = 1 if divide by zero
-        # - R4 used as workspace and trashed
+        # - R4, R6 used as workspace and trashed
         # - all other registers preserved
         #
         # Register Usage
         # - R1 = N:Quotient (N shifts out of LHS/Q in from RHS)
         # - R2 = Divisor
-        # - R3 = Remainder
+        # - R5 = Remainder
         # - R4 = loop counter
         # -----------------------------------------------------------------
         #
@@ -361,6 +361,9 @@ qm32_1:
         #
         # Routine returns on divide by zero with carry flag set.
         #
+        # Leading zero bytes of N are skipped before the bit loop: each would
+        # only shift a zero into the remainder 8 times, and most dividends in
+        # BCPL programs fit in 16 bits.
         # ------------------------------------------------------------------
 __divu: 
 udiv32:
@@ -369,6 +372,14 @@ udiv32:
         mov     r5,r0          # Initialise Remainder in R5
         cmp     r2,r0          # check D != 0
         z.mov   pc, r13        # bail out if zero (and carry will be set also)
+        cmp     r1,r0          # N = 0 gives quotient and remainder 0 (in R1, R5 already)
+        z.lmov  pc,udiv_2
+udiv_0:
+        bperm   r6,r1,0x4443   # top byte of N into R6, Z set if it is zero
+        nz.lmov pc,udiv_1      # top byte not zero: do the bit loop
+        bperm   r1,r1,0x2104   # N := N << 8
+        sub     r4,r0,8        # 8 fewer bits to do (N != 0, so the counter stays > 0)
+        lmov    pc,udiv_0
 udiv_1:
         ASL     (r1)           # left shift N
         rol     r5,r5          # left shift R and import carry into LSB
@@ -377,6 +388,7 @@ udiv_1:
         pl.add  r1,r0,1        # ..and increment quotient
         sub     r4,r0,1        # dec loop counter
         nz.lmov pc,udiv_1      # repeat 'til zero
+udiv_2:
         c.add   r0,r0          # clear carry
         mov     r2,r5          # put remainder into r2 for return
         POP     (r5)

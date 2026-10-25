@@ -16,6 +16,10 @@ and 'make DUMP=1 <name>.emu.stdout' for the emulator's memory dump in
                 Prints low 16 bits only, so use on OPC6 and OPC7.
   optest32.b    32 bit selector fields and large ikl constants, which need the
                 large constant register r8. OPC7 only.
+  divtest.b     / and MOD for dividends of every byte length (just below and
+                above each byte boundary, zero, maxint, minint) by small and
+                large divisors of both signs, for the OPC7 divide routine that
+                skips leading zero bytes (25/10/2026). OPC7 only.
   writefmt.b    writef formats in the OPC bcpllib (extended 23/10/2026): widths
                 before the letter (%11i), after it (%i5, %ib), %d and %n.mD
                 fixed point. Use on OPC6 and OPC7.

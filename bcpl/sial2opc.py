@@ -746,7 +746,9 @@ def process_sial(sialtext):
             elif opcode == sialop['f_jgr'] :     # jgr      Ln         Jump to Ln if b > a [ ie a < b ]
                 signed_jump("r1", "r2", False, fields[1], line)
             elif opcode == sialop['f_jgr0'] :     # jgr0      Ln       Jump to Ln if a > 0  [ie if 0 < a]
-                signed_jump("r0", "r1", False, fields[1], line)
+                code("cmp r1,r0", line)
+                code("mi.mov r4,r0")             # Z := 1 if a < 0, so Z is set iff a <= 0 (OPC6 cannot predicate cmp)
+                code("nz.mov pc,r0,%s" % fields[1])
             elif opcode == sialop['f_jle'] :     # jle      Ln         Jump to Ln if b <= a [ie a >= b]
                 signed_jump("r1", "r2", True, fields[1], line)
             elif opcode == sialop['f_jls'] :     # jls      Ln         Jump to Ln if b < a
@@ -764,7 +766,9 @@ def process_sial(sialtext):
                 code("cmp r1,r0",line)
                 code("mi.mov pc,r0,%s" % fields[1])
             elif opcode == sialop['f_jle0'] :     # jle0      Ln         Jump to Ln if a <= 0 [or 0>=a]
-                signed_jump("r0", "r1", True, fields[1], line)
+                code("cmp r1,r0", line)
+                code("mi.mov r4,r0")             # Z := 1 if a < 0, so Z is set iff a <= 0 (OPC6 cannot predicate cmp)
+                code("z.mov pc,r0,%s" % fields[1])
             elif opcode == sialop['f_ip'] :      # ip        Pn           a := P!n + a; P!n := a
                 code("ld r4,r11,%d" % getnum(fields[1]) ,line)
                 code("add r1,r4")
@@ -861,15 +865,21 @@ def process_sial(sialtext):
             elif opcode == sialop['f_ge'] :           # ge                     a := b >= a
                 signed_compare("r2", "r1", True, line)
             elif opcode == sialop['f_ge0'] :          # ge0                    a := a >= 0
-                signed_compare("r1", "r0", True, line)
+                code("add r1,r1", line)      # C = sign bit of a
+                code("mov r1,r0")            # default answer FALSE (mov leaves C alone)
+                code("nc.mov r1,r0,-1")
             elif opcode == sialop['f_ls0'] :           # ls0                     a := a < 0  [ ie !(0 <= a) ]
                 code ("cmp r1,r0", line)           
                 code ("mi.mov r1,r0,0xFFFF") # If negative result set r1 all 1's
                 code ("pl.mov r1,r0")        # If positive result set r1 all 0's (won't be triggered by previous condition)
-            elif opcode == sialop['f_le0'] :          # le0                    a := a <= 0  [ie 0 >= a]
-                signed_compare("r0", "r1", True, line)
-            elif opcode == sialop['f_gr0'] :          # gr0                    a := a > 0  [ie 0 < a]
-                signed_compare("r0", "r1", False, line)
+            elif opcode in (sialop['f_gr0'], sialop['f_le0']):
+                # gr0                    a := a > 0  [ie 0 < a]
+                # le0                    a := a <= 0  [ie 0 >= a]
+                code("cmp r1,r0", line)
+                code("mi.mov r1,r0")         # a < 0 becomes 0, so Z is set iff a <= 0
+                code("nz.mov r1,r0,-1")      # a > 0 becomes TRUE; otherwise a is now 0
+                if opcode == sialop['f_le0']:
+                    code("not r1,r1")
             elif opcode == sialop['f_rtn'] : # procedure return
                 code("ld r4,r11,1", line)  # get return address
                 code("ld r11,r11" )        # restore P pointer
