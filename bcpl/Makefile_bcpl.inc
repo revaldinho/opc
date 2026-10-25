@@ -41,7 +41,9 @@ TESTSRCS   ?= $(shell ls -1 *b | egrep -v '(bcpllib|beeb|empty|mandset)'  )
 SIALS      ?= $(patsubst %.b,%.sial,$(TESTSRCS))
 ASMS       ?= $(patsubst %.b,%.s,$(TESTSRCS))
 HEXS       ?= $(patsubst %.b,%.hex,$(TESTSRCS))
-BCPLEXECS  ?= $(patsubst %.b,%,$(TESTSRCS))
+# Native executables for clean to remove: one per .b in the directory, not
+# just the tests, so programs left out of TESTSRCS (or another ARCH's) go too
+BCPLEXECS  ?= $(patsubst %.b,%,$(wildcard *.b))
 EMUSTDOUTS ?= $(patsubst %.b,%.emu.stdout,$(TESTSRCS))
 
 SIMSRCS     ?= $(shell ls -1 *.b | egrep -v '(bcpllib|beeb|enigma|empty|mandset)'  )

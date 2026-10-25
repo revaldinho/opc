@@ -1,3 +1,14 @@
+# Native cintcode executables in the BCPL test directories have no extension:
+# ignore every extensionless file there (tracked files such as the Makefiles
+# are unaffected). This comes first so that the patterns below still ignore
+# names with extensions.
+opc7/bcpltests/*
+!opc7/bcpltests/*.*
+!opc7/bcpltests/*/
+opc7/claude-tests/*
+!opc7/claude-tests/*.*
+!opc7/claude-tests/*/
+
 *~
 *.lst
 *.lis
@@ -73,16 +84,7 @@
 */xc95*/xlnx_auto_0_xdb/
 */xc95*/xst/
 
-# BCPL test build outputs (sial2opc.py, emulator, native cintcode executables)
+# BCPL test build outputs (sial2opc.py, emulator)
 */bcpltests/*.s
 */bcpltests/*.sial
 */bcpltests/*.emu.stdout
-opc7/bcpltests/Leval
-opc7/bcpltests/ack
-opc7/bcpltests/anseq
-opc7/bcpltests/apfel
-opc7/bcpltests/enig
-opc7/bcpltests/enigma-m3
-opc7/bcpltests/eval
-opc7/bcpltests/reedsolomon
-opc7/bcpltests/solit2
