@@ -1614,8 +1614,11 @@ AND testbit(bitno, bitvec) = VALOF
 // bitvec!0 holds bits 0 to bitsperword-1
 // bitvec!1 holds bits bitsperword to 2*bitsperword-1
 // etc
-{ LET i = bitno  /  bitsperword
-  AND s = bitno MOD bitsperword
+// Changed 25/10/2026 for OPC, which has no divide instruction:
+// bitno/bitsperword and bitno MOD bitsperword are a shift and a mask
+// (bitsperword is a power of 2 and bitno >= 0).
+{ LET i = bitno >> (B2Wsh+3)
+  AND s = bitno & (bitsperword-1)
   RESULTIS bitvec!i & (1<<s)
 }
 
@@ -1623,9 +1626,9 @@ AND setbit(bitno, bitvec, state) = VALOF
 // This function sets the specified bit in bitvec to 1 or 0 depending
 // on whether state is TRUE or FALSE, respectively. It returns a
 // non-zero value if the previous setting of the bit was a one, otherwise
-// it returns zero. See testbit above.
-{ LET i = bitno  /  bitsperword
-  AND s = bitno MOD bitsperword
+// it returns zero. See testbit above, also for the change of 25/10/2026.
+{ LET i = bitno >> (B2Wsh+3)
+  AND s = bitno & (bitsperword-1)
   LET mask = 1 << s
   LET oldstate = bitvec!i & mask
   TEST state THEN bitvec!i := bitvec!i |  mask
