@@ -626,19 +626,31 @@ def process_sial(sialtext):
                 codestring = "add r1,r1" if opcode==sialop['f_lsh'] else "LSR (r1,r1)"
                 code("mov r4,r1",line) # Get the number of places to shift in r4 + 1
                 code("mov r1,r2")      # r2 preserved so shift in r1
-                code("cmp r4,r0")      # is r4 ==0 (ie shift dist==0)?
-                if cpu_target == "opc6":
-                    code("z.inc pc,_L%04d - PC" % (localcounter+1))
-                else: 
-                    code("z.add pc,r0,_L%04d - PC" % (localcounter+1))                   
-                code("_L%04d:" % localcounter)
-                code(codestring)
-                code("sub r4,r0,1")                
-                if cpu_target == "opc6":
-                    code("nz.inc pc,_L%04d - PC" % localcounter) # PC op preserves Z flag from dec r4
+                if cpu_target == "opc7":
+                    # Changed 25/10/2026: distances of 8 or more (unsigned, so also negative
+                    # ones) go to a syslib routine which shifts whole bytes with bperm and
+                    # leaves 0-7 places, done by jumping into a run of 7 single shifts
+                    code("cmp r4,r0,8")
+                    code("c.jsr r13,r0,%s" % ("__lsh_bytes" if opcode==sialop['f_lsh'] else "__rsh_bytes"))
+                    code("not r4,r4,-1")                                # r4 := -places
+                    code("add pc,r4,_L%04d - PC" % localcounter)        # skip 7-places shifts
+                    for n in range(7):
+                        code(codestring)
+                    code("_L%04d:" % localcounter)
                 else:
-                    code("nz.add pc,r0,_L%04d - PC" % localcounter) # PC op preserves Z flag from dec r4                    
-                code("_L%04d:" % (localcounter+1))
+                    code("cmp r4,r0")      # is r4 ==0 (ie shift dist==0)?
+                    if cpu_target == "opc6":
+                        code("z.inc pc,_L%04d - PC" % (localcounter+1))
+                    else: 
+                        code("z.add pc,r0,_L%04d - PC" % (localcounter+1))                   
+                    code("_L%04d:" % localcounter)
+                    code(codestring)
+                    code("sub r4,r0,1")                
+                    if cpu_target == "opc6":
+                        code("nz.inc pc,_L%04d - PC" % localcounter) # PC op preserves Z flag from dec r4
+                    else:
+                        code("nz.add pc,r0,_L%04d - PC" % localcounter) # PC op preserves Z flag from dec r4                    
+                    code("_L%04d:" % (localcounter+1))
                 localcounter += 2
             elif opcode == sialop['f_ext_asl']: # f_ext_asl=      175    //  a := b << 1
                 code("mov r1,r2", line)

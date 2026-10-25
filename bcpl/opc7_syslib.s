@@ -480,6 +480,78 @@ __xmod: ## Find signed modulus of a MOD b
         POP     (r13)           # pop return address 
         RTS     ()
 
+        # -----------------------------------------------------------------
+        # __lsh_bytes, __rsh_bytes
+        #
+        # Called by the code sial2opc.py generates for lsh and rsh (added
+        # 25/10/2026) when the shift distance is 8 or more, unsigned: shift by
+        # whole bytes with bperm, leaving the last 0-7 places to the caller.
+        # As natively, a distance of 32 or more gives 0, and a negative
+        # distance shifts the other way, done here completely (minint gives 0,
+        # where natively the value is unchanged).
+        #
+        # Entry
+        # - R1 holds the value to shift (logical shift for rsh)
+        # - R4 holds the distance, 8 or more unsigned
+        # - R13 holds return address
+        #
+        # Exit
+        # - R1 shifted
+        # - R4 holds the places still to shift, 0-7
+        # - all other registers preserved
+        # -----------------------------------------------------------------
+__lsh_bytes:
+        cmp     r4,r0
+        mi.lmov pc,__lsh_neg   # negative distance: shift right instead
+        cmp     r4,r0,32
+        c.mov   r1,r0          # 32 or more places gives 0
+        c.mov   r4,r0
+        c.mov   pc,r13
+__lsh_b1:
+        bperm   r1,r1,0x2104   # R1 := R1 << 8
+        sub     r4,r0,8
+        cmp     r4,r0,8
+        c.lmov  pc,__lsh_b1
+        RTS     ()
+
+__rsh_bytes:
+        cmp     r4,r0
+        mi.lmov pc,__rsh_neg   # negative distance: shift left instead
+        cmp     r4,r0,32
+        c.mov   r1,r0          # 32 or more places gives 0
+        c.mov   r4,r0
+        c.mov   pc,r13
+__rsh_b1:
+        bperm   r1,r1,0x4321   # R1 := R1 >> 8 (logical)
+        sub     r4,r0,8
+        cmp     r4,r0,8
+        c.lmov  pc,__rsh_b1
+        RTS     ()
+
+__lsh_neg:                     # R1 << R4 for R4 < 0 is R1 >> -R4
+        not     r4,r4,-1       # R4 := -R4
+        cmp     r4,r0,32
+        c.mov   r1,r0          # 32 or more places (or minint) gives 0
+        c.mov   r4,r0
+        c.mov   pc,r13
+__lsh_n1:
+        LSR     (r1,r1)
+        sub     r4,r0,1
+        nz.lmov pc,__lsh_n1    # R4 ends at 0: no places left for the caller
+        RTS     ()
+
+__rsh_neg:                     # R1 >> R4 for R4 < 0 is R1 << -R4
+        not     r4,r4,-1       # R4 := -R4
+        cmp     r4,r0,32
+        c.mov   r1,r0          # 32 or more places (or minint) gives 0
+        c.mov   r4,r0
+        c.mov   pc,r13
+__rsh_n1:
+        ASL     (r1)
+        sub     r4,r0,1
+        nz.lmov pc,__rsh_n1    # R4 ends at 0: no places left for the caller
+        RTS     ()
+
         # ------------------------------------------------------------
         # sys()
         #

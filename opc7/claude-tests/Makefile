@@ -20,7 +20,7 @@ assembler ?= $(ROOT)/$(ARCH)/$(ARCH)asm.py
 emulator  ?= $(ROOT)/$(ARCH)/$(ARCH)emu.py
 
 TESTS_opc6 = cmptest optest writefmt rand16
-TESTS_opc7 = cmptest optest optest32 writefmt randtest divtest bittest
+TESTS_opc7 = cmptest optest optest32 writefmt randtest divtest bittest shifttest
 TESTS      = $(TESTS_$(ARCH))
 TESTSRCS   = $(addsuffix .b,$(TESTS))
 
@@ -80,6 +80,6 @@ clean: clean-extra
 
 clean-extra:
 	rm -f flt flt.sial flt.err sial-check.s bcpllib.sial
-	for t in optest32 randtest divtest bittest rand16 $(SORTTESTS); do \
+	for t in optest32 randtest divtest bittest shifttest rand16 $(SORTTESTS); do \
 	  rm -f $$t $$t.sial $$t.s $$t.hex $$t.lst $$t.dump $$t.emu.dump $$t.emu.stdout $${t}_native; \
 	done

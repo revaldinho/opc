@@ -25,6 +25,11 @@ and 'make DUMP=1 <name>.emu.stdout' for the emulator's memory dump in
                 state and testbit, then a bit vector
                 sieve to 20000 that also serves as a benchmark. OPC7 only, as
                 bitsperword is 32 in bcpllib.
+  shifttest.b   Shifts by a variable distance (25/10/2026: whole bytes with
+                bperm in a syslib routine, then a jump into a run of single
+                shifts) for every distance from -33 to 40 in both directions:
+                32 or more gives 0, a negative distance shifts the other way.
+                Also some constant shifts. OPC7 only.
   writefmt.b    writef formats in the OPC bcpllib (extended 23/10/2026): widths
                 before the letter (%11i), after it (%i5, %ib), %d and %n.mD
                 fixed point. Use on OPC6 and OPC7.
