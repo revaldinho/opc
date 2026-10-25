@@ -446,6 +446,18 @@ def optimize_sial( sialtext):
                     newtext[-1] = "F%d" % (sialop['f_ext_lsr'] if opcode==sialop["f_rsh"] else sialop['f_ext_asl'])
                     newtext.extend([shift_a] * (shift_dist-1))
                     line = None
+            elif opcode in (sialop['f_div'],sialop['f_mod']) and prev_opcode in (sialop['f_l'],sialop['f_atbl']) \
+                 and prev_fields[1].startswith("K"):
+                # OPT-3 (added 25/10/2026): a := b / n or b MOD n for a constant n = 2**k, done
+                # inline with shifts or a mask. Up to 2**14 on OPC6 (16 bit) and 2**23 on OPC7
+                n = int(prev_fields[1][1:])
+                if 0 < n <= (1 << (14 if cpu_target in ("opc6","opc5ls") else 23)) and n & (n-1) == 0:
+                    if prev_opcode == sialop['f_atbl']:
+                        newtext[-1] = "F%d" % sialop['f_atb']   # keep atbl's b := a
+                    else:
+                        newtext.pop()                          # the l Kn
+                    newop = sialop['f_ext_divp2'] if opcode == sialop['f_div'] else sialop['f_ext_modp2']
+                    line = "F%d K%d" % (newop, n)
             prev_fields = fields
             prev_opcode = opcode
         if line:
@@ -853,6 +865,29 @@ def process_sial(sialtext):
                 code("mov r1,r2")
                 code("mov r2,r4")
                 code("jsr r13,r0,__div")     # need to have signed division routine here for a/b
+            elif opcode in (sialop['f_ext_divp2'], sialop['f_ext_modp2']):
+                # f_ext_divp2  Kn   a := b / n      n = 2**k, from OPT-3 (added 25/10/2026)
+                # f_ext_modp2  Kn   a := b MOD n
+                # BCPL / truncates towards zero, so a negative b gets n-1 added before an
+                # arithmetic shift; b MOD n = b - (that rounded b with its low k bits clear)
+                n = int(fields[1][1:])               # up to 2**23: n-1 and -n may need r8
+                dest = "r1" if opcode == sialop['f_ext_divp2'] else "r4"
+                code("", line)
+                if n-1 > 0x7FFF:                     # OPC7 only: n-1 in the large constant register
+                    for s in getlongnum("K%d" % (n-1)):
+                        code(s)
+                code("mov %s,r2" % dest)             # sets the S flag from b
+                code("mi.add %s,%s" % (dest, "r8" if n-1 > 0x7FFF else "r0,%d" % (n-1)))
+                if opcode == sialop['f_ext_divp2']:
+                    for i in range(n.bit_length()-1):
+                        code("asr r1,r1")
+                else:
+                    if n <= 0x8000:
+                        code("and r4,r0,%d" % -n)    # -n as a sign extended immediate
+                    else:
+                        and_const("r4", -n)
+                    code("mov r1,r2")
+                    code("sub r1,r4")
             elif opcode == sialop['f_mod'] :      # mod                  a := b MOD a
                 code("jsr r13,r0,__mod", line)
             elif opcode == sialop['f_xmod'] :      # xmod                  a := a MOD b ; c := ?

@@ -191,6 +191,8 @@ f_ext_asl=        155    //  a := b << 1
 f_ext_lsr=        156    //  a := b >> 1
 f_ext_asl_a=      157    //  a := a << 1
 f_ext_lsr_a=      158    //  a := a >> 1
+f_ext_divp2=      167    //  Kn  a := b / n    for n a power of 2 (added 25/10/2026)
+f_ext_modp2=      168    //  Kn  a := b MOD n  for n a power of 2 (added 25/10/2026)
 
 // _ext_jeq0=      159    //   as f_jeq0 but no need for compare as Z flag set by prev. instruction
 // _ext_jne0=     160    //   as f_jne0 but no need for compare as Z flag set by prev. instruction

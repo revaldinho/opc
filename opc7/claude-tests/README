@@ -25,6 +25,14 @@ and 'make DUMP=1 <name>.emu.stdout' for the emulator's memory dump in
                 state and testbit, then a bit vector
                 sieve to 20000 that also serves as a benchmark. OPC7 only, as
                 bitsperword is 32 in bcpllib.
+  p2divtest.b   / and MOD by constant powers of 2 (2**0 to 2**14), which
+                sial2opc.py -o translates inline as shifts and a mask
+                (25/10/2026), for 16 bit dividends including negative ones
+                (/ truncates towards zero, MOD takes the dividend's sign).
+                Both SIAL forms, l Kn and atbl Kn before div/mod, with one
+                writef per divisor. Use on OPC6 and OPC7.
+  p2div32test.b The same for 32 bit dividends and divisors up to 2**23, where
+                the constants need the large constant register r8. OPC7 only.
   shifttest.b   Shifts by a variable distance (25/10/2026: whole bytes with
                 bperm in a syslib routine, then a jump into a run of single
                 shifts) for every distance from -33 to 40 in both directions:
