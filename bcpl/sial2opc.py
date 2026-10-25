@@ -858,7 +858,10 @@ def process_sial(sialtext):
             elif opcode == sialop['f_xsub'] :    # xsub                 a := a - b  c := ?? 
                 code("sub r1,r2", line)
             elif opcode == sialop['f_xdiv'] :     # xdiv                 a := a / b
-                code("jsr r13,r0,__div", line)     # need to have signed division routine here for a/b
+                # OPC7 has __xdiv for a/b (25/10/2026); OPC6's __div is a/b
+                code("jsr r13,r0,%s" % ("__xdiv" if cpu_target == "opc7" else "__div"), line)
+            elif opcode == sialop['f_div'] and cpu_target == "opc7":    # div    a := b / a
+                code("jsr r13,r0,__div", line)     # OPC7 __div is b/a and keeps B (25/10/2026)
             elif opcode == sialop['f_div'] :      # div                 a := b / a
                 # assume need to swap a and b over here via temp r4 before and after call to sdiv
                 code("mov r4,r1", line)

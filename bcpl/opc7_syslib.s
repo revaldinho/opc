@@ -334,72 +334,159 @@ qm32_1:
         #
         # udiv32 
         #
-        # Divide 32 bit N by 32 bit D and return integer dividend and remainder
+        # Unsigned divide of N by D, the core of __div, __xdiv, __mod and
+        # __xmod below (rewritten 25/10/2026)
         #
         # Entry
         # - R1 holds N
-        # - R2 holds D
-        # - R13 holds return address
-        # - R14 global stack pointer
+        # - R8 holds D, at most 2**31 (the wrappers pass absolute values)
+        # - R7 holds return address
         #
         # Exit
         # - R1 holds Quotient
-        # - R2 holds remainder         
-        # - C = 0 if successful ; C = 1 if divide by zero
-        # - R4, R6 used as workspace and trashed
+        # - R5 holds Remainder
+        # - R4 used as workspace and trashed
         # - all other registers preserved
         #
-        # Register Usage
-        # - R1 = N:Quotient (N shifts out of LHS/Q in from RHS)
-        # - R2 = Divisor
-        # - R5 = Remainder
-        # - R4 = loop counter
+        # D = 0 gives quotient 0 and remainder N (natively it is an error).
+        #
+        # Leading zero bytes of N are skipped (most dividends in BCPL programs
+        # fit in 16 bits), so the bits left are a multiple of 8 and the loop
+        # does a byte per pass. Each bit takes 4 instructions: rol of N brings
+        # the previous quotient bit in from C and sends N's next bit out to C,
+        # where rol of R picks it up; cmp leaves C = 1 if R >= D, and then
+        # c.sub subtracts D leaving C = 1. The counter is decremented with mov,
+        # which keeps C. R < D <= 2**31 before each rol of R, so R never
+        # overflows.
+        # ------------------------------------------------------------------
+udiv32:
+        cmp     r8,r0
+        z.lmov  pc,udiv_z      # divide by zero
+        mov     r1,r1
+        z.lmov  pc,udiv_q      # N = 0 gives quotient and remainder 0
+        lmov    r4,4           # bytes of N to do
+udiv_0:
+        bperm   r5,r1,0x4443   # top byte of N into R5, Z set if it is zero
+        nz.lmov pc,udiv_s      # top byte not zero: do the bit loop
+        bperm   r1,r1,0x2104   # N := N << 8
+        mov     r4,r4,-1       # one byte fewer (N != 0, so the counter stays > 0)
+        lmov    pc,udiv_0
+udiv_s:
+        mov     r5,r0          # R := 0
+        add     r0,r0          # C := 0, which the first rol of N takes in
+udiv_1:
+        rol     r1,r1          # quotient bit in from C, next bit of N out to C
+        rol     r5,r5          # ..and into R
+        cmp     r5,r8          # C = 1 if R >= D (unsigned)
+        c.sub   r5,r8          # if so subtract, leaving C = 1 as the quotient bit
+        rol     r1,r1
+        rol     r5,r5
+        cmp     r5,r8
+        c.sub   r5,r8
+        rol     r1,r1
+        rol     r5,r5
+        cmp     r5,r8
+        c.sub   r5,r8
+        rol     r1,r1
+        rol     r5,r5
+        cmp     r5,r8
+        c.sub   r5,r8
+        rol     r1,r1
+        rol     r5,r5
+        cmp     r5,r8
+        c.sub   r5,r8
+        rol     r1,r1
+        rol     r5,r5
+        cmp     r5,r8
+        c.sub   r5,r8
+        rol     r1,r1
+        rol     r5,r5
+        cmp     r5,r8
+        c.sub   r5,r8
+        rol     r1,r1
+        rol     r5,r5
+        cmp     r5,r8
+        c.sub   r5,r8
+        mov     r4,r4,-1       # next byte (mov keeps C)
+        nz.lmov pc,udiv_1
+        rol     r1,r1          # the last quotient bit
+        mov     pc,r7
+udiv_q:
+        mov     r5,r0
+        mov     pc,r7
+udiv_z:
+        mov     r5,r1
+        mov     r1,r0
+        mov     pc,r7
+
         # -----------------------------------------------------------------
         #
-        # For 16b operation, N must be moved to the upper 16 bits of R1 to
-        # start so that left shifts immediately move valid bits into the carry.
+        # __div, __xdiv, __mod, __xmod
         #
-        # Routine returns on divide by zero with carry flag set.
+        # Signed divide and remainder for the SIAL operations of the same
+        # names (rewritten 25/10/2026; on OPC7 sial2opc.py no longer swaps A
+        # and B for div):
+        #   __div    a := b / a       __mod    a := b MOD a
+        #   __xdiv   a := a / b       __xmod   a := a MOD b
+        # / truncates towards zero and MOD takes the sign of the dividend.
         #
-        # Leading zero bytes of N are skipped before the bit loop: each would
-        # only shift a zero into the remainder 8 times, and most dividends in
-        # BCPL programs fit in 16 bits.
-        # ------------------------------------------------------------------
-__divu: 
-udiv32:
-        PUSH    (r5)
-        lmov    r4,32          # loop counter
-        mov     r5,r0          # Initialise Remainder in R5
-        cmp     r2,r0          # check D != 0
-        z.mov   pc, r13        # bail out if zero (and carry will be set also)
-        cmp     r1,r0          # N = 0 gives quotient and remainder 0 (in R1, R5 already)
-        z.lmov  pc,udiv_2
-udiv_0:
-        bperm   r6,r1,0x4443   # top byte of N into R6, Z set if it is zero
-        nz.lmov pc,udiv_1      # top byte not zero: do the bit loop
-        bperm   r1,r1,0x2104   # N := N << 8
-        sub     r4,r0,8        # 8 fewer bits to do (N != 0, so the counter stays > 0)
-        lmov    pc,udiv_0
-udiv_1:
-        ASL     (r1)           # left shift N
-        rol     r5,r5          # left shift R and import carry into LSB
-        cmp     r5, r2         # compare R with D
-        pl.sub  r5, r2         # if >= 0 then do subtract for real..
-        pl.add  r1,r0,1        # ..and increment quotient
-        sub     r4,r0,1        # dec loop counter
-        nz.lmov pc,udiv_1      # repeat 'til zero
-udiv_2:
-        c.add   r0,r0          # clear carry
-        mov     r2,r5          # put remainder into r2 for return
-        POP     (r5)
-        RTS()
+        # Entry
+        # - R1, R2 hold SIAL A and B
+        # - R13 holds return address
+        #
+        # Exit
+        # - R1 holds the result
+        # - R4, R5, R6, R7, R8 used as workspace and trashed
+        # - all other registers preserved, including B (R2) and C (R3)
+        # -----------------------------------------------------------------
+__div:  ## a := b / a
+        mov     r6,r1
+        xor     r6,r2          # sign of the quotient in R6
+        mov     r8,r1
+        mi.not  r8,r8,-1       # D := ABS a
+        mov     r1,r2
+        mi.not  r1,r1,-1       # N := ABS b
+        ljsr    r7,udiv32
+        mov     r6,r6
+        mi.not  r1,r1,-1       # negate the quotient if the signs differ
+        RTS     ()
+
+__xdiv: ## a := a / b
+        mov     r6,r1
+        xor     r6,r2          # sign of the quotient in R6
+        mov     r8,r2
+        mi.not  r8,r8,-1       # D := ABS b
+        mov     r1,r1
+        mi.not  r1,r1,-1       # N := ABS a
+        ljsr    r7,udiv32
+        mov     r6,r6
+        mi.not  r1,r1,-1       # negate the quotient if the signs differ
+        RTS     ()
+
+__mod:  ## a := b MOD a
+        mov     r8,r1
+        mi.not  r8,r8,-1       # D := ABS a
+        mov     r1,r2
+        mi.not  r1,r1,-1       # N := ABS b
+        ljsr    r7,udiv32
+        mov     r1,r5
+        mov     r2,r2          # (R2 is still b)
+        mi.not  r1,r1,-1       # the remainder takes the sign of b
+        RTS     ()
+
+__xmod: ## a := a MOD b
+        mov     r6,r1          # sign of a in R6
+        mi.not  r1,r1,-1       # N := ABS a
+        mov     r8,r2
+        mi.not  r8,r8,-1       # D := ABS b
+        ljsr    r7,udiv32
+        mov     r1,r5
+        mov     r6,r6
+        mi.not  r1,r1,-1       # the remainder takes the sign of a
+        RTS     ()
 
 	# --------------------------------------------------------------
-	# Signed wrappers
-	#
-	# __mul
-	# __div
-	# __mod
+	# Signed wrapper for __mul (the division wrappers are above)
 	#
 	# For mul and div, the sign of the result depends on the sign of both arguments
 	# - the A for of the wrapper achieves this
@@ -431,54 +518,6 @@ ENDMACRO
 
 __mul:
       SW32A(__mulu)
-
-__div:
-      SW32A(__divu)
-
-        # For mod, the sign of the result depends only on the sign of the first arguments
-        # - the B for of the wrapper achieves this
-
-__mod:  ## Find signed modulus of b MOD a
-        ## NB division by zero should abort !! ABORT 5: Division by zero
-        PUSH    (r13)           # save return address
-        PUSH    (r2)            # save r2 (b)
-        mov     r4,r2           # swap over r1 and r2
-        not     r2,r1,-1        # r2 <- -r1
-        mi.mov  r2,r1           # if negative then r2 <- r1
-        not     r1,r4,-1        # r1 <- -r4
-        mi.mov  r1,r4           # if negative then r1 <- r4
-        ljsr    r13,__divu      # do a unsigned divide/mod operation
-                                # result is quo in r1, rem in r2
-                                # now adjust based on sign of original r2
-        not     r1,r2,-1        # put -remainder in r1
-        POP     (r4)            # get original 'b'
-        cmp     r4,r0           # compare with zero
-        pl.mov  r1,r2           # if was +ve then put rem in r1 instead
-        mov     r2,r4           # restore r2 = 'b'
-        POP     (r13)           # pop return address 
-        RTS     ()
-
-__xmod: ## Find signed modulus of a MOD b
-        ## NB division by zero should abort !! ABORT 5: Division by zero
-        PUSH    (r13)           # save return address
-        PUSH    (r2)            # save r2 (b)
-        PUSH    (r1)            # save r1 (a) for inspection of sign later
-        not     r3,r1,-1        # r1 <- -r1
-        mi.mov  r3,r1           # if negative then r1 <- r1 ie A = ABS(A)
-        mov     r1, r3
-        not     r3,r2,-1        # r2 <- -r2
-        mi.mov  r3,r2           # if negative then r2 <- r2 is A = ABS(B)
-        mov     r2,r3
-        ljsr    r13,__divu      # do a unsigned divide/mod operation
-                                # result is quo in r1, rem in r2
-                                # now adjust based on sign of original r2
-        not     r1,r2,-1        # put -remainder in r1
-        POP     (r4)            # get original 'a'
-        cmp     r4,r0
-        pl.mov  r1,r2           # if was +ve then put rem in r1 instead
-        POP     (r2)            # restore original b
-        POP     (r13)           # pop return address 
-        RTS     ()
 
         # -----------------------------------------------------------------
         # __lsh_bytes, __rsh_bytes

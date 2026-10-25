@@ -33,6 +33,12 @@ and 'make DUMP=1 <name>.emu.stdout' for the emulator's memory dump in
                 writef per divisor. Use on OPC6 and OPC7.
   p2div32test.b The same for 32 bit dividends and divisors up to 2**23, where
                 the constants need the large constant register r8. OPC7 only.
+  xdivtest.b    The reversed SIAL operations xdiv (a := a / b) and xmod
+                (a := a MOD b), which the compiler generates after comparing
+                the operands or for one call result divided by another, as in
+                bcpltests/modarith.b and eval.b; OPC7 calls __xdiv and __xmod
+                (25/10/2026). Signed values including minint and maxint, and
+                an xmod as a byte index. OPC7 only.
   shifttest.b   Shifts by a variable distance (25/10/2026: whole bytes with
                 bperm in a syslib routine, then a jump into a run of single
                 shifts) for every distance from -33 to 40 in both directions:
