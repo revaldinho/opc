@@ -79,7 +79,7 @@ sort-expected:
 clean: clean-extra
 
 clean-extra:
-	rm -f flt flt.sial flt.err sial-check.s
+	rm -f flt flt.sial flt.err sial-check.s bcpllib.sial
 	for t in optest32 randtest rand16 $(SORTTESTS); do \
 	  rm -f $$t $$t.sial $$t.s $$t.hex $$t.lst $$t.dump $$t.emu.dump $$t.emu.stdout $${t}_native; \
 	done
