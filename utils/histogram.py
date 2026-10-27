@@ -11,9 +11,9 @@ def generate_histograms(filename, type, verbose=False):
     digits = wordsize/4
     
     if type == "Dynamic":        
-        instr_re = re.compile("[0-9a-f]{%d}\s*:\s*(?P<opcode>[0-9a-f]{%d})\s*?(?P<operand>[0-9a-f]{%d})?\s*: ((?P<pred>(mi|pl|z|c|nz|nc))\.)?(?P<instr>\w*)\s+(?P<rd>r\d*|psr),.*" % (digits,digits,digits) )
+        instr_re = re.compile(r"[0-9a-f]{%d}\s*:\s*(?P<opcode>[0-9a-f]{%d})\s*?(?P<operand>[0-9a-f]{%d})?\s*: ((?P<pred>(mi|pl|z|c|nz|nc))\.)?(?P<instr>\w*)\s+(?P<rd>r\d*|psr),.*" % (digits,digits,digits) )
     else:
-        instr_re = re.compile("[0-9a-f]{%d}\s+(?P<opcode>[0-9a-f]{%d})\s*?(?P<operand>[0-9a-f]{%d})?\s+(?P<label>\w+?\:\s+)?((?P<pred>(mi|pl|z|c|nz|nc))\.)?(?P<instr>[a-z]+)\s+(?P<rd>\w+)" % (digits,digits,digits))
+        instr_re = re.compile(r"[0-9a-f]{%d}\s+(?P<opcode>[0-9a-f]{%d})\s*?(?P<operand>[0-9a-f]{%d})?\s+(?P<label>\w+?\:\s+)?((?P<pred>(mi|pl|z|c|nz|nc))\.)?(?P<instr>[a-z]+)\s+(?P<rd>\w+)" % (digits,digits,digits))
 
 
     one_word_instr_count = 0
