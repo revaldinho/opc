@@ -34,7 +34,7 @@ enum { MOV, MOVT, XOR, AND, OR, NOT, CMP, SUB, ADD, BPERM, ROR, LSR, JSR, ASR,
 static const char *mnemonics[32] = {
     "mov", "movt", "xor", "and", "or", "not", "cmp", "sub", "add", "bperm",
     "ror", "lsr", "jsr", "asr", "rol", "s0F", "halt", "rti", "putpsr",
-    "getpsr", "s13", "s15", "scmp", "s17", "out", "in", "sto", "ld", "ljsr",
+    "getpsr", "s14", "s15", "scmp", "s17", "out", "in", "sto", "ld", "ljsr",
     "lmov", "lsto", "lld" };
 static const char *pred_str[8] = { "", "0.", "z.", "nz.", "c.", "nc.", "mi.", "pl." };
 

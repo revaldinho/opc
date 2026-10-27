@@ -163,6 +163,10 @@ def assemble( filename, listingon=True):
                             words = ([(words[i+1]&0xFFFF)<<16|(words[i]&0xFFFF) for i in range(0,len(words)-1,2)]) if inst=="HALF" else words
                         else :
                             words = [int(eval( f,globals(), symtab)) for f in opfields ]
+                            if inst == "WORD":  # negative values as 32 bit two's complement, so the hex file has no '-'
+                                if any(not -0x80000000 <= w <= 0xFFFFFFFF for w in words):
+                                    errors.append("Error: 32b constant out of range in ...\n         %s" % (line.strip()))
+                                words = [w & 0xFFFFFFFF for w in words]
                     except (ValueError, NameError, TypeError,SyntaxError):
                         (words,errors)=([0]*3,errors+["Error: illegal or undefined register name or expression in ...\n         %s" % line.strip() ])
                     if inst in op:
@@ -188,7 +192,7 @@ def assemble( filename, listingon=True):
                 print("%08x  %-36s  %s"%(memptr,' '.join([("%08x" % i) for i in words]),line.rstrip()))
 
     print ("\nAssembled %d words of code with %d error%s and %d warning%s." % (wcount,len(errors),'' if len(errors)==1 else 's',len(warnings),'' if len(warnings)==1 else 's'))
-    print (r"\nSymbol Table:\n\n%s\n\n%s\n%s" % ('\n'.join(["%-32s 0x%08X (%08d)" % (k,v,v) for k,v in sorted(symtab.items()) if not re.match(r"r\d|r\d\d|pc|psr",k)]),'\n'.join(errors),'\n'.join(warnings)))
+    print ("\nSymbol Table:\n\n%s\n\n%s\n%s" % ('\n'.join(["%-32s 0x%08X (%08d)" % (k,v,v) for k,v in sorted(symtab.items()) if not re.match(r"r\d|r\d\d|pc|psr",k)]),'\n'.join(errors),'\n'.join(warnings)))
 
     return wordmem
 
