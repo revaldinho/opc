@@ -34,7 +34,7 @@ enum { MOV, MOVT, XOR, AND, OR, NOT, CMP, SUB, ADD, BPERM, ROR, LSR, JSR, ASR,
 static const char *mnemonics[32] = {
     "mov", "movt", "xor", "and", "or", "not", "cmp", "sub", "add", "bperm",
     "ror", "lsr", "jsr", "asr", "rol", "s0F", "halt", "rti", "putpsr",
-    "getpsr", "s13", "s15", "s16", "s17", "out", "in", "sto", "ld", "ljsr",
+    "getpsr", "s13", "s15", "scmp", "s17", "out", "in", "sto", "ld", "ljsr",
     "lmov", "lsto", "lld" };
 static const char *pred_str[8] = { "", "0.", "z.", "nz.", "c.", "nc.", "mi.", "pl." };
 
@@ -335,7 +335,7 @@ int main(int argc, char **argv) {
             break;
         case SUB: case CMP: case SCMP: {
             uint64_t nea = (~ea_ed)&0xFFFFFFFF;                   /* invert, add with carry in, as the hardware */
-            uint64_t res = (regfile[dest] + nea+ 1) & 0x1FFFFFFFFULL;
+            uint64_t res = (regfile[dest] + nea + 1) & 0x1FFFFFFFFULL;
             uint64_t rd = regfile[dest];
             v = ((((~res) & nea & rd) | (res & (~nea) & (~rd))) & 0x80000000) != 0;
             c = (res >> 32) & 1;
