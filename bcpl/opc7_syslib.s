@@ -295,43 +295,6 @@ umd_div0:
         RTS     ()
         # -----------------------------------------------------------------
         #
-        # qmul32, __mulu
-        #
-        # Quick multiply 2 32 bit numbers and return a 32 bit number  without
-        # checking for overflow conditions
-        #
-        # Entry
-        # - R1 holds A
-        # - R2 holds B
-        # - R13 holds return address
-        # - R14 holds global stack pointer
-        #
-        # Exit
-        # - R1 holds product of A and B
-        # - R4,5 used as workspace and trashed
-        # - all other registers preserved
-        #
-        # Register Usage
-        # - R1 = Product Register
-        # - R3 = holds first shifted copy of A
-        # - R4 = sticky carry set if sign bit or carry out is ever set
-        # ------------------------------------------------------------------
-__mulu:
-        PUSH    (r5)
-        lsr     r5,r1         # shift A into r5
-        mov     r1,r0         # initialise product (preserve C)
-        mov     r4,r2         # move multiplicand (B) into r4, preserve C
-qm32_1:
-        c.add   r1,r4       # add B into acc if carry
-        ASL     (r4)          # multiply B x 2
-        lsr     r5,r5         # shift A to check LSB
-        nz.lmov pc,qm32_1 # if A is zero then exit else loop again (preserving carry)
-        c.add   r1,r4       # Add last copy of multiplicand into acc if carry was set
-        POP     (r5)
-        RTS()
-
-        # -----------------------------------------------------------------
-        #
         # udiv32 
         #
         # Unsigned divide of N by D, the core of __div, __xdiv, __mod and
@@ -485,39 +448,45 @@ __xmod: ## a := a MOD b
         mi.not  r1,r1,-1       # the remainder takes the sign of a
         RTS     ()
 
-	# --------------------------------------------------------------
-	# Signed wrapper for __mul (the division wrappers are above)
-	#
-	# For mul and div, the sign of the result depends on the sign of both arguments
-	# - the A for of the wrapper achieves this
-
-MACRO SW32A ( _sub_ )
-        PUSH    (r13)
-        PUSH    (r5)
-        mov     r5, r0         # keep track of signs
-        add     r1, r0
-        pl.lmov pc,l1_@
-        NEG     (r1)
-        add     r5,r0, 1
-l1_@:
-        add     r2, r0
-        pl.lmov pc,l2_@
-        NEG     (r2)
-        sub     r5,r0, 1
-l2_@:
-        ljsr    r13,_sub_
-        cmp     r5, r0
-        z.lmov  pc, l3_@
-        NEG     (r2)         # NEG2    (r2,r1) for OPC6
-        NEG     (r1)
-l3_@:
-        POP     (r5)
-        POP     (r13)
-        mov     pc, r13
-ENDMACRO
-
+        # -----------------------------------------------------------------
+        #
+        # __mul
+        #
+        # a := b * a, the low 32 bits of the product (rewritten 27/10/2026)
+        #
+        # Entry
+        # - R1 holds a, R2 holds b
+        # - R13 holds return address
+        #
+        # Exit
+        # - R1 holds b * a
+        # - R4, R5, R6 used as workspace and trashed
+        # - all other registers preserved, including B (R2) and C (R3)
+        # - no stack use
+        #
+        # The low 32 bits of a product are the same whether the operands are
+        # taken as signed or unsigned, so only the multiplier needs its sign
+        # handling: a*b = -(ABS a * b) when a < 0. Using ABS a keeps the loop
+        # short for small negative multipliers. Each pass adds b << k for a
+        # set bit k of ABS a, which arrives in C from lsr; it stops when the
+        # bits left are all 0, so a small multiplier (often a constant in A)
+        # takes few passes. mov, add and lsr leave C for the following
+        # instruction as noted.
 __mul:
-      SW32A(__mulu)
+        mov     r6,r1          # sign of a in R6
+        mi.not  r1,r1,-1       # ABS a
+        lsr     r5,r1          # the multiplier bits left, bit 0 in C
+        mov     r1,r0          # product := 0 (mov keeps C)
+        mov     r4,r2          # b, shifted left each pass (mov keeps C)
+mul_loop:
+        c.add   r1,r4          # add b << k if bit k is set
+        add     r4,r4
+        lsr     r5,r5          # next bit to C; Z set when none are left
+        nz.lmov pc,mul_loop
+        c.add   r1,r4          # the last bit
+        mov     r6,r6
+        mi.not  r1,r1,-1       # negate the product if a < 0
+        RTS     ()
 
         # -----------------------------------------------------------------
         # __lsh_bytes, __rsh_bytes
