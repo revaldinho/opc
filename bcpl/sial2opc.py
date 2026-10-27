@@ -201,8 +201,9 @@ def code ( codestring, source=""):
     print( "%s%-48s%s # %s" % (leading,newcodestring,trailing,source))
 
 def signed_ge( x, y, source=""):
-    # Set the sign bit of r4, and so the S flag, iff signed x >= y. Exact for all
-    # values, unlike testing the sign of x-y which is wrong when x-y overflows:
+    # Set the sign bit of r4, and so the S flag, iff signed x >= y (OPC6; OPC7 has
+    # scmp). Exact for all values, unlike testing the sign of x-y which is wrong
+    # when x-y overflows:
     #   x >= y (signed) == (x >= y unsigned) ^ sign(x) ^ sign(y)
     # and the unsigned result is the carry from cmp. mov and xor leave the carry
     # alone; ror rotates it into the sign bit. Uses r4,r5 as temporaries.
@@ -214,6 +215,15 @@ def signed_ge( x, y, source=""):
 
 def signed_compare( x, y, want_ge, source=""):
     # a := TRUE if signed x >= y (want_ge) or signed x < y (not want_ge), else FALSE
+    if cpu_target == "opc7":
+        # scmp sets S iff x < y (signed). Once mi.mov sets r1 to TRUE, S stays set
+        # and pl.mov is skipped. mov sets S itself, so >= inverts the answer.
+        code("scmp %s,%s" % (x, y), source)
+        code("mi.mov r1,r0,-1")
+        code("pl.mov r1,r0")
+        if want_ge:
+            code("not r1,r1")
+        return
     signed_ge(x, y, source)
     code("add r4,r4")            # C = sign bit of r4
     code("mov r1,r0")            # default answer FALSE (mov leaves C alone)
@@ -221,6 +231,10 @@ def signed_compare( x, y, want_ge, source=""):
 
 def signed_jump( x, y, want_ge, label, source=""):
     # Jump to label if signed x >= y (want_ge) or signed x < y (not want_ge)
+    if cpu_target == "opc7":
+        code("scmp %s,%s" % (x, y), source)    # S set iff x < y (signed)
+        code("%s.mov pc,r0,%s" % ("pl" if want_ge else "mi", label))
+        return
     signed_ge(x, y, source)
     code("%s.mov pc,r0,%s" % ("mi" if want_ge else "pl", label))
 
