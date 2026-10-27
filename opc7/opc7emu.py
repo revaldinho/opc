@@ -2,7 +2,7 @@ import sys, re, functools
 # -q: quiet mode, no per-instruction trace (memory and I/O accesses are still printed)
 trace = "-q" not in sys.argv
 sys.argv = [a for a in sys.argv if a != "-q"]
-mnemonics="mov movt xor and or not cmp sub add bperm ror lsr jsr asr rol s0F halt rti putpsr getpsr s13 s15 s16 s17 out in sto ld ljsr lmov lsto lld".split()
+mnemonics="mov movt xor and or not cmp sub add bperm ror lsr jsr asr rol s0F halt rti putpsr getpsr s14 s15 scmp s17 out in sto ld ljsr lmov lsto lld".split()
 op = dict([(opcode,mnemonics.index(opcode)) for opcode in mnemonics])
 dis = dict([(mnemonics.index(opcode),opcode) for opcode in mnemonics])
 pred_dict = {0:"",1:"0.",2:"z.",3:"nz.",4:"c.",5:"nc.",6:"mi.",7:"pl."}
@@ -83,10 +83,11 @@ while True:
                 regfile[dest] = ea_ed & 0xFFFFFFFF
                 if opcode in (op["ld"],op["in"],op["lld"]):
                     print_memory_access( "IN" if opcode==op["in"] else "LOAD" , eff_addr, ea_ed)
-            elif opcode in (op["sub"], op["cmp"]) :
-                res = (regfile[dest] + ((~ea_ed)&0xFFFFFFFF) + 1) & 0x1FFFFFFFF
-                dest = 0 if opcode==op["cmp"] else dest #  update dest reg to be r0 for correct flag setting later if PC was compared
-                v = 1 if  ((((~res)&ea_ed&regfile[dest])|((res)&(~ea_ed)&(~regfile[dest])))&0x80000000)!=0 else 0                                
+            elif opcode in (op["sub"], op["cmp"], op["scmp"]) :
+                nea = (~ea_ed)&0xFFFFFFFF               # invert, add with carry in, as the hardware
+                res = (regfile[dest] + nea + 1) & 0x1FFFFFFFF
+                v = 1 if ((((~res)&nea&regfile[dest])|(res&(~nea)&(~regfile[dest])))&0x80000000)!=0 else 0                
+                dest = 0 if (opcode in (op["cmp"], op["scmp"])) else dest #  update dest reg to be r0 for correct flag setting later if PC was compared                
                 (c, regfile[dest])  = ( (res>>32) & 1, res & 0xFFFFFFFF)
             elif opcode in (op["jsr"], op["ljsr"]):
                 (preserve_flag,regfile[dest],regfile[pcreg]) = (True,regfile[pcreg],ea_ed)
@@ -107,7 +108,7 @@ while True:
             if  (dest==pcreg) or opcode in (op["sto"],op["in"],op["lsto"],op["putpsr"], op["rti"]):
                 (v,swiid,ei,s,c,z) = flag_save
             else:
-                (v, swiid,ei,s,c,z) = (v,swiid,ei,(regfile[dest]>>31) & 1, c, 1 if (regfile[dest]==0) else 0)
+                (v, swiid,ei,s,c,z) = (v, swiid,ei,((regfile[dest]>>31) & 1)^(v if opcode==op["scmp"] else 0), c, 1 if (regfile[dest]==0) else 0)
 if len(sys.argv) > 2 and sys.argv[2] != "-":  # Dump memory for inspection if required ('-' for no dump)
     with open(sys.argv[2],"w" ) as f:
         f.write( '\n'.join([''.join("%08x " % d for d in wordmem[j:j+12]) for j in [i for i in range(0,len(wordmem),12)]]))

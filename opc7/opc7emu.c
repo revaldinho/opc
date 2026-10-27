@@ -28,7 +28,7 @@
 #include <stdint.h>
 
 enum { MOV, MOVT, XOR, AND, OR, NOT, CMP, SUB, ADD, BPERM, ROR, LSR, JSR, ASR,
-       ROL, S0F, HALT, RTI, PUTPSR, GETPSR, S13, S15, S16, S17, OUT, IN, STO,
+       ROL, S0F, HALT, RTI, PUTPSR, GETPSR, S14, S15, SCMP, S17, OUT, IN, STO,
        LD, LJSR, LMOV, LSTO, LLD };
 
 static const char *mnemonics[32] = {
@@ -333,12 +333,13 @@ int main(int argc, char **argv) {
             if (opcode == LD || opcode == IN || opcode == LLD)
                 print_memory_access(opcode == IN ? "IN" : "LOAD", eff_addr, ea_ed);
             break;
-        case SUB: case CMP: {
-            uint64_t res = (regfile[dest] + ((~ea_ed) & 0xFFFFFFFF) + 1) & 0x1FFFFFFFFULL;
-            if (opcode == CMP) dest = 0;        /* as the Python: V is then against r0 */
+        case SUB: case CMP: case SCMP: {
+            uint64_t nea = (~ea_ed)&0xFFFFFFFF;                   /* invert, add with carry in, as the hardware */
+            uint64_t res = (regfile[dest] + nea+ 1) & 0x1FFFFFFFFULL;
             uint64_t rd = regfile[dest];
-            v = ((((~res) & ea_ed & rd) | (res & (~ea_ed) & (~rd))) & 0x80000000) != 0;
+            v = ((((~res) & nea & rd) | (res & (~nea) & (~rd))) & 0x80000000) != 0;
             c = (res >> 32) & 1;
+            if (opcode == CMP || opcode == SCMP) dest = 0;        /* change dest to r0 before writing back */
             regfile[dest] = res & 0xFFFFFFFF;
             break;
         }
@@ -377,7 +378,7 @@ int main(int argc, char **argv) {
             iomem[ea_ed & 0xFFFF] = regfile[dest];
             print_memory_access("OUT", ea_ed, regfile[dest]);
             break;
-        default:                                /* s0F s13 s15 s16 s17: no operation */
+        default:                                /* s0F s14 s15 s17: no operation */
             break;
         }
 
@@ -386,7 +387,7 @@ int main(int argc, char **argv) {
             v = flag_save[0]; swiid = flag_save[1]; ei = flag_save[2];
             s = flag_save[3]; c = flag_save[4]; z = flag_save[5];
         } else {
-            s = (regfile[dest] >> 31) & 1;
+            s = (regfile[dest] >> 31) ^ ((opcode==SCMP)?v:0);
             z = regfile[dest] == 0;
         }
     }
