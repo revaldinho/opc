@@ -28,7 +28,7 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
       AND,OR           :{carry,result} = {PSR_q[C],(IR_q==AND)?(RF_pipe_q & OR_q):(RF_pipe_q | OR_q)};
       MOVT,ROL         :{carry,result} = (IR_q==ROL)? {OR_q, PSR_q[C]} :{PSR_q[C], OR_q[15:0], RF_pipe_q[15:0]} ;
       ADD,SUB,CMP,SCMP :{carry,result} = RF_pipe_q + OR_q + subnotadd_q; // OR_q negated in EAD if required for sub/cmp
-      XOR,GPSR         :{carry,result} = (IR_q==GPSR)?{PSR_q[C],8'b0,PSR_q}:{PSR_q[C],RF_pipe_q ^ OR_q};
+      XOR,GPSR         :{carry,result} = (IR_q==GPSR)?{PSR_q[C],PSR_q}:{PSR_q[C],RF_pipe_q ^ OR_q};
       NOT              :{result,carry} = {~OR_q,PSR_q[C]};
       ROR,ASR,LSR      :{result,carry} = {(IR_q==ROR)?PSR_q[C]:(IR_q==ASR)?OR_q[31]:1'b0,OR_q};
       JSR,LJSR         :{result,carry} = { 12'b0, PC_q, PSR_q[C]};
