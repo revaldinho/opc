@@ -105,7 +105,7 @@ while True:
             elif opcode == op["out"]:
                 iomem[ea_ed&0xFFFF] = regfile[dest]
                 print_memory_access("OUT",ea_ed,regfile[dest])
-            if  (dest==pcreg) or opcode in (op["sto"],op["in"],op["lsto"],op["putpsr"], op["rti"]):
+            if  (dest==pcreg) or opcode in (op["sto"],op["out"],op["lsto"],op["putpsr"], op["rti"]):
                 (v,swiid,ei,s,c,z) = flag_save
             else:
                 (v, swiid,ei,s,c,z) = (v, swiid,ei,((regfile[dest]>>31) & 1)^(v if opcode==op["scmp"] else 0), c, 1 if (regfile[dest]==0) else 0)

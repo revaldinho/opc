@@ -12,7 +12,7 @@
  * dump are byte-for-byte the same as opc7emu.py's, including its quirks:
  *   - flags are only updated when an instruction executes, and are restored
  *     from their saved values when the destination is the PC or the opcode is
- *     sto, lsto, in, putpsr or rti
+ *     sto, lsto, out, putpsr or rti
  *   - cmp computes V against r0 (dest is switched to r0 before V is computed)
  *   - in consumes an input character even if its predicate fails or an
  *     interrupt is taken
@@ -382,7 +382,7 @@ int main(int argc, char **argv) {
             break;
         }
 
-        if (dest == PCREG || opcode == STO || opcode == IN || opcode == LSTO
+        if (dest == PCREG || opcode == STO || opcode == OUT || opcode == LSTO
             || opcode == PUTPSR || opcode == RTI) {
             v = flag_save[0]; swiid = flag_save[1]; ei = flag_save[2];
             s = flag_save[3]; c = flag_save[4]; z = flag_save[5];
