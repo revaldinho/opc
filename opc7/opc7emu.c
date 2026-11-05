@@ -221,7 +221,7 @@ int main(int argc, char **argv) {
         char instr_str[64];
         if (trace) {
             snprintf(instr_str, sizeof instr_str, "%s%s r%d,r%d,0x%05llX",
-                     (p0 | p1 | !p2) ? pred_str[p0 << 2 | p1 << 1 | p2] : "",
+                     pred_str[p0 << 2 | p1 << 1 | p2],
                      mnemonics[opcode], dest, source,
                      (unsigned long long)(operand & 0xFFFFF));
             if (opcode == PUTPSR || opcode == GETPSR) {   /* first "r0" -> "psr" */

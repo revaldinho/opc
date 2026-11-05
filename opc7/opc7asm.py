@@ -111,7 +111,7 @@ def assemble( filename, listingon=True):
 
     op = "mov movt xor and or not cmp sub add bperm ror lsr jsr asr rol s0F halt rti putpsr getpsr s14 s15 scmp s17 out in sto ld ljsr lmov lsto lld".split()
     symtab = dict( [ ("r%d"%d,d) for d in range(0,16)] + [("pc",15), ("psr",0)])
-    pdict = {"1":0x0,"z":0x4,"nz":0x6,"c":0x8,"nc":0xA,"mi":0xC,"pl":0xE,"":0x0}
+    pdict = {"1":0x0,"0":0x2,"z":0x4,"nz":0x6,"c":0x8,"nc":0xA,"mi":0xC,"pl":0xE,"":0x0}
     reg_re = re.compile(r"(r\d*|psr|pc)")
     (wordmem,wcount)=([0x00000000]*1024*1024,0)
 
@@ -120,7 +120,7 @@ def assemble( filename, listingon=True):
     for iteration in range (0,2): # Two pass assembly
         (wcount,nextmem) = (0,0)
         for line in newtext:
-            mobj = re.match(r'^(?:(?P<label>\w+):)?\s*((?:(?P<pred>((pl)|(mi)|(nc)|(nz)|(c)|(z)|(1)?)?)\.))?(?P<inst>\w+)?\s*(?P<operands>.*)',re.sub(r"#.*","",line))
+            mobj = re.match(r'^(?:(?P<label>\w+):)?\s*((?:(?P<pred>((pl)|(mi)|(nc)|(nz)|(c)|(z)|(0)|(1)?)?)\.))?(?P<inst>\w+)?\s*(?P<operands>.*)',re.sub(r"#.*","",line))
             (label, pred, inst,operands) = [ mobj.groupdict()[item] for item in ("label","pred", "inst","operands")]
             (pred, opfields,words, memptr) = ("1" if pred==None else pred, [ x.strip() for x in operands.split(",")],[], nextmem)
             if (iteration==0 and (label and label != "None") or (inst=="EQU")):

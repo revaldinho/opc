@@ -35,7 +35,7 @@ while True:
     else:
         operand = (operand | 0xFFFF0000)  if (operand & 0x8000 != 0) else operand
 
-    if trace: instr_str = "%s%s r%d,r%d,0x%05X" % ((pred_dict[p0<<2 | p1<<1 | p2] if (p0,p1,p2)!=(0,0,1) else ""),dis[opcode],dest,source,(operand & 0xFFFFF))
+    if trace: instr_str = "%s%s r%d,r%d,0x%05X" % ((pred_dict[p0<<2 | p1<<1 | p2] ),dis[opcode],dest,source,(operand & 0xFFFFF))
     if trace: instr_str = re.sub("r0","psr",instr_str,1) if (opcode in (op["putpsr"],op["getpsr"])) else instr_str
 
     regfile[pcreg] += 1

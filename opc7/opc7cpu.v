@@ -12,8 +12,8 @@ module opc7cpu(input[31:0] din,input clk,input reset_b,input[1:0] int_b,input cl
 `ifdef PRED_IN_EAD_ONLY  
   wire        pred       = (OR_q[29] ^ (OR_q[30]?(OR_q[31]?PSR_q[S]:PSR_q[Z]):(OR_q[31]?PSR_q[C]:1)));
 `else  
-  wire        pred_d     = (din[31:29]==3'b001) || (din[P2] ^ (din[P1] ? (din[P0] ? sign : zero): (din[P0] ? carry : 1))); // New data,new flags (in exec/fetch)
-  wire        pred_din   = (din[31:29]==3'b001) || (din[P2] ^ (din[P1]?(din[P0]?PSR_q[S]:PSR_q[Z]):(din[P0]?PSR_q[C]:1))); // New data,old flags (in fetch0)
+  wire        pred_d     = (din[P2] ^ (din[P1] ? (din[P0] ? sign : zero): (din[P0] ? carry : 1))); // New data,new flags (in exec/fetch)
+  wire        pred_din   = (din[P2] ^ (din[P1]?(din[P0]?PSR_q[S]:PSR_q[Z]):(din[P0]?PSR_q[C]:1))); // New data,old flags (in fetch0)
 `endif  
   wire [31:0] RF_sout    = {32{(|src_q)&&IR_q[4:2]!=3'b111}} & ((src_q==4'hF)? {12'b0,PC_q} : RF_q[src_q]);
   wire [7:0]  bytes0     = {8{~OR_q[2] }} & ((OR_q[1])?  ((OR_q[0]) ?RF_sout[31:24] :RF_sout[23:16]):(OR_q[0]) ? RF_sout[15:8]:RF_sout[7:0]);
