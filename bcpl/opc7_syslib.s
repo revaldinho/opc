@@ -15,6 +15,8 @@ __osword_pblk:
         # __pbyt,__xpbyt,__gbyt, __xgbyt
         #
         # Routines for getting and putting bytes to support string operations.
+        # Each splits the byte address into word and byte number, then jumps
+        # through a table on the byte number (no compare chain).
         # Uses r5,r6 temporary variables as workspace but preserves all other
         # registers, setting r1 to new data with get byte instructions. Maybe
         # no need strictly to preserve SIAL accumulator C (r3) but this is
@@ -34,67 +36,82 @@ __osword_pblk:
         #       all other registers preserved (inc. r2)
         # --------------------------------------------------------------
 __pbyt:                            # pbyt   b % a := c
-        asr     r6,r1              # get word offset into r6
-        asr     r6,r6              #
+        asr     r6,r1              # word offset into r6
+        mov     r7,r1              # byte offset into r7
+        asr     r6,r6
+        and     r7,r0,0x03         # byte number 0-3
         add     r6,r2              # add word offset to base pointer
-        mov     r7,r1              # get byte offset in r7
-        lmov    pc,common_pbyt
+        add     r7,r7
+        add     r7,r7              # x4: the table entries are 4 words
+        add     r7,pc,pbyt_tab - PC
+        ld      r5,r6              # read word
+        mov     pc,r7              # jump to the entry for the byte
 
-__xpbyt:                           # pbyt   a % b := c
-        asr     r6,r2              # get word offset into r6
-        asr     r6,r6              #
+__xpbyt:                           # xpbyt  a % b := c
+        asr     r6,r2              # word offset into r6
+        mov     r7,r2              # byte offset into r7
+        asr     r6,r6
+        and     r7,r0,0x03
         add     r6,r1              # add word offset to base pointer
-        mov     r7,r2              # get byte offset in r7
+        add     r7,r7
+        add     r7,r7
+        add     r7,pc,pbyt_tab - PC
+        ld      r5,r6
+        mov     pc,r7
 
-common_pbyt:
-        ld      r5,r6              # read word        
-        and     r7,r0,0x03         # get lowest 2 bits of byte offset in r7
-        z.lmov  pc, merge_1st_byte # if zero then lowest byte is target
-        cmp     r7,r0,0x01         # second byte ?
-        z.lmov  pc, merge_2nd_byte                 
-        cmp     r7,r0,0x02         # third byte ?
-        z.lmov  pc, merge_3rd_byte # else must be top byte                                                          
-merge_4th_byte: 
-        bperm   r4,r3,0x0444       # Put bottom byte of 'C' into top byte of r4
-        bperm   r5,r5,0x4210       # zero top byte of r5, preserve others
-        lmov    pc, finish_pbyt
-merge_3rd_byte: 
-        bperm   r4,r3,0x4044       # Put bottom byte of 'C' into 3rd byte of r4
-        bperm   r5,r5,0x3410       # zero 3rd byte of r5, preserve others
-        lmov    pc, finish_pbyt
-merge_2nd_byte: 
-        bperm   r4,r3,0x4404       # Put bottom byte of 'C' into 2nd byte of r4
-        bperm   r5,r5,0x3240       # zero 2d byte of r5, preserve others
-        lmov    pc, finish_pbyt
-merge_1st_byte: 
-        bperm   r4,r3,0x4440       # Put bottom byte of 'C' into bottom byte of r4
-        bperm   r5,r5,0x3214       # zero bottom byte of r5, preserve others
-finish_pbyt:            
-        or      r5,r4              # Merge the bytes       
+        # Jump table on the byte number, 4 words an entry: put the bottom byte of
+        # C into the byte's place in r4, clear that byte of the word, merge
+pbyt_tab:
+        bperm   r4,r3,0x4440       # byte 0
+        bperm   r5,r5,0x3214
+        or      r5,r4
+        mov     pc,pc,finish_pbyt - PC
+        bperm   r4,r3,0x4404       # byte 1
+        bperm   r5,r5,0x3240
+        or      r5,r4
+        mov     pc,pc,finish_pbyt - PC
+        bperm   r4,r3,0x4044       # byte 2
+        bperm   r5,r5,0x3410
+        or      r5,r4
+        mov     pc,pc,finish_pbyt - PC
+        bperm   r4,r3,0x0444       # byte 3
+        bperm   r5,r5,0x4210
+        or      r5,r4
+finish_pbyt:
         sto     r5,r6              # write back to memory
         RTS     ()
-        
+
 __gbyt:                            # gbyt  a:= b % a
-        asr     r6,r1              # get word offset into r6
-        asr     r6,r6              #
+        asr     r6,r1              # word offset into r6
+        mov     r7,r1              # byte offset into r7
+        asr     r6,r6
+        and     r7,r0,0x03         # byte number 0-3
         add     r6,r2              # add word offset to base pointer
-        mov     r7,r1
-        lmov    pc, common_gbyt
-__xgbyt:                           # gbyt  a:= a % b
-        asr     r6,r2              # get word offset into r6
-        asr     r6,r6              #
-        add     r6,r1              # add word offset to base pointer
+        add     r7,r7              # x2: the table entries are 2 words
+        add     r7,pc,gbyt_tab - PC
+        ld      r5,r6              # read word
+        mov     pc,r7              # jump to the entry for the byte
+
+__xgbyt:                           # xgbyt a:= a % b
+        asr     r6,r2
         mov     r7,r2
-common_gbyt:
-        ld      r5,r6              # read word        
+        asr     r6,r6
         and     r7,r0,0x03
-        z.bperm r1,r5,0x4440       # if zero get lowest byte and zero others
-        cmp     r7,r0,0x01         # second byte ?
-        z.bperm r1,r5,0x4441       # if zero get next byte and zero others
-        cmp     r7,r0,0x02         # third byte ?
-        z.bperm r1,r5,0x4442       # if zero get next byte and zero others
-        cmp     r7,r0,0x03         # last byte ?
-        z.bperm r1,r5,0x4443       # if zero get next byte and zero others
+        add     r6,r1
+        add     r7,r7
+        add     r7,pc,gbyt_tab - PC
+        ld      r5,r6
+        mov     pc,r7
+
+        # Jump table on the byte number, 2 words an entry: the byte, others zero
+gbyt_tab:
+        bperm   r1,r5,0x4440       # byte 0
+        RTS     ()
+        bperm   r1,r5,0x4441       # byte 1
+        RTS     ()
+        bperm   r1,r5,0x4442       # byte 2
+        RTS     ()
+        bperm   r1,r5,0x4443       # byte 3
         RTS     ()
 
         # -----------------------------------------------------------------
