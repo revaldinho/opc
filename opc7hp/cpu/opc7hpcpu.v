@@ -57,7 +57,8 @@ module opc7hpcpu(input[31:0] idin, input[31:0] din,input clk,input reset_b,input
   reg [19:0]  PC_q,PC_d,PCI_q,PCI_d,ea_pc_q,mem_pc_q,ex_pc_q,addr_d,ex_target,ex_next,ex_redir_pc;(* RAM_STYLE="DISTRIBUTED" *)
   reg [31:0]  PSR_d,PSR_q,RF_q[14:0],ea_or_q,mem_or_q,ex_or_q,mem_rfp_q,ex_rfp_q,rfp_d,op_d,result;
   reg [4:0]   ea_ir_q,mem_ir_q,ex_ir_q;
-  reg [3:0]   swiid,PSRI_q,PSRI_d,ea_dst_q,ea_src_q,mem_dst_q,ex_dst_q,mem_rs_q,mem_rd_q,wb_dst_q;
+  reg [4:0]   PSRI_q,PSRI_d;                    // flags saved on an interrupt: V, EI, S, C, Z
+  reg [3:0]   swiid,ea_dst_q,ea_src_q,mem_dst_q,ex_dst_q,mem_rs_q,mem_rd_q,wb_dst_q;
   reg [31:0]  wb_val_q;
   reg         mem_neg_q,wb_q,mem_early_q,ex_early_q;
   reg         ea_long_q,ea_jmp_q,ea_pred_q,ea_st_q,ea_side_q,ea_mem_q,ea_neg_q,ea_isj_q,ea_red_q,mem_st_q,mem_side_q,mem_isj_q,mem_red_q,ex_st_q,ex_isj_q,ex_red_q;
@@ -186,9 +187,9 @@ module opc7hpcpu(input[31:0] idin, input[31:0] din,input clk,input reset_b,input
     if (!reset_s1_b)
       {PCI_d, PSRI_d, PSR_d, rfp_d, addr_d} = 0;
     else if (int_q)
-      {PSRI_d, PSR_d[EI]} = {PSR_q[3:0], 1'b0};
+      {PSRI_d, PSR_d[EI]} = {PSR_q[V], PSR_q[3:0], 1'b0};
     else if (ex_pass && !ex_st_q) begin
-      PSR_d = ex_rti_q?{4'b0,PSRI_q}:{overflow,23'b0,swiid,enable_int,sign,carry,zero};
+      PSR_d = ex_rti_q?{PSRI_q[4],27'b0,PSRI_q[3:0]}:{overflow,23'b0,swiid,enable_int,sign,carry,zero};
       if (ex_int) PCI_d = ex_next;
     end
     else if (ex_int)

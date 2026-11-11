@@ -28,3 +28,5 @@ date             cpu    version       LOGIC LOGIC%   LUT4   ALU  MUX2   DFF RAM1
 2026-11-05 09:37 opc7hp md5:ca7ff9f    1496   7.2%   1392   104   502   411    16     8      0    103.9/109.1/114.9  summary, 15 seeds, stage 6
 2026-11-05 09:37 opc7hp md5:ca7ff9f    1192   5.7%   1088   104     0   411    16     8      0    110.8/118.4/124.9  [-nowidelut] summary, 15 seeds, stage 6
 2026-11-11 22:47 opc7hp md5:898c8f0    1178   5.7%   1074   104     0   412    16     8      0    110.3/113.3/118.6  [-nowidelut] opc7hp layout check
+2026-11-11 23:52 opc7hp b680f93+       1191   5.7%   1087   104     0   413    16     8      0    112.6/112.8/121.9  [-nowidelut] rti restores V
+2026-11-11 23:52 opc7   49508f5+       1780   8.6%   1690    90   968   154    16     8      0       73.6/76.4/81.9  rti restores V

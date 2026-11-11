@@ -39,6 +39,15 @@ U2:
         putpsr  r0, r0, 0x28
         mov     r3, r14
 
+        # the flags, V included, are the same after the interrupt: putpsr sets V and raises it, the handler's add clears V
+        mov     r3, r0, 24
+        movt    r3, r0, -32768
+        putpsr  psr, r3
+        getpsr  r3, psr
+        mi.mov  r4, r0, 0x0444
+        pl.mov  r4, r0, 0x0BAD
+        sto     r3, r0, buf
+
         # a store straight behind a software interrupt happens after the handler, which reads it into r11
         mov     r3, r0, 5
         sto     r0, r0, sv
@@ -71,6 +80,13 @@ K12:
         sub     r3, r0, 1
         nz.mov  pc, r0, K12
         add     r1, r1, 23
+        mov     r3, r0, -1
+        movt    r3, r0, 32767
+        add     r3, r0, 1
+        mov     r4, r0
+        mov     r4, r0
+        getpsr  r4, psr
+        sto     r4, r0, tgt
         jsr     r13, r0, SUB
         add     r1, r1, 9
         sto     r1, r0, buf

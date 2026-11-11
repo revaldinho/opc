@@ -404,6 +404,9 @@ def haz_int():
     p('putpsr  r0, r0, 0x18', 'mov     pc, r0, %s' % t); wrong()
     p(t + ':', 'mov     pc, r0, %s' % u); wrong()
     p(u + ':', 'putpsr  r0, r0, 0x28', 'mov     r3, r14')
+    p.comment('the flags, V included, are the same after the interrupt: putpsr sets V and raises it, the handler\'s add clears V')
+    p.const(3, 0x80000018)
+    p('putpsr  psr, r3', 'getpsr  r3, psr', 'mi.mov  r4, r0, 0x0444', 'pl.mov  r4, r0, 0x0BAD', 'sto     r3, r0, buf')
     p.comment('a store straight behind a software interrupt happens after the handler, which reads it into r11')
     p('mov     r3, r0, 5', 'sto     r0, r0, sv', 'putpsr  r0, r0, 0x18', 'sto     r3, r0, sv', 'mov     r4, r11')
     p.word('sv', 0)
@@ -417,6 +420,8 @@ def haz_int():
     p(b + ':', 'sto     r1, r0, buf', 'ld      r4, r0, buf', 'add     r1, r4, 7')
     k = p.label('K')    # a predicted jump, right once and wrong once, with a store at its target
     p('mov     r3, r0, 2', k + ':', 'sto     r1, r0, buf', 'add     r1, r1, 21', 'sub     r3, r0, 1', 'nz.mov  pc, r0, %s' % k, 'add     r1, r1, 23')
+    p.const(3, 0x7FFFFFFF)   # V set, then read: a hardware interrupt between must not lose it
+    p('add     r3, r0, 1', 'mov     r4, r0', 'mov     r4, r0', 'getpsr  r4, psr', 'sto     r4, r0, tgt')
     p('jsr     r13, r0, SUB', 'add     r1, r1, 9')
     p('sto     r1, r0, buf', 'cmp     r1, r1', 'z.mov   pc, r0, %s' % c, 'mov     pc, r0, %s' % d); wrong()
     p(d + ':'); wrong()

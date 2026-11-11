@@ -10,7 +10,8 @@ module opc7hcpu(input[31:0] idin, input[31:0] din,input clk,input reset_b,input[
   reg [19:0]  addr_d, PC_q,PC_d,PCI_q,PCI_d;(* RAM_STYLE="DISTRIBUTED" *)
   reg [31:0]  PSR_d,PSR_q,RF_q[14:0], RF_pipe_q, RF_pipe_d, OR_q, OR_d, result;
   reg [4:0]   IR_q, IR_d;
-  reg [3:0]   swiid,PSRI_q,PSRI_d,dst_q,dst_d,src_q,src_d;
+  reg [3:0]   swiid,dst_q,dst_d,src_q,src_d;
+  reg [4:0]   PSRI_q,PSRI_d;                    // flags saved on an interrupt: V, EI, S, C, Z
   reg [2:0]   FSM_q, FSM_d;
   reg         overflow,zero,carry,sign,enable_int,reset_s0_b,reset_s1_b,subnotadd_q,rnw_d,vpa_d,vda_d,vio_d;
   wire        pred       = (OR_q[29] ^ (OR_q[30]?(OR_q[31]?PSR_q[S]:PSR_q[Z]):(OR_q[31]?PSR_q[C]:1)));
@@ -66,12 +67,12 @@ module opc7hcpu(input[31:0] idin, input[31:0] din,input clk,input reset_b,input[
       end
       else if ( FSM_q == EXEC) begin
         PC_d = (IR_q==RTI)?PCI_q: (dst_q==4'hF) ? result[19:0] : (IR_q==JSR||IR_q==LJSR)? OR_q[19:0]:PC_q;
-        PSR_d = (IR_q==RTI)?{4'b0,PSRI_q}:{overflow,23'b0,swiid,enable_int,sign,carry,zero};
+        PSR_d = (IR_q==RTI)?{PSRI_q[4],27'b0,PSRI_q[3:0]}:{overflow,23'b0,swiid,enable_int,sign,carry,zero};
       end
       else if (FSM_q==EAD & (IR_q==CMP || IR_q==SCMP) )
         dst_d = 4'b0; // Zero dest addr after reading it in EAD for CMP operations
       else if ( FSM_q == INT )
-        {PC_d,PCI_d,PSRI_d,PSR_d[EI]} = {(!int_b[1])?INT_VECTOR1:INT_VECTOR0,PC_q,PSR_q[3:0],1'b0};
+        {PC_d,PCI_d,PSRI_d,PSR_d[EI]} = {(!int_b[1])?INT_VECTOR1:INT_VECTOR0,PC_q,PSR_q[V],PSR_q[3:0],1'b0};
       addr_d = RF_sout+din_sxt;
     end // else: !if( !reset_s1_b)
   end // always @ ( * )
