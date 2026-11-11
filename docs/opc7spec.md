@@ -28,7 +28,8 @@ OPC-7 has a 16 entry register file. Most instructions specify one register as a 
 and destination, using the two 4 bit fields in the encoding. Two of the registers have special purposes:
 
   * R0 holds 'all-zeros'. It is legal to write to R0 but this has no effect on the register contents.
-  * R15 is the program counter. This can be written or read like any other register.
+  * R15 is the program counter. This can be written or read like any other register. Reading it gives the
+    address of the next instruction, and writing it is a jump, which leaves the flags unchanged.
 
 The address bus and program counter are 20b wide rather than a full 32 bits. Whenever the program counter is
 loaded into another register the top 12 bits will be zeroed.
@@ -58,15 +59,23 @@ operands with the LD and STO instructions the following addressing modes are sup
 Processor Status Register
 -------------------------
 
-The processor has an 32 bit processor status register, although only 9 bits are used. Included in this are
-four processor status flags which are set by ALU operations - calculation of the EA/ED values has no effect on these - and 5 bits related to interrupt handling. 
+The processor has a 32 bit processor status register, although only 9 bits are used: overflow in bit 31, the SWI
+bits in bits 7-4, then EI, sign, carry and zero in bits 3-0. Included in these are four processor status flags
+which are set by the instructions themselves - calculation of the EA/ED values has no effect on them - and 5 bits
+related to interrupt handling. A flag that an instruction does not set keeps its value. 
 
   * SWI      - 4 bits used to identify a software interrupt. Writing a non-zero value here triggers a SWI.
   * EI       - used to enable or disable hardware interrupts
-  * Carry    - set or cleared only on arithmetic operations
-  * Zero     - set on every instruction based on the state of the destination register
-  * Sign     - set when the MSB of the result is a '1'
-  * Overflow - set when an addition, subtraction or compare of two like signed operands results in a change of sign in the result
+  * Carry    - set or cleared only by arithmetic operations (the carry out of add, sub, cmp and scmp) and by the
+               shifts and rotates (the bit shifted out)
+  * Zero     - set on every instruction that writes a result to a register, according to that result (writing R0
+               sets it from the result too). Stores, OUT, writes to R15 and RTI leave it alone, and PUTPSR sets it directly
+  * Sign     - set when the MSB of the result is a '1'; for SCMP, set when the first operand is less than the
+               second as signed numbers (the result's MSB exclusive-or overflow)
+  * Overflow - set when an addition, subtraction or compare of two like signed operands results in a change of
+               sign in the result; other instructions leave it alone
+
+An instruction whose predicate fails changes no flags.
 
 Instruction Set
 ---------------
@@ -77,6 +86,7 @@ Notes:
 
   * Where a [p.] is shown in the table, the instruction can be prefixed with a predicate (see table below) for conditional execution dependent on the state of the chosen flags
   * All effective data/address calculations are truncated to 32 bits and do not affect any of the processor flags
+  * GETPSR ignores its immediate field: it reads the PSR as it is
   * add rd,rd can be used to synthesize an arithmetic shift left (asl) instruction
 
 Predication
@@ -96,7 +106,10 @@ a prefix on the instruction mnemonic in the assembler.
   |  1 |  1 |  0 | mi.        | Execute if Sign flag is set                        |
   |  1 |  1 |  1 | pl.        | Execute if Sign flag is clear                      |
 
-The overflow flag is stored in the MSB of the PSR, but cannot be used in predication directly. To check for overflow first read the PSR into R0 (or any other register) and then check the sign flag, i.e.
+The overflow flag is stored in the MSB of the PSR, but cannot be used in predication directly. For signed comparisons
+use SCMP, which folds overflow into the sign flag, so that `mi.` and `pl.` after it test signed less-than and
+greater-or-equal. To check for overflow itself, first read the PSR into R0 (or any other register) and then check the
+sign flag, i.e.
 
        getpsr R0, PSR
     mi.mov    PC, R0, exit_on_overflow  
@@ -112,8 +125,8 @@ of each nybble determine which byte of the source will be placed in the correspo
 Bytes (and nybbles) are numbered from 3 down to 0 reading from left to right (MSB to LSB). This is best illustrated
 with some simple examples:
 							
-    BPERM rd,rs,0x3210  Has no effect on r1 - all bytes are put back in their original positions
-    BPERM rd,rs,0x0123  Reverses the order of the bytes in r1					
+    BPERM rd,rs,0x3210  Copies rs unchanged - all bytes are put back in their original positions
+    BPERM rd,rs,0x0123  Reverses the order of the bytes					
     BPERM rd,rs,0x0321  Byte-wise rotate right					
     BPERM rd,rs,0x2103  Byte-wise rotate left					
     BPERM rd,rs,0x1032  Half-word swap/rotate					
@@ -132,6 +145,10 @@ Interrupts
   
 OPC7 has two interrupt inputs for hardware interrupts: int\_b[1:0].
   
-If either of these inputs is taken low, then the processor with finish executing the current instruction and jump to a restart vector at either 0x0002 (for int\_b[0]) or 0x0004 (for int\_b[1]). If both interrupt pins are low at the same time then the processor will jump to 0x0004 to service int\_b[1] first.
+If either of these inputs is taken low while the EI bit is set, then the processor will finish executing the current instruction and jump to a restart vector at either 0x0002 (for int\_b[0]) or 0x0004 (for int\_b[1]). If both interrupt pins are low at the same time then the processor will jump to 0x0004 to service int\_b[1] first.
+
+Taking an interrupt saves the return address and the flags (V, EI, S, C and Z), and clears EI so that the handler is not
+itself interrupted. RTI PC,PC returns to the saved address and restores the saved flags, with the SWI bits cleared, so the
+interrupted code sees its flags unchanged. On reset the processor starts at location 0 with interrupts disabled.
   
 Additionally there is an ability to cause software interrupts by writing a non-zero value to the SWI bits (see above) using the PUTPSR instruction. Software interrupts are also vectored to address 0x0002 in common with the hardware interrupt for int\_b[0]. The interrupt service routine is responsible for reading the processor status register to determine the interrupt source.
