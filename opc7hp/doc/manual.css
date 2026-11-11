@@ -1,0 +1,108 @@
+/* manual.css - the OPC7HP manual's style, put inline by gen_manual.py.
+   Layout: book pages on a desk: chapter 1 in numbered sections, then one page per instruction with a
+   label column on the left, after Zaks's "Programming the Z80". */
+:root {
+  --paper: #fbfcfd; --desk: #e9edf2; --ink: #16202b; --muted: #5a6876; --rule: #c9d2dc;
+  --blue: #1d4f91; --blue-soft: #e3ebf6; --mark: #b4471a;
+  --display: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #18212b; --desk: #10161d; --ink: #e4ebf2; --muted: #9aa9b8; --rule: #33414f;
+  --blue: #8db4ea; --blue-soft: #22344a; --mark: #f0a070; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #18212b; --desk: #10161d; --ink: #e4ebf2; --muted: #9aa9b8; --rule: #33414f;
+  --blue: #8db4ea; --blue-soft: #22344a; --mark: #f0a070; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--desk); color: var(--ink); font: 17px/1.55 var(--body) }
+.wrap { max-width: 880px; margin: 0 auto; padding-block: 36px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 32px }
+.wrap > * { min-width: 0 }
+.page { background: var(--paper); border: 1px solid var(--rule); padding: 30px 32px 32px; display: grid; gap: 24px }
+.page > * { min-width: 0 }
+a { color: var(--blue) }
+a:focus-visible { outline: 2px solid var(--mark); outline-offset: 2px }
+code, .mono { font-family: var(--mono); font-size: .86em }
+p { margin: 0; max-width: 68ch }
+/* chapter 1 */
+.cover { display: grid; gap: 10px; border-bottom: 3px solid var(--ink); padding-bottom: 14px }
+.cover .k { font: 600 .82rem var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--blue) }
+h1 { font: 700 3rem/1 var(--display); margin: 0; letter-spacing: .01em; text-wrap: balance }
+section { display: grid; gap: 12px }
+section > * { min-width: 0 }
+h2 { font: 700 1.6rem/1.15 var(--display); margin: 0; display: flex; gap: 12px; align-items: baseline; border-bottom: 1px solid var(--rule); padding-bottom: 4px; text-wrap: balance }
+h2 .n { color: var(--blue); font-size: 1.1rem; min-width: 1.6em }
+h3 { font: 600 1.05rem var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--blue); margin: 4px 0 0 }
+ul { margin: 0; padding-left: 20px; display: grid; gap: 5px; max-width: 68ch }
+.cap { font-size: .9rem; color: var(--muted); margin-top: 6px }
+.regs { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); border: 1.5px solid var(--ink); max-width: 560px }
+.regs div { border-left: 1.5px solid var(--ink); border-top: 1.5px solid var(--ink); text-align: center; padding: 5px 0; font: 500 .9rem var(--mono) }
+.regs div:nth-child(-n+8) { border-top: 0 }
+.regs div:nth-child(8n+1) { border-left: 0 }
+.regs .sp { background: var(--blue-soft) }
+.box { border: 1.5px solid var(--mark); padding: 12px 14px; display: grid; gap: 6px; max-width: 72ch }
+.box b { color: var(--mark); font-family: var(--display); letter-spacing: .08em; text-transform: uppercase; font-size: .9rem }
+/* contents */
+.toc { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px 18px }
+.toc a { display: flex; gap: 10px; align-items: baseline; text-decoration: none; color: var(--ink); padding: 2px 0; border-bottom: 1px dotted var(--rule) }
+.toc a b { font: 700 1.05rem var(--display); color: var(--blue); min-width: 4.2em }
+.toc a span { font-size: .9rem; color: var(--muted) }
+.toc a:hover span { color: var(--ink) }
+/* instruction pages */
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-bottom: 3px solid var(--ink); padding-bottom: 6px }
+.mn { font: 700 4.4rem/0.9 var(--display); letter-spacing: .02em; color: var(--ink) }
+.name { font: 600 1.25rem/1.2 var(--display); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); text-align: right }
+.name b { display: block; color: var(--blue); font-family: var(--mono); font-weight: 500; font-size: .95rem; letter-spacing: 0; text-transform: none }
+.row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 18px; align-items: start }
+.row > * { min-width: 0 }
+.lab { font: 600 .82rem/1.9 var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--blue) }
+.row p { margin: 0 0 8px; max-width: 66ch }
+.row p:last-child { margin-bottom: 0 }
+.fn { font: 500 1.1rem var(--mono); color: var(--ink) }
+.alt { margin-top: 8px; font-size: .92rem; color: var(--muted) }
+/* instruction words and registers drawn as fields */
+.wordbox { overflow-x: auto }
+.word { display: grid; min-width: 520px; border: 1.5px solid var(--ink) }
+.word div { border-left: 1.5px solid var(--ink); text-align: center; padding: 6px 2px 5px; display: grid; gap: 2px }
+.word div:first-child { border-left: 0 }
+.word .bits { font: 400 .72rem var(--mono); color: var(--muted); display: flex; justify-content: space-between; padding: 0 3px }
+.word .val { font: 500 .95rem var(--mono) }
+.word .f { font: 600 .74rem var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
+.word .op, .word .hi { background: var(--blue-soft) }
+.std { grid-template-columns: 3fr 5fr 4fr 4fr 16fr }
+.lng { grid-template-columns: 3fr 5fr 4fr 20fr }
+.psr { grid-template-columns: 2fr 10fr 4fr 2fr 2fr 2fr 2fr }
+/* flags */
+.flags { display: inline-grid; grid-template-columns: repeat(6, 54px); border: 1.5px solid var(--ink) }
+.flags div { border-left: 1.5px solid var(--ink); text-align: center; padding: 3px 0 4px; display: grid; gap: 1px }
+.flags div:first-child { border-left: 0 }
+.flags .n { font: 600 .9rem var(--display); letter-spacing: .06em }
+.flags .s { font: 500 1.05rem var(--mono); color: var(--muted) }
+.flags .s.set { color: var(--mark) }
+.key { font-size: .9rem; color: var(--muted); margin-top: 6px }
+/* tables */
+table { border-collapse: collapse; width: 100%; font-size: .93rem }
+th, td { text-align: left; padding: 5px 12px 5px 0; border-bottom: 1px solid var(--rule); vertical-align: top }
+th { font: 600 .8rem var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--muted) }
+td.m, td.mono { font-family: var(--mono); font-size: .86rem; white-space: nowrap }
+tbody tr:last-child td { border-bottom: 0 }
+tr.grp td { font: 600 .78rem var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--blue); padding-top: 12px }
+.tscroll { overflow-x: auto }
+/* data path drawings */
+.dp { width: 100%; max-width: 640px; height: auto; display: block }
+.dp .box { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5 }
+.dp .boxa { fill: var(--blue-soft); stroke: var(--ink); stroke-width: 1.5 }
+.dp .w { stroke: var(--ink); stroke-width: 1.5; fill: none }
+.dp .wf { stroke: var(--mark); stroke-width: 1.5; fill: none; stroke-dasharray: 4 3 }
+.dp .ah { fill: var(--ink) }
+.dp .ahf { fill: var(--mark) }
+.dp text { fill: var(--ink); font-family: var(--mono); font-size: 12px }
+.dp text.f { fill: var(--mark) }
+@media (max-width: 640px) {
+  .page { padding: 20px 16px 22px }
+  .row { grid-template-columns: minmax(0, 1fr); gap: 4px }
+  .mn { font-size: 3.4rem }
+  h1 { font-size: 2.3rem }
+}

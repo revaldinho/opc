@@ -1,0 +1,190 @@
+<title>OPC7 FPGA System</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a datasheet column, same family as the OPC7 pipeline summary: status, block diagram, maps, phases, figures. */
+:root {
+  --bg: #eef2ef; --panel: #f8faf8; --fg: #14231e; --muted: #51635c; --line: #c9d5cf;
+  --copper: #a04e17; --mask: #0f6b5c; --mask-soft: #d5e7e1; --done: #1d7a4f; --next: #8a6a12; --plan: #6a7a74;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", Arial, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1a17; --panel: #16241f; --fg: #e3ece7; --muted: #9db0a8; --line: #2c3f38;
+  --copper: #e39a5b; --mask: #4fc4ae; --mask-soft: #1d3a33; --done: #5fcf95; --next: #e2bf5a; --plan: #8fa39b;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f1a17; --panel: #16241f; --fg: #e3ece7; --muted: #9db0a8; --line: #2c3f38;
+  --copper: #e39a5b; --mask: #4fc4ae; --mask-soft: #1d3a33; --done: #5fcf95; --next: #e2bf5a; --plan: #8fa39b;
+  color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 16px/1.55 var(--body) }
+.wrap { max-width: 920px; margin: 0 auto; padding-block: 40px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 44px }
+.wrap > * { min-width: 0 }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; margin: 0; text-wrap: balance; line-height: 1.15 }
+h1 { font-size: clamp(2rem, 6vw, 2.9rem) }
+h2 { font-size: 1.5rem }
+h3 { font-size: 1.05rem }
+p { margin: 0; max-width: 68ch }
+section { display: grid; gap: 14px }
+section > * { min-width: 0 }
+code { font-family: var(--mono); font-size: .9em }
+.part { font: 500 .8rem var(--mono); letter-spacing: .06em; color: var(--copper); text-transform: uppercase }
+header { display: grid; gap: 12px }
+.lede { font-size: 1.1rem }
+.note { color: var(--muted); font-size: .9rem }
+.figs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line) }
+.fig { background: var(--panel); padding: 14px 16px; display: grid; gap: 2px; align-content: start }
+.fig b { font: 600 1.9rem/1.1 var(--display); color: var(--mask); font-variant-numeric: tabular-nums }
+.fig span { font-size: .85rem; color: var(--muted) }
+/* block diagram */
+.diag { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); gap: 18px; align-items: stretch }
+.col { display: grid; gap: 10px; align-content: start }
+.blk { background: var(--panel); border: 1px solid var(--line); padding: 10px 12px; display: grid; gap: 3px }
+.blk b { font: 500 .95rem var(--mono); color: var(--mask) }
+.blk span { font-size: .84rem; color: var(--muted); line-height: 1.35 }
+.blk.cpu { border-top: 3px solid var(--mask) }
+.blk.later { border-style: dashed }
+.blk.later b { color: var(--plan) }
+.lbl { font: 500 .74rem var(--mono); letter-spacing: .05em; text-transform: uppercase; color: var(--copper) }
+.scroll { overflow-x: auto; border: 1px solid var(--line); background: var(--panel) }
+table { border-collapse: collapse; width: 100%; font-size: .93rem }
+th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap }
+td.mono { font-family: var(--mono); font-size: .88rem; white-space: nowrap }
+tbody tr:last-child td { border-bottom: 0 }
+thead th { font-weight: 600; background: var(--mask-soft) }
+.pill { display: inline-block; font: 500 .74rem var(--mono); letter-spacing: .04em; text-transform: uppercase; padding: 1px 8px; border: 1px solid currentColor; white-space: nowrap }
+.pill.done { color: var(--done) } .pill.next { color: var(--next) } .pill.plan { color: var(--plan) }
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px }
+.pair > div { display: grid; gap: 10px; min-width: 0 }
+ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 6px; max-width: 68ch }
+@media (max-width: 720px) {
+  .figs { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  .diag, .pair { grid-template-columns: minmax(0, 1fr) }
+}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="part">opc7/opc7h/system &middot; phase 1 &middot; 11 November 2026</div>
+  <h1>OPC7 FPGA system</h1>
+  <p class="lede">A complete computer around the pipelined opc7hpcpu: boot ROM, main memory, a UART and GPIO, built for the Tang Nano 20K and, later, ECP5 boards. Phase 1 uses block RAM for main memory; caches and SDRAM follow.</p>
+</header>
+
+<div class="figs">
+  <div class="fig"><b>54 MHz</b><span>system clock (PLL from 27 MHz); 83.6 MHz estimated Fmax</span></div>
+  <div class="fig"><b>1551</b><span>logic cells on the Tang Nano 20K, CPU 1192 of them</span></div>
+  <div class="fig"><b>39 / 46</b><span>block RAMs: 4K-word ROM and 16K-word RAM</span></div>
+  <div class="fig"><b>115200</b><span>baud UART, 16-entry FIFOs each way</span></div>
+</div>
+
+<section>
+  <h2>Block diagram</h2>
+  <div class="diag">
+    <div class="col">
+      <div class="lbl">Processor</div>
+      <div class="blk cpu"><b>opc7hpcpu</b><span>4-stage pipeline. Separate instruction and data ports, each with its own wait input. A halt stops it until reset.</span></div>
+    </div>
+    <div class="col">
+      <div class="lbl">Memory (vda)</div>
+      <div class="blk"><b>Boot ROM 0x00000-0x00FFF</b><span>4K words, two read ports, so instruction and data reads never clash. Not cached.</span></div>
+      <div class="blk"><b>RAM from 0x01000</b><span>Phase 1: 16K words of block RAM on the Tang Nano, repeated through the address space.</span></div>
+      <div class="blk later"><b>I-cache, D-cache, SDRAM</b><span>Phase 2-3: direct mapped, at least 4K and 2K words, write-through data cache.</span></div>
+    </div>
+    <div class="col">
+      <div class="lbl">I/O (vio)</div>
+      <div class="blk"><b>UART 0x00-0x01</b><span>RX and TX, no handshaking.</span></div>
+      <div class="blk"><b>GPIO 0x10-0x12</b><span>32 bits: input, output, direction.</span></div>
+      <div class="blk later"><b>CPC-CPLINK 0x20-0x21</b><span>Byte link to an Amstrad CPC as terminal.</span></div>
+      <div class="blk later"><b>Cache control 0x30</b><span>Instruction cache invalidate.</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>I/O registers</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Port</th><th>Register</th><th>Read</th><th>Write</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">0x00</td><td>UART status</td><td>bit 0: room in the TX FIFO; bit 1: data in the RX FIFO</td><td>empty both FIFOs</td></tr>
+      <tr><td class="mono">0x01</td><td>UART data</td><td>pop a byte from the RX FIFO</td><td>push a byte into the TX FIFO</td></tr>
+      <tr><td class="mono">0x10</td><td>GPIO input</td><td>pin levels (synchronised)</td><td>ignored</td></tr>
+      <tr><td class="mono">0x11</td><td>GPIO output</td><td>output register</td><td>output register</td></tr>
+      <tr><td class="mono">0x12</td><td>GPIO direction</td><td>direction register</td><td>1 drives the pin</td></tr>
+      <tr><td class="mono">0x20-0x21</td><td>CPC-CPLINK</td><td>reads 0 (not yet built)</td><td>ignored</td></tr>
+      <tr><td class="mono">0x30</td><td>Cache control</td><td>reads 0 (no caches yet)</td><td>ignored</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">I/O addresses with bits 15 to 8 set read as 0 and ignore writes.</p>
+</section>
+
+<section>
+  <h2>Phases</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>Phase</th><th>Contents</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>CPU, dual-port boot ROM, block RAM main memory, UART, GPIO, I/O decoding. Simulation, then Tang Nano 20K.</td><td><span class="pill next">board run Friday</span></td></tr>
+      <tr><td>2</td><td>Instruction and data caches, tested against a slow-memory model with random delays.</td><td><span class="pill plan">planned</span></td></tr>
+      <tr><td>3</td><td>SDRAM controllers: Tang Nano 20K (64 Mbit in package), ULX3S and Colorlight i9 (ECP5).</td><td><span class="pill plan">planned</span></td></tr>
+      <tr><td>4</td><td>UART boot loader in ROM, then the CPC-CPLINK interface.</td><td><span class="pill plan">planned</span></td></tr>
+      <tr><td>5</td><td>SD card loading, PS/2 keyboard, HDMI frame buffer, other cache designs.</td><td><span class="pill plan">later</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Phase 1 so far</h2>
+  <div class="pair">
+    <div>
+      <h3>Built</h3>
+      <ul class="plain">
+        <li><code>opc7hsys.v</code>: the board-independent system, with ROM, RAM, I/O decoding and GPIO.</li>
+        <li><code>opc7_uart.v</code>: UART with FIFOs and a clock divider.</li>
+        <li><code>tn20k_sys.v</code>: the Tang Nano top, with PLL, power-on reset and LEDs (LED 5 shows halted).</li>
+        <li><code>opc7sys_rom.s</code>: the BCPL runtime's console routines rewritten to use the UART, so programs need no change.</li>
+        <li><code>sysrun.sh</code>: builds a BCPL program for the system, simulates it, and compares the UART output with the expected text.</li>
+        <li><code>tn20k_build.sh</code>: makes a Tang Nano bitstream for a program.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Checked</h3>
+      <ul class="plain">
+        <li><b>hello</b> runs on the whole system in simulation: ROM, RAM and UART, with output matching the emulator.</li>
+        <li>All 60 claude-tests and bcpltests programs are being run through the system simulation. A simulation-only fix (RAM cleared to zero, as in block RAM) is being rechecked on the programs it affected.</li>
+        <li>The Tang Nano bitstream for hello builds and meets timing at 54 MHz.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Tang Nano 20K build</h2>
+  <div class="scroll"><table>
+    <thead><tr><th></th><th class="num">System</th><th class="num">CPU alone</th></tr></thead>
+    <tbody>
+      <tr><td>Logic cells (LUT4 + ALU)</td><td class="num">1551</td><td class="num">1192</td></tr>
+      <tr><td>Flip-flops</td><td class="num">587</td><td class="num">411</td></tr>
+      <tr><td>RAM16 (register file, UART FIFOs)</td><td class="num">20</td><td class="num">16</td></tr>
+      <tr><td>Block RAM</td><td class="num">39 of 46</td><td class="num">8</td></tr>
+      <tr><td>PLL</td><td class="num">1 of 2</td><td class="num">0</td></tr>
+      <tr><td>Fmax estimate</td><td class="num">83.6 MHz</td><td class="num">118.4 MHz</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Single build with -nowidelut, nextpnr estimates. Cells are counted as in results.txt. The CPU-alone column is its 15-seed median from 5 November, with the test top's 4K-word RAM.</p>
+</section>
+
+<section>
+  <h2>Notes</h2>
+  <ul class="plain">
+    <li><b>Software layout unchanged.</b> sial2opc already puts programs at 0x1000 and the runtime's MOS entry points below it, so the boot ROM covers exactly the runtime.</li>
+    <li><b>ROM per program in phase 1.</b> Each build puts the program's low 4K words in the ROM and the rest in RAM. A fixed ROM with a loader comes in phase 4.</li>
+    <li><b>Halt.</b> opc7hpcpu gained a <code>hlt</code> output so the system can stop the CPU at the end of a program. Without it, a finished program would return to address 0 and start again.</li>
+    <li><b>To check on the board.</b> The UART pins (69 TX, 70 RX) and the reset buttons haven't been confirmed against the Tang Nano schematic yet.</li>
+  </ul>
+</section>
+</div>

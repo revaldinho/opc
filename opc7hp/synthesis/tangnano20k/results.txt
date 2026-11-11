@@ -1,0 +1,30 @@
+date             cpu    version       LOGIC LOGIC%   LUT4   ALU  MUX2   DFF RAM16 BSRAM    DSP Fmax MHz min/med/max  note
+2026-10-26 21:28 opc7   93b4cdb        1666   8.0%   1576    90   858   153    16     8      0       91.3/94.1/97.2  baseline, before any SIAL work
+2026-10-26 23:26 opc7   93b4cdb        1684   8.1%   1594    90   895   153    16     8      0    100.9/103.2/106.6  synth_gowin -family gw2a (earlier lines: gw1n default)
+2026-10-27 21:26 opc7   73190b5        2065  10.0%   1975    90  1276   153    16     8      0     90.5/100.3/103.6  with scmp (opcode 0x16)
+2026-10-30 20:25 opc7   73190b5        1624   7.8%   1534    90   818   153    16     8      0       75.3/78.3/81.6  with scmp; yosys 0.70 Release, nextpnr 0.11.1-84
+2026-10-30 20:25 opc7   md5:2d3e348    1589   7.7%   1499    90   777   153    16     8      0       77.4/78.1/78.5  93b4cdb, before scmp; yosys 0.70 Release, nextpnr 0.11.1-84
+2026-10-30 20:25 opc7   md5:54f452a    1597   7.7%   1507    90   770   153    16     8      0      95.6/97.3/101.1  73190b5 with PRED_IN_EAD_ONLY; yosys 0.70 Release, nextpnr 0.11.1-84
+2026-10-30 21:01 opc7h  md5:1af0f76    1822   8.8%   1732    90   918   200    16    16      0       84.2/86.3/86.7  opc7h: separate instruction port, dual-port BSRAM; yosys 0.70 Release, nextpnr 0.11.1-84
+2026-10-30 21:07 opc7h  md5:052a0ad    1873   9.0%   1783    90   961   200    16    16      0    102.6/102.8/107.8  opc7h with PRED_IN_EAD_ONLY; yosys 0.70 Release, nextpnr 0.11.1-84
+2026-10-30 21:33 opc7h  md5:052a0ad    1909   9.2%   1819    90  1111   153    16     8      0     99.9/101.0/103.1  opc7h with PRED_IN_EAD_ONLY, no_rw_check on the dual-port memory (8 DPB); yosys 0.70 Release, nextpnr 0.11.1-84
+2026-10-31 21:32 opc7h  md5:e57b363    1820   8.8%   1730    90  1030   153    16     8      0    103.8/106.1/107.1  opc7h: FET and EXEC no longer overlapped, PRED_IN_EAD_ONLY only; yosys 0.70 Release, nextpnr 0.11.1-84
+2026-11-03 18:04 opc7hp md5:8f32f0a    1887   9.1%   1797    90  1100   249    16     8      0    102.5/107.5/108.0  opc7hp stage 1: stage registers with valid bits, one instruction in flight; yosys 0.70 Release, nextpnr 0.11.1-84
+2026-11-03 18:26 opc7hp md5:eeeb728    1864   9.0%   1774    90  1073   319    16     8      0      97.8/98.5/101.3  opc7hp stage 2: 4-stage pipeline with interlocks, no forwarding; yosys 0.70 Release, nextpnr 0.11.1-84
+2026-11-03 18:33 opc7hp md5:f112ef8    2359  11.4%   2269    90  1464   365    16     8      0    100.4/102.8/109.0  opc7hp stage 3: late-binding forwarding (EX result, wb) into MEM->EX; yosys 0.70 Release, nextpnr 0.11.1-84
+2026-11-03 19:01 opc7hp md5:f112ef8    1117   5.4%   1027    90     0   365    16     8      0       91.6/92.0/93.1  [-nowidelut] opc7hp stage 3; yosys 0.70 Release, nextpnr 0.11.1-84
+2026-11-05 00:34 opc7hp md5:70582c4    2219  10.7%   2129    90  1291   367    16     8      0      94.3/97.6/100.6  opc7hp stage 4: early jumps from EA; yosys 0.70 Release, nextpnr 0.11.1-84
+2026-11-05 00:35 opc7hp md5:70582c4    1141   5.5%   1051    90     0   367    16     8      0      92.7/96.4/102.2  [-nowidelut] opc7hp stage 4: early jumps from EA; yosys 0.70 Release, nextpnr 0.11.1-84
+2026-11-05 00:38 opc7hp md5:085580c    1838   8.9%   1748    90   901   367    16     8      0      97.2/98.6/100.2  opc7hp stage 4: early jumps, ea_early without flush; yosys 0.70 Release, nextpnr 0.11.1-84
+2026-11-05 00:39 opc7hp md5:085580c    1152   5.6%   1062    90     0   367    16     8      0       85.2/89.9/98.4  [-nowidelut] opc7hp stage 4: early jumps, ea_early without flush; yosys 0.70 Release, nextpnr 0.11.1-84
+2026-11-05 01:22 opc7hp md5:c99b7b1    1565   7.5%   1475    90   597   411    16     8      0    112.2/113.3/117.9  opc7hp stage 5: decode in FD and MEM, one-hot ALU select; yosys 0.70 Release, nextpnr 0.11.1-84
+2026-11-05 01:22 opc7hp md5:c99b7b1    1179   5.7%   1089    90     0   411    16     8      0    109.0/115.2/115.8  [-nowidelut] opc7hp stage 5: decode in FD and MEM, one-hot ALU select; yosys 0.70 Release, nextpnr 0.11.1-84
+2026-11-05 07:09 opc7hp md5:ca7ff9f    1496   7.2%   1392   104   502   411    16     8      0    108.9/110.6/111.2  stage 6: predicted backward jumps, 12 bit direction compare
+2026-11-05 07:09 opc7hp md5:ca7ff9f    1192   5.7%   1088   104     0   411    16     8      0    111.3/118.4/118.7  [-nowidelut] stage 6: predicted backward jumps, 12 bit direction compare
+2026-11-05 09:35 opc7   3a7f036+       1569   7.6%   1479    90   781   153    16     8      0       71.9/77.0/84.4  summary, 15 seeds, default
+2026-11-05 09:35 opc7   3a7f036+        907   4.4%    817    90     0   153    16     8      0       68.0/74.3/76.0  [-nowidelut] summary, 15 seeds, default
+2026-11-05 09:36 opc7   md5:356c393    1905   9.2%   1815    90  1119   153    16     8      0     92.5/102.7/109.8  summary, 15 seeds, PRED_IN_EAD_ONLY
+2026-11-05 09:36 opc7   md5:356c393     905   4.4%    815    90     0   153    16     8      0      88.3/95.7/103.2  [-nowidelut] summary, 15 seeds, PRED_IN_EAD_ONLY
+2026-11-05 09:37 opc7hp md5:ca7ff9f    1496   7.2%   1392   104   502   411    16     8      0    103.9/109.1/114.9  summary, 15 seeds, stage 6
+2026-11-05 09:37 opc7hp md5:ca7ff9f    1192   5.7%   1088   104     0   411    16     8      0    110.8/118.4/124.9  [-nowidelut] summary, 15 seeds, stage 6
+2026-11-11 22:47 opc7hp md5:898c8f0    1178   5.7%   1074   104     0   412    16     8      0    110.3/113.3/118.6  [-nowidelut] opc7hp layout check

@@ -1,0 +1,21 @@
+# ULX3S (LFE5U-85F-6BG381C): 25 MHz oscillator, BTN0 (PWR, active low) as reset, LEDs 0-5 (active high).
+# Pin sites from the ULX3S v2.x constraints (ulx3s_v20.lpf); check against the board's own file
+# before loading a bitstream. The tops are shared with the Tang Nano, whose LEDs are active low,
+# so here the LEDs show the inverse.
+LOCATE COMP "clk" SITE "G2";
+IOBUF PORT "clk" IO_TYPE=LVCMOS33;
+FREQUENCY PORT "clk" 25 MHZ;
+LOCATE COMP "rst_n" SITE "D6";
+IOBUF PORT "rst_n" IO_TYPE=LVCMOS33 PULLMODE=UP;
+LOCATE COMP "led[0]" SITE "B2";
+LOCATE COMP "led[1]" SITE "C2";
+LOCATE COMP "led[2]" SITE "C1";
+LOCATE COMP "led[3]" SITE "D2";
+LOCATE COMP "led[4]" SITE "D1";
+LOCATE COMP "led[5]" SITE "E2";
+IOBUF PORT "led[0]" IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[1]" IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[2]" IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[3]" IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[4]" IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[5]" IO_TYPE=LVCMOS33 DRIVE=4;

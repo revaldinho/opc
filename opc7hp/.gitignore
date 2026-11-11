@@ -1,0 +1,8 @@
+# simulation and synthesis work files (make clean removes them)
+build/
+# editor backups
+*~
+__pycache__/
+# generated from tests/*.s by the cpu Makefile
+cpu/tests/*.hex
+cpu/tests/*.lst

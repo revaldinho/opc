@@ -1,0 +1,208 @@
+<!-- Chapter 1 of the OPC7HP manual: gen_manual.py puts it before the instruction pages. -->
+<section>
+  <h2><span class="n">1.1</span>Registers</h2>
+  <div class="regs" role="img" aria-label="Sixteen registers r0 to r15; r0 reads as zero and r15 is the program counter">
+    <div class="sp">r0 = 0</div><div>r1</div><div>r2</div><div>r3</div><div>r4</div><div>r5</div><div>r6</div><div>r7</div>
+    <div>r8</div><div>r9</div><div>r10</div><div>r11</div><div>r12</div><div>r13</div><div>r14</div><div class="sp">r15 = pc</div>
+  </div>
+  <ul>
+    <li>Sixteen 32-bit registers. Most instructions name a destination register, which is also their first operand, and a source register.</li>
+    <li><b>r0</b> always reads as zero. Writing it is allowed and changes nothing, but the flags are still set from the result, so an operation with destination r0 serves as a test.</li>
+    <li><b>r15</b> is the program counter. Read as a source, it gives the address of the next instruction. Writing it is a jump, and a jump leaves the flags unchanged.</li>
+    <li>Addresses and the program counter are 20 bits, so the machine addresses 1M 32-bit words. Reading r15 gives zeros in the top 12 bits. Memory is word addressed: there are no byte loads or stores.</li>
+    <li>By software convention, the BCPL code generator uses r13 as the link register and r14 as the stack pointer.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">1.2</span>Processor status register</h2>
+  <div class="wordbox"><div class="word psr" role="img" aria-label="PSR: bit 31 V, bits 30 to 8 unused, bits 7 to 4 SWI, bit 3 EI, bit 2 S, bit 1 C, bit 0 Z">
+    <div class="hi"><span class="bits"><span>31</span><span></span></span><span class="val">V</span><span class="f">overflow</span></div>
+    <div><span class="bits"><span>30</span><span>8</span></span><span class="val">0</span><span class="f">unused</span></div>
+    <div><span class="bits"><span>7</span><span>4</span></span><span class="val">SWI</span><span class="f">soft int</span></div>
+    <div><span class="bits"><span>3</span><span></span></span><span class="val">EI</span><span class="f">int en</span></div>
+    <div class="hi"><span class="bits"><span>2</span><span></span></span><span class="val">S</span><span class="f">sign</span></div>
+    <div class="hi"><span class="bits"><span>1</span><span></span></span><span class="val">C</span><span class="f">carry</span></div>
+    <div class="hi"><span class="bits"><span>0</span><span></span></span><span class="val">Z</span><span class="f">zero</span></div>
+  </div></div>
+  <ul>
+    <li><b>Z</b>: the result is zero. <b>S</b>: bit 31 of the result is set. <b>C</b>: the carry out of an add, subtract or compare, or the bit shifted out by a shift or rotate. <b>V</b>: signed overflow from an add, subtract or compare.</li>
+    <li><b>EI</b> enables hardware interrupts. Writing a non-zero <b>SWI</b> value with <code>putpsr</code> raises a software interrupt.</li>
+    <li>Only the instructions themselves set flags. The address and operand calculation (section 1.4) never does.</li>
+    <li>The PSR is read with <code>getpsr</code> and written with <code>putpsr</code>. <code>getpsr</code> puts V in bit 31 of its result, which also sets S, so <code>getpsr</code> followed by <code>mi.</code> or <code>pl.</code> tests overflow.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">1.3</span>Instruction formats</h2>
+  <p>Every instruction is one 32-bit word, in one of two formats.</p>
+  <h3>Standard: opcodes 0x00 to 0x1B</h3>
+  <div class="wordbox"><div class="word std" role="img" aria-label="Standard format: predicate, opcode, destination, source, 16-bit operand">
+    <div><span class="bits"><span>31</span><span>29</span></span><span class="val">ppp</span><span class="f">pred</span></div>
+    <div class="hi"><span class="bits"><span>28</span><span>24</span></span><span class="val">ooooo</span><span class="f">opcode</span></div>
+    <div><span class="bits"><span>23</span><span>20</span></span><span class="val">dddd</span><span class="f">dst</span></div>
+    <div><span class="bits"><span>19</span><span>16</span></span><span class="val">ssss</span><span class="f">src</span></div>
+    <div><span class="bits"><span>15</span><span>0</span></span><span class="val">imm16</span><span class="f">operand, sign extended</span></div>
+  </div></div>
+  <h3>Long: opcodes 0x1C to 0x1F</h3>
+  <div class="wordbox"><div class="word lng" role="img" aria-label="Long format: predicate, opcode, destination, 20-bit operand">
+    <div><span class="bits"><span>31</span><span>29</span></span><span class="val">ppp</span><span class="f">pred</span></div>
+    <div class="hi"><span class="bits"><span>28</span><span>24</span></span><span class="val">111oo</span><span class="f">opcode</span></div>
+    <div><span class="bits"><span>23</span><span>20</span></span><span class="val">dddd</span><span class="f">dst</span></div>
+    <div><span class="bits"><span>19</span><span>0</span></span><span class="val">imm20</span><span class="f">operand, sign extended</span></div>
+  </div></div>
+  <p class="cap">Both immediates are sign extended to 32 bits. A 16-bit immediate covers 0x0000 to 0x7FFF and 0xFFFF8000 to 0xFFFFFFFF. The exception is <code>in</code> and <code>out</code>, whose 16-bit I/O address space accepts any 16-bit constant. Load a full 32-bit constant with <code>mov</code> and then <code>movt</code>.</p>
+</section>
+
+<section>
+  <h2><span class="n">1.4</span>Operand and address calculation</h2>
+  <p>Every instruction first forms an effective address or data value, EAD. For the standard format, EAD = src + imm16. For the long format, EAD = imm20. The instruction then uses EAD as its operand, as a memory or I/O address, or as a jump target. Choosing r0 and a zero immediate gives these modes:</p>
+  <div class="tscroll"><table>
+    <thead><tr><th>Mode</th><th>Written as</th><th>EAD</th><th>Used by</th></tr></thead>
+    <tbody>
+      <tr><td>Immediate</td><td class="m">mov r1, r0, 100</td><td>imm16</td><td>ALU instructions</td></tr>
+      <tr><td>Register</td><td class="m">add r1, r2</td><td>src</td><td>ALU instructions</td></tr>
+      <tr><td>Register + immediate</td><td class="m">add r1, r2, 4</td><td>src + imm16</td><td>ALU instructions</td></tr>
+      <tr><td>Long immediate</td><td class="m">lmov r1, 0x12345</td><td>imm20</td><td>lmov, ljsr</td></tr>
+      <tr><td>Direct</td><td class="m">ld r1, r0, 0x200</td><td>mem[imm16]</td><td>loads, stores, in, out</td></tr>
+      <tr><td>Indirect</td><td class="m">ld r1, r2</td><td>mem[src]</td><td>loads, stores, in, out</td></tr>
+      <tr><td>Indexed</td><td class="m">ld r1, r2, 4</td><td>mem[src + imm16]</td><td>loads, stores, in, out</td></tr>
+      <tr><td>Long direct</td><td class="m">lld r1, 0x12345</td><td>mem[imm20]</td><td>lld, lsto</td></tr>
+      <tr><td>PC relative</td><td class="m">mov pc, pc, -3</td><td>next pc + imm16</td><td>jumps, data near the code</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">There are three exceptions. <code>bperm</code> takes src as its value and uses imm16 as a byte selector (section 1.6). <code>getpsr</code> reads the PSR and ignores the immediate. <code>rti</code> takes its target from the saved interrupt PC.</p>
+</section>
+
+<section>
+  <h2><span class="n">1.5</span>Predicates</h2>
+  <p>Every instruction carries a predicate in bits 31 to 29, written as a prefix to its mnemonic. If the predicate fails, the instruction does nothing at all and changes no flags.</p>
+  <div class="tscroll"><table>
+    <thead><tr><th>Bits 31-29</th><th>Prefix</th><th>Executes when</th></tr></thead>
+    <tbody>
+      <tr><td class="m">000</td><td class="m">none, or 1.</td><td>always</td></tr>
+      <tr><td class="m">001</td><td class="m">0.</td><td>never: a no-operation that leaves the flags alone</td></tr>
+      <tr><td class="m">010</td><td class="m">z.</td><td>Z set</td></tr>
+      <tr><td class="m">011</td><td class="m">nz.</td><td>Z clear</td></tr>
+      <tr><td class="m">100</td><td class="m">c.</td><td>C set</td></tr>
+      <tr><td class="m">101</td><td class="m">nc.</td><td>C clear</td></tr>
+      <tr><td class="m">110</td><td class="m">mi.</td><td>S set</td></tr>
+      <tr><td class="m">111</td><td class="m">pl.</td><td>S clear</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">V has no predicate of its own. For signed comparisons, <code>scmp</code> sets S to the true signed result, so <code>scmp</code> followed by <code>mi.</code> or <code>pl.</code> gives signed less-than or greater-or-equal.</p>
+</section>
+
+<section>
+  <h2><span class="n">1.6</span>Instruction set</h2>
+  <div class="tscroll"><table>
+    <thead><tr><th>Op</th><th>Mnemonic</th><th>Operation</th><th>Flags</th></tr></thead>
+    <tbody>
+      <tr class="grp"><td colspan="4">Moves and logic</td></tr>
+      <tr><td class="m">00</td><td class="m">mov rd, rs, imm</td><td>rd &larr; EAD</td><td>S Z</td></tr>
+      <tr><td class="m">01</td><td class="m">movt rd, rs, imm</td><td>rd &larr; {EAD[15:0], rd[15:0]}</td><td>S Z</td></tr>
+      <tr><td class="m">02</td><td class="m">xor rd, rs, imm</td><td>rd &larr; rd ^ EAD</td><td>S Z</td></tr>
+      <tr><td class="m">03</td><td class="m">and rd, rs, imm</td><td>rd &larr; rd &amp; EAD</td><td>S Z</td></tr>
+      <tr><td class="m">04</td><td class="m">or rd, rs, imm</td><td>rd &larr; rd | EAD</td><td>S Z</td></tr>
+      <tr><td class="m">05</td><td class="m">not rd, rs, imm</td><td>rd &larr; ~EAD</td><td>S Z</td></tr>
+      <tr><td class="m">09</td><td class="m">bperm rd, rs, sel</td><td>rd &larr; bytes of rs chosen by sel</td><td>S Z</td></tr>
+      <tr class="grp"><td colspan="4">Arithmetic and compare</td></tr>
+      <tr><td class="m">08</td><td class="m">add rd, rs, imm</td><td>{C, rd} &larr; rd + EAD</td><td>V S C Z</td></tr>
+      <tr><td class="m">07</td><td class="m">sub rd, rs, imm</td><td>{C, rd} &larr; rd + ~EAD + 1</td><td>V S C Z</td></tr>
+      <tr><td class="m">06</td><td class="m">cmp rd, rs, imm</td><td>rd + ~EAD + 1, result discarded</td><td>V S C Z</td></tr>
+      <tr><td class="m">16</td><td class="m">scmp rd, rs, imm</td><td>as cmp, with S = sign of result ^ V</td><td>V S C Z</td></tr>
+      <tr class="grp"><td colspan="4">Shifts and rotates (one place)</td></tr>
+      <tr><td class="m">0A</td><td class="m">ror rd, rs, imm</td><td>{rd, C} &larr; {C, EAD}</td><td>S C Z</td></tr>
+      <tr><td class="m">0B</td><td class="m">lsr rd, rs, imm</td><td>{rd, C} &larr; {0, EAD}</td><td>S C Z</td></tr>
+      <tr><td class="m">0D</td><td class="m">asr rd, rs, imm</td><td>{rd, C} &larr; {EAD[31], EAD}</td><td>S C Z</td></tr>
+      <tr><td class="m">0E</td><td class="m">rol rd, rs, imm</td><td>{C, rd} &larr; {EAD, C}</td><td>S C Z</td></tr>
+      <tr class="grp"><td colspan="4">Memory and I/O</td></tr>
+      <tr><td class="m">1B</td><td class="m">ld rd, rs, imm</td><td>rd &larr; mem[EAD]</td><td>S Z</td></tr>
+      <tr><td class="m">1F</td><td class="m">lld rd, imm20</td><td>rd &larr; mem[imm20]</td><td>S Z</td></tr>
+      <tr><td class="m">1A</td><td class="m">sto rd, rs, imm</td><td>mem[EAD] &larr; rd</td><td>&ndash;</td></tr>
+      <tr><td class="m">1E</td><td class="m">lsto rd, imm20</td><td>mem[imm20] &larr; rd</td><td>&ndash;</td></tr>
+      <tr><td class="m">19</td><td class="m">in rd, rs, imm</td><td>rd &larr; io[EAD]</td><td>S Z</td></tr>
+      <tr><td class="m">18</td><td class="m">out rd, rs, imm</td><td>io[EAD] &larr; rd</td><td>&ndash;</td></tr>
+      <tr class="grp"><td colspan="4">Control</td></tr>
+      <tr><td class="m">0C</td><td class="m">jsr rd, rs, imm</td><td>rd &larr; next pc; pc &larr; EAD</td><td>S Z (of the link)</td></tr>
+      <tr><td class="m">1C</td><td class="m">ljsr rd, imm20</td><td>rd &larr; next pc; pc &larr; imm20</td><td>S Z (of the link)</td></tr>
+      <tr><td class="m">1D</td><td class="m">lmov rd, imm20</td><td>rd &larr; imm20</td><td>S Z</td></tr>
+      <tr><td class="m">11</td><td class="m">rti pc, pc</td><td>pc &larr; saved pc; flags restored</td><td>restored</td></tr>
+      <tr><td class="m">12</td><td class="m">putpsr psr, rs, imm</td><td>PSR &larr; EAD; a non-zero SWI interrupts</td><td>all</td></tr>
+      <tr><td class="m">13</td><td class="m">getpsr rd, psr</td><td>rd &larr; PSR</td><td>S (= V) Z</td></tr>
+      <tr><td class="m">10</td><td class="m">halt rd, rs, imm</td><td>stop (the end of a simulation; opc7hpcpu raises hlt)</td><td>n/a</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li>Writing r15 with any instruction except the compares is a jump: <code>mov pc</code>, <code>add pc</code>, <code>ld pc</code> and so on. A jump leaves all the flags unchanged. A compare with destination r15 just compares.</li>
+    <li>Flags not listed for an instruction keep their values. In particular, C and V change only where shown.</li>
+    <li><code>add rd, rd</code> shifts left one place, with C taking the bit shifted out.</li>
+    <li><b>bperm</b> builds each byte of the result from a 4-bit field of the selector, with byte 3 on the left. Bits 1 and 0 of a field pick a byte of rs, and bit 2 makes the byte zero. For example, <code>0x3210</code> leaves rs unchanged, <code>0x0123</code> reverses its bytes and <code>0x4441</code> moves byte 1 to byte 0 and clears the rest.</li>
+    <li>Unused opcodes are 0x0F, 0x14, 0x15 and 0x17.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">1.7</span>Reset and interrupts</h2>
+  <ul>
+    <li>Reset starts execution at address 0 with interrupts disabled.</li>
+    <li>Hardware interrupts come from <code>int_b[1:0]</code>, active low, while EI is set. An interrupt is taken as an instruction completes, and enters the handler at address 0x0004 for <code>int_b[1]</code> or 0x0002 for <code>int_b[0]</code>. If both are low, <code>int_b[1]</code> wins. A software interrupt, from <code>putpsr</code> writing a non-zero SWI, also uses 0x0002, so the handler reads the PSR to tell them apart.</li>
+    <li>Taking an interrupt saves the return address and the flags, then clears EI. <code>rti pc, pc</code> returns and restores them, with SWI cleared.</li>
+    <li>On opc7hpcpu, interrupts are precise. Everything before the interrupted point has completed, nothing after it has had any effect, and a store, <code>in</code> or <code>out</code> already sent to memory is never repeated.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">1.8</span>The opc7hpcpu hardware interface</h2>
+  <div class="tscroll"><table>
+    <thead><tr><th>Signal</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td class="m">iaddr[19:0], ird</td><td>instruction fetch request</td></tr>
+      <tr><td class="m">idin[31:0]</td><td>instruction reply; held until the next fetch is taken</td></tr>
+      <tr><td class="m">iwait</td><td>instruction port busy: the reply isn't ready and no request is taken</td></tr>
+      <tr><td class="m">address[19:0], rnw, dout[31:0]</td><td>data request; a write supplies dout</td></tr>
+      <tr><td class="m">vda / vio</td><td>the data request is to memory / to the 16-bit I/O space</td></tr>
+      <tr><td class="m">din[31:0]</td><td>data reply, for loads and <code>in</code></td></tr>
+      <tr><td class="m">dwait</td><td>data port busy, as iwait</td></tr>
+      <tr><td class="m">int_b[1:0]</td><td>hardware interrupts, active low</td></tr>
+      <tr><td class="m">clken</td><td>stops the whole CPU while low</td></tr>
+      <tr><td class="m">hlt</td><td>high for the cycle a halt completes, so a system can stop the CPU</td></tr>
+      <tr><td class="m">reset_b, clk</td><td>reset (active low, synchronised inside) and clock</td></tr>
+    </tbody>
+  </table></div>
+  <p>Each port carries one access at a time. A request is taken at the end of a cycle in which its wait is low. The reply comes in the first later cycle with the wait low, and a write is complete as soon as it is taken. Tie both waits low for single-cycle memory such as block RAM. The waits must not depend on the CPU's outputs in the same cycle.</p>
+</section>
+
+<section>
+  <h2><span class="n">1.9</span>Timing</h2>
+  <p>The original opc7cpu runs one instruction at a time through its fetch (FET), address (EAD), memory (RDM/WRM) and execute (EXEC) states. opc7hpcpu overlaps four pipeline stages: FD (fetch), EA (address), MEM (memory) and EX (execute). It starts one instruction per cycle, apart from the costs below, and averages about 1.33 cycles per instruction on the BCPL test programs.</p>
+  <div class="tscroll"><table>
+    <thead><tr><th>Case</th><th>opc7cpu</th><th>opc7hpcpu</th></tr></thead>
+    <tbody>
+      <tr><td>ALU instruction</td><td>2</td><td>1</td></tr>
+      <tr><td>Load, <code>in</code></td><td>3</td><td>1</td></tr>
+      <tr><td>Store, <code>out</code></td><td>2, plus a fetch for the next</td><td>1</td></tr>
+      <tr><td>Predicate fails</td><td>1</td><td>1</td></tr>
+      <tr><td>Unpredicated <code>mov</code>/<code>lmov</code> to pc, <code>jsr</code>, <code>ljsr</code></td><td>2, plus a fetch</td><td>2</td></tr>
+      <tr><td>Predicated jump to an immediate or pc-relative backward target</td><td>2, plus a fetch, if taken</td><td>2 if taken, 4 if not</td></tr>
+      <tr><td>Any other taken jump (forward predicated, <code>add pc</code>, <code>ld pc</code>, <code>rti</code>)</td><td>2 or 3, plus a fetch</td><td>4</td></tr>
+      <tr><td>Register written by the previous instruction, needed early: an address, a source with a non-zero immediate or for bperm, store data, a jump target</td><td>no extra</td><td>+2 (+1 if written two before)</td></tr>
+      <tr><td>Register needed only in EX: the ALU's operands</td><td>no extra</td><td>no extra (forwarded)</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">opc7cpu figures are for its default build. "Plus a fetch" is one cycle, which opc7cpu otherwise overlaps with the end of the previous instruction. On opc7hpcpu each cycle with iwait or dwait high adds one, for the port it holds up.</p>
+</section>
+
+<section>
+  <h2><span class="n">1.10</span>Changes from the original OPC7 specification</h2>
+  <ul>
+    <li><b>scmp</b> (0x16) added for signed comparisons. The original table showed it as <code>cmp</code>.</li>
+    <li>Predicate <code>001</code>, written <code>0.</code>, means never execute in all the CPUs, both emulators and the assembler. The original opc7cpu executed it.</li>
+    <li><code>getpsr</code> used to clear C in the copy it read. It now reads the PSR as it is.</li>
+    <li><code>in</code> sets S and Z from the value read, and <code>out</code> leaves the flags alone, the same as loads and stores.</li>
+    <li><code>asr</code> shifts in bit 31; the original table said bit 15. Shifts and rotates set C, and stores, <code>out</code>, writes to r15 and <code>rti</code> leave Z alone, which the original flag notes didn't say.</li>
+    <li>The long forms are written <code>ljsr</code>, <code>lmov</code>, <code>lsto</code> and <code>lld</code>.</li>
+    <li>An interrupt saves V along with the other flags, and <code>rti</code> restores it, as the emulators always did. The RTL used to clear V on <code>rti</code>.</li>
+    <li>opc7hpcpu adds the Harvard ports, the iwait and dwait inputs and the hlt output. Interrupts are precise.</li>
+  </ul>
+</section>

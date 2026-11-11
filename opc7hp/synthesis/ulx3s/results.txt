@@ -1,0 +1,4 @@
+date             cpu    version       LOGIC LOGIC%   LUT4 CCU2C PFUMX L6MUX    FF  RAMW DP16KD MULT18 Fmax MHz min/med/max  note
+2026-11-09 21:14 opc7   49508f5        1451   1.7%   1255    43   390   207   153    16      8      0       65.3/67.0/71.5  first ULX3S run, 15 seeds
+2026-11-09 21:14 opc7hp md5:9cf10f7    1585   1.9%   1373    49   403   129   412    16      8      0       77.3/79.3/82.8  first ULX3S run, 15 seeds, stage 6 with iwait/dwait
+2026-11-11 22:47 opc7hp md5:898c8f0    1585   1.9%   1373    49   403   129   412    16      8      0       77.3/78.0/81.0  opc7hp layout check
