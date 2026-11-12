@@ -1,7 +1,9 @@
-// Tang Nano 20K pins for tn20k_sys.v: 27 MHz oscillator, the BL616 USB serial bridge, the six LEDs.
+// Tang Nano 20K pins for tn20k_sys.v: 27 MHz oscillator, button S1, the BL616 USB serial bridge, the
+// six LEDs. S1 is pin 88 (S2 is 87) as in Sipeed's examples: check it against the schematic too.
 // The UART pins are 69 (FPGA TX) and 70 (FPGA RX) as in Sipeed's examples: check them against the
 // board's schematic before relying on them.
 IO_LOC "clk27" 4;
+IO_LOC "btn" 88;
 IO_LOC "uart_tx" 69;
 IO_LOC "uart_rx" 70;
 IO_PORT "uart_rx" PULL_MODE=UP;
