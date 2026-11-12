@@ -23,7 +23,7 @@
 
 CPU    ?= opc7hp
 TESTS  ?= writefmt cmptest optest optest32
-ALLTESTS = cmptest optest optest32 writefmt randtest divtest bittest shifttest p2divtest p2div32test xdivtest multest
+ALLTESTS = cmptest optest optest32 writefmt randtest divtest bittest shifttest p2divtest p2div32test xdivtest multest cmp32test
 
 OPC7    = ../../opc7
 TESTDIR = $(OPC7)/claude-tests

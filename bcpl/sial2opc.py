@@ -784,9 +784,12 @@ def process_sial(sialtext):
             elif opcode == sialop['f_jgr'] :     # jgr      Ln         Jump to Ln if b > a [ ie a < b ]
                 signed_jump("r1", "r2", False, fields[1], line)
             elif opcode == sialop['f_jgr0'] :     # jgr0      Ln       Jump to Ln if a > 0  [ie if 0 < a]
-                code("cmp r1,r0", line)
-                code("mi.mov r4,r0")             # Z := 1 if a < 0, so Z is set iff a <= 0 (OPC6 cannot predicate cmp)
-                code("nz.mov pc,r0,%s" % fields[1])
+                if cpu_target == "opc7":
+                    signed_jump("r0", "r1", False, fields[1], line)   # 0 < a
+                else:
+                    code("cmp r1,r0", line)
+                    code("mi.mov r4,r0")             # Z := 1 if a < 0, so Z is set iff a <= 0 (OPC6 cannot predicate cmp)
+                    code("nz.mov pc,r0,%s" % fields[1])
             elif opcode == sialop['f_jle'] :     # jle      Ln         Jump to Ln if b <= a [ie a >= b]
                 signed_jump("r1", "r2", True, fields[1], line)
             elif opcode == sialop['f_jls'] :     # jls      Ln         Jump to Ln if b < a
@@ -804,9 +807,12 @@ def process_sial(sialtext):
                 code("cmp r1,r0",line)
                 code("mi.mov pc,r0,%s" % fields[1])
             elif opcode == sialop['f_jle0'] :     # jle0      Ln         Jump to Ln if a <= 0 [or 0>=a]
-                code("cmp r1,r0", line)
-                code("mi.mov r4,r0")             # Z := 1 if a < 0, so Z is set iff a <= 0 (OPC6 cannot predicate cmp)
-                code("z.mov pc,r0,%s" % fields[1])
+                if cpu_target == "opc7":
+                    signed_jump("r0", "r1", True, fields[1], line)    # 0 >= a
+                else:
+                    code("cmp r1,r0", line)
+                    code("mi.mov r4,r0")             # Z := 1 if a < 0, so Z is set iff a <= 0 (OPC6 cannot predicate cmp)
+                    code("z.mov pc,r0,%s" % fields[1])
             elif opcode == sialop['f_ip'] :      # ip        Pn           a := P!n + a; P!n := a
                 code("ld r4,r11,%d" % getnum(fields[1]) ,line)
                 code("add r1,r4")
