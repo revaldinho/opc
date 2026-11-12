@@ -1,0 +1,24 @@
+# opc7: build outputs (the root .gitignore covers .hex, .lst, .log, .trace and the like)
+
+# the C emulator, built from opc7emu.c
+/opc7emu
+
+# claude-tests: sial2opc and emulator/simulator outputs. Hand-written SIAL there
+# (jge0m_mlab_nop.sial) is tracked, so stays unaffected.
+/claude-tests/*.sial
+/claude-tests/*.s
+/claude-tests/*.emu.stdout
+/claude-tests/*.sim
+/claude-tests/*.sim.stdout
+/claude-tests/*.diff
+/claude-tests/*.err
+
+# tests: the .s sources are tracked; everything the Makefile makes from them is not
+/tests/*.exe
+/tests/*.sim
+/tests/*.sim.stdout
+/tests/*.emu.stdout
+/tests/*.diff
+/tests/*.dynstats
+/tests/*.stastats
+/tests/*.trace.gz
