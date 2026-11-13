@@ -506,6 +506,228 @@ mul_loop:
         RTS     ()
 
         # -----------------------------------------------------------------
+        # __mul4, __div4, __mod4, __gbyt4, __pbyt4
+        #
+        # For code from bcplcgopc7.b, which keeps register variables in r5-r8:
+        # these change only r1-r4 (and use r14 within the call).
+        #   __mul4   r1 := r2 * r1          uses r2, r3
+        #   __div4   r1 := r2 / r1          uses r2-r4
+        #   __mod4   r1 := r2 MOD r1        uses r2-r4
+        #   __gbyt4  r1 := r2 % r1          uses r3, r4
+        #   __pbyt4  r2 % r1 := r3          uses r1-r4
+        # -----------------------------------------------------------------
+__mul4:
+        mov     r3,r1          # S from a
+        mi.not  r2,r2,-1       # a < 0: negate both (the product is the same)
+        mov     r3,r3
+        mi.not  r1,r1,-1
+        lsr     r3,r1          # the multiplier bits left, bit 0 in C
+        mov     r1,r0          # product := 0 (mov keeps C)
+mul4_loop:
+        c.add   r1,r2          # add b << k if bit k is set
+        add     r2,r2
+        lsr     r3,r3          # next bit to C; Z set when none are left
+        nz.lmov pc,mul4_loop
+        c.add   r1,r2          # the last bit
+        RTS     ()
+
+        # __div4 and __mod4: the unsigned divide of udiv32 done in r1-r4, with
+        # N (then the quotient) in r1, D in r2, the remainder in r3 and the byte
+        # count in r4; the link is pushed so that r13 can hold the sign.
+__div4:                        # r1 := r2 / r1
+        PUSH    (r13)
+        mov     r13,r1
+        xor     r13,r2         # sign of the quotient in r13
+        mov     r3,r1
+        mov     r1,r2
+        mi.not  r1,r1,-1       # N := ABS b
+        mov     r2,r3
+        mi.not  r2,r2,-1       # D := ABS a
+        cmp     r2,r0
+        z.lmov  pc,div4_z       # divide by zero
+        mov     r1,r1
+        z.lmov  pc,div4_q       # N = 0 gives quotient and remainder 0
+        lmov    r4,4           # bytes of N to do
+div4_0:
+        bperm   r3,r1,0x4443   # top byte of N, Z set if it is zero
+        nz.lmov pc,div4_s       # not zero: do the bit loop
+        bperm   r1,r1,0x2104   # N := N << 8
+        mov     r4,r4,-1       # one byte fewer (N != 0, so it stays > 0)
+        lmov    pc,div4_0
+div4_s:
+        mov     r3,r0          # R := 0
+        add     r0,r0          # C := 0, which the first rol of N takes in
+div4_1:
+        rol     r1,r1          # quotient bit in from C, next bit of N out to C
+        rol     r3,r3          # ..and into R
+        cmp     r3,r2          # C = 1 if R >= D (unsigned)
+        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        rol     r1,r1          # quotient bit in from C, next bit of N out to C
+        rol     r3,r3          # ..and into R
+        cmp     r3,r2          # C = 1 if R >= D (unsigned)
+        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        rol     r1,r1          # quotient bit in from C, next bit of N out to C
+        rol     r3,r3          # ..and into R
+        cmp     r3,r2          # C = 1 if R >= D (unsigned)
+        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        rol     r1,r1          # quotient bit in from C, next bit of N out to C
+        rol     r3,r3          # ..and into R
+        cmp     r3,r2          # C = 1 if R >= D (unsigned)
+        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        rol     r1,r1          # quotient bit in from C, next bit of N out to C
+        rol     r3,r3          # ..and into R
+        cmp     r3,r2          # C = 1 if R >= D (unsigned)
+        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        rol     r1,r1          # quotient bit in from C, next bit of N out to C
+        rol     r3,r3          # ..and into R
+        cmp     r3,r2          # C = 1 if R >= D (unsigned)
+        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        rol     r1,r1          # quotient bit in from C, next bit of N out to C
+        rol     r3,r3          # ..and into R
+        cmp     r3,r2          # C = 1 if R >= D (unsigned)
+        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        rol     r1,r1          # quotient bit in from C, next bit of N out to C
+        rol     r3,r3          # ..and into R
+        cmp     r3,r2          # C = 1 if R >= D (unsigned)
+        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        mov     r4,r4,-1       # next byte (mov keeps C)
+        nz.lmov pc,div4_1
+        rol     r1,r1          # the last quotient bit
+        lmov    pc,div4_e
+div4_z:
+        mov     r3,r1          # remainder N, quotient 0
+        mov     r1,r0
+        lmov    pc,div4_e
+div4_q:
+        mov     r3,r0
+div4_e:
+        mov     r13,r13
+        mi.not  r1,r1,-1       # negate the quotient if the signs differ
+        POP     (r13)
+        RTS     ()
+
+__mod4:                        # r1 := r2 MOD r1
+        PUSH    (r13)
+        mov     r13,r2         # sign of b in r13
+        mov     r3,r1
+        mov     r1,r2
+        mi.not  r1,r1,-1       # N := ABS b
+        mov     r2,r3
+        mi.not  r2,r2,-1       # D := ABS a
+        cmp     r2,r0
+        z.lmov  pc,mod4_z       # divide by zero
+        mov     r1,r1
+        z.lmov  pc,mod4_q       # N = 0 gives quotient and remainder 0
+        lmov    r4,4           # bytes of N to do
+mod4_0:
+        bperm   r3,r1,0x4443   # top byte of N, Z set if it is zero
+        nz.lmov pc,mod4_s       # not zero: do the bit loop
+        bperm   r1,r1,0x2104   # N := N << 8
+        mov     r4,r4,-1       # one byte fewer (N != 0, so it stays > 0)
+        lmov    pc,mod4_0
+mod4_s:
+        mov     r3,r0          # R := 0
+        add     r0,r0          # C := 0, which the first rol of N takes in
+mod4_1:
+        rol     r1,r1          # quotient bit in from C, next bit of N out to C
+        rol     r3,r3          # ..and into R
+        cmp     r3,r2          # C = 1 if R >= D (unsigned)
+        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        rol     r1,r1          # quotient bit in from C, next bit of N out to C
+        rol     r3,r3          # ..and into R
+        cmp     r3,r2          # C = 1 if R >= D (unsigned)
+        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        rol     r1,r1          # quotient bit in from C, next bit of N out to C
+        rol     r3,r3          # ..and into R
+        cmp     r3,r2          # C = 1 if R >= D (unsigned)
+        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        rol     r1,r1          # quotient bit in from C, next bit of N out to C
+        rol     r3,r3          # ..and into R
+        cmp     r3,r2          # C = 1 if R >= D (unsigned)
+        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        rol     r1,r1          # quotient bit in from C, next bit of N out to C
+        rol     r3,r3          # ..and into R
+        cmp     r3,r2          # C = 1 if R >= D (unsigned)
+        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        rol     r1,r1          # quotient bit in from C, next bit of N out to C
+        rol     r3,r3          # ..and into R
+        cmp     r3,r2          # C = 1 if R >= D (unsigned)
+        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        rol     r1,r1          # quotient bit in from C, next bit of N out to C
+        rol     r3,r3          # ..and into R
+        cmp     r3,r2          # C = 1 if R >= D (unsigned)
+        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        rol     r1,r1          # quotient bit in from C, next bit of N out to C
+        rol     r3,r3          # ..and into R
+        cmp     r3,r2          # C = 1 if R >= D (unsigned)
+        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        mov     r4,r4,-1       # next byte (mov keeps C)
+        nz.lmov pc,mod4_1
+        rol     r1,r1          # the last quotient bit
+        lmov    pc,mod4_e
+mod4_z:
+        mov     r3,r1          # remainder N, quotient 0
+        mov     r1,r0
+        lmov    pc,mod4_e
+mod4_q:
+        mov     r3,r0
+mod4_e:
+        mov     r1,r3
+        mov     r13,r13
+        mi.not  r1,r1,-1       # the remainder takes the sign of b
+        POP     (r13)
+        RTS     ()
+
+__gbyt4:
+        asr     r3,r1          # word offset
+        asr     r3,r3
+        add     r3,r2
+        ld      r4,r3          # the word
+        and     r1,r0,0x03     # byte number 0-3
+        add     r1,r1          # x2: the table entries are 2 words
+        add     r1,pc,gbyt4_tab - PC
+        mov     pc,r1
+gbyt4_tab:
+        bperm   r1,r4,0x4440   # byte 0
+        RTS     ()
+        bperm   r1,r4,0x4441   # byte 1
+        RTS     ()
+        bperm   r1,r4,0x4442   # byte 2
+        RTS     ()
+        bperm   r1,r4,0x4443   # byte 3
+        RTS     ()
+
+__pbyt4:
+        asr     r4,r1          # word offset
+        asr     r4,r4
+        add     r2,r4          # the word's address
+        and     r1,r0,0x03     # byte number 0-3
+        add     r1,r1
+        add     r1,r1          # x4: the table entries are 4 words
+        add     r1,pc,pbyt4_tab - PC
+        ld      r4,r2          # the word
+        mov     pc,r1
+pbyt4_tab:
+        bperm   r3,r3,0x4440   # byte 0
+        bperm   r4,r4,0x3214
+        or      r4,r3
+        mov     pc,pc,pbyt4_fin - PC
+        bperm   r3,r3,0x4404   # byte 1
+        bperm   r4,r4,0x3240
+        or      r4,r3
+        mov     pc,pc,pbyt4_fin - PC
+        bperm   r3,r3,0x4044   # byte 2
+        bperm   r4,r4,0x3410
+        or      r4,r3
+        mov     pc,pc,pbyt4_fin - PC
+        bperm   r3,r3,0x0444   # byte 3
+        bperm   r4,r4,0x4210
+        or      r4,r3
+pbyt4_fin:
+        sto     r4,r2
+        RTS     ()
+
+        # -----------------------------------------------------------------
         # __lsh_bytes, __rsh_bytes
         #
         # Called by the code sial2opc.py generates for lsh and rsh (added
@@ -613,7 +835,52 @@ __rsh_n1:
         EQU     K_Sys_rdch,      10
         EQU     K_Sys_quit,       0
         EQU     K_Sys_setcount,  -1
+        # sys() for code from bcplcgopc7.b. Its calls arrive with r11 already the new P (the
+        # old P at P!0), arguments 1-3 in r1-r3 and 4 onwards in the frame, and expect r5-r8
+        # (register variables) to be kept. wrch and rdch go straight to the ROM (as
+        # __Sys_sawrch and __Sys_sardch do); the others go through __sys, with arguments 2
+        # and 3 put in the frame, r11 back as __sys expects, and r5-r8 saved.
+__sys_regargs:
+        cmp     r1,r0,K_Sys_sawrch
+        z.lmov  pc,__sysr_wrch
+        cmp     r1,r0,K_Sys_sardch
+        z.lmov  pc,__sysr_rdch
+        sto     r2,r11,4
+        sto     r3,r11,5
+        mov     r3,r11                  # __sys makes its frame from r3
+        ld      r11,r11
+        PUSH    (r13)
+        PUSH    (r5)
+        PUSH    (r6)
+        PUSH    (r7)
+        PUSH    (r8)
+        ljsr    r13,__sys               # returns with r11 the old P
+        POP     (r8)
+        POP     (r7)
+        POP     (r6)
+        POP     (r5)
+        POP     (r13)
+        RTS     ()
+__sysr_wrch:
+        PUSH    (r13)
+        mov     r1,r2
+        JSR     (oswrch)
+        POP     (r13)
+        ld      r11,r11
+        RTS     ()
+__sysr_rdch:
+        PUSH    (r13)
+        PUSH    (r12)                   # tuberom osrdch implementation uses r12 as a temp
+        JSR     (osrdch)
+        POP     (r12)
+        POP     (r13)
+        ld      r11,r11
+        RTS     ()
 __sys:
+        cmp     r1,r0,K_Sys_sawrch      # wrch and rdch first, without making a frame
+        z.lmov  pc,__sys_wrch           # (added 13/11/2026)
+        cmp     r1,r0,K_Sys_sardch
+        z.lmov  pc,__sys_rdch
                                         # BCPL routine entry boilerplate:
         sto     r11,r3                  # Save old stack pointer into new frame
         mov     r11,r3                  # Update  stack pointer
@@ -657,6 +924,35 @@ __sys_return:
         ld r4,r11,1                      # move return address to r4
         ld r11,r11                       # restore old stack pointer
         mov pc,r4                        # return to calling routine
+
+        # ------------------------------------------------------------
+        # __sys_wrch, __sys_rdch
+        #
+        # sys(Sys_sawrch, ch) and sys(Sys_sardch) straight from __sys, with
+        # no frame and no search for the call: as __Sys_sawrch and
+        # __Sys_sardch, with the character in the new frame (r3) at P!4
+        # (added 13/11/2026)
+        # ------------------------------------------------------------
+__sys_wrch:
+        PUSH    (r13)
+        PUSH    (r2)
+        ld      r4,r3,4                 # the character
+        mov     r1,r4
+        JSR     (oswrch)
+        mov     r1,r4
+        POP     (r2)
+        POP     (r13)
+        RTS     ()
+
+__sys_rdch:
+        PUSH    (r13)
+        PUSH    (r12)   # tuberom osrdch implementatio uses r12 as a temp
+        PUSH    (r2)
+        JSR     (osrdch)
+        POP     (r2)
+        POP     (r12)
+        POP     (r13)
+        RTS     ()
 
         # ------------------------------------------------------------
         # Sys_dummy()

@@ -51,6 +51,9 @@ OPTIONAL SWITCHES ::
                             option requires the provided header file ext_sial.h which defines
                             additional opcodes for the SIAL machine.
   
+  -a  --asm     <filename>  Include OPC7 assembler from the OCODE back end bcplcgopc7.b
+                            after the translated SIAL. Its "## GLOBAL <n> <label>" lines
+                            go in the global vector. May be used multiple times.
   -7  --opc7                Select target CPU. Default is OPC6.
   -6  --opc6 
   -5  --opc5ls  (or --opc5)
@@ -1043,11 +1046,12 @@ if __name__ == "__main__" :
         sialhdr = os.path.join(bcplhdrs,'sial.h')
 
     syslib = ""
+    asmfiles = []
     optimize = False
     noheader = False
 
     try:
-        opts, args = getopt.getopt( sys.argv[1:], "f:g:s:no567h", ["filename=","sialhdr=","syslib=","noheader", "opt","opc5", "opc5ls","opc6","opc7","help"])
+        opts, args = getopt.getopt( sys.argv[1:], "f:g:s:a:no567h", ["filename=","sialhdr=","syslib=","asm=","noheader", "opt","opc5", "opc5ls","opc6","opc7","help"])
     except getopt.GetoptError:
         showUsageAndExit()
     for opt, arg in opts:
@@ -1057,6 +1061,8 @@ if __name__ == "__main__" :
             sialhdr = arg
         elif ( opt in ("-s", "--syslib")):
             syslib = arg
+        elif ( opt in ("-a", "--asm")):
+            asmfiles.append(arg)
         elif ( opt in ("-n", "--noheader")):
             noheader = True
         elif ( opt in ("-o", "--opt")):
@@ -1070,9 +1076,9 @@ if __name__ == "__main__" :
         elif ( opt in ("-h", "--help")):
             showUsageAndExit()
 
-    if len(filename) == 0 or sialhdr=="":
+    if (len(filename) == 0 and len(asmfiles) == 0) or sialhdr=="":
         showUsageAndExit()        
-    for f in filename + [sialhdr] + [syslib] :
+    for f in filename + [sialhdr] + [syslib] + asmfiles :
         if ( f and not os.path.exists(f) ):
             print("Error - cannot open file %s" %f )
             sys.exit(1)
@@ -1089,6 +1095,22 @@ if __name__ == "__main__" :
         
     ## Process the SIAL text and create the global vector data
     (global_vector, gv_hightide) = process_sial(sialtext)
+    ## Include the assembler from bcplcgopc7.b, and its global initialisation
+    for a in asmfiles:
+        with open(a) as af:
+            for l in af:
+                print(l, end='')
+                if re.match(r"\s*## REGARGS", l):
+                    # bcplcgopc7.b's calling convention (arguments 1-3 in r1-r3, r5-r8 kept
+                    # across calls): sys() goes through __sys_regargs, and SIAL code (which
+                    # passes arguments in the frame) cannot be mixed with it
+                    if len(filename) > 0:
+                        sys.exit("Error: %s passes arguments in registers; it cannot be linked with SIAL input" % a)
+                    global_vector[3] = "__sys_regargs"
+                m = re.match(r"\s*## GLOBAL (\d+) (\S+)", l)
+                if m:
+                    global_vector[int(m.group(1))] = m.group(2)
+                    gv_hightide = max(gv_hightide, int(m.group(1)))
     ## Include the syslib assember verbatim in the output
     if syslib != "":
         process_syslib(syslib)
