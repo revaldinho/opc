@@ -6,7 +6,7 @@
 # (int_check.sh) with waits. Prints a line per run that fails and a summary.
 cpu=${1:-opc7hpcpu}
 d=$(cd "$(dirname "$0")" && pwd); cd $d
-TESTS=${TESTS:-"tests/haz_raw.hex tests/haz_flags.hex tests/haz_jump.hex tests/haz_misc.hex tests/haz_int.hex writefmt cmptest"}
+TESTS=${TESTS:-"tests/haz_raw.hex tests/haz_flags.hex tests/haz_jump.hex tests/haz_misc.hex tests/haz_int.hex tests/haz_steps.hex writefmt cmptest"}
 SETS=${SETS:-"+iwp=50 +dwp=50 +iwp=10_+dwp=10 +iwp=30_+dwp=30 +iwp=80_+dwp=80"}
 make -s $(for t in $TESTS; do case $t in tests/*) echo $t;; esac; done) || exit 1   # build the test images first
 export TBDEFS=-DWAIT_TEST WORKTAG=wait   # own work directories: this can run beside a regression

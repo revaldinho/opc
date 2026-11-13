@@ -332,12 +332,12 @@ umd_div0:
         #
         # Leading zero bytes of N are skipped (most dividends in BCPL programs
         # fit in 16 bits), so the bits left are a multiple of 8 and the loop
-        # does a byte per pass. Each bit takes 4 instructions: rol of N brings
-        # the previous quotient bit in from C and sends N's next bit out to C,
-        # where rol of R picks it up; cmp leaves C = 1 if R >= D, and then
-        # c.sub subtracts D leaving C = 1. The counter is decremented with mov,
-        # which keeps C. R < D <= 2**31 before each rol of R, so R never
-        # overflows.
+        # does a byte per pass. Each bit takes 2 instructions (divstep, added
+        # 13/11/2026): rol of N brings the previous quotient bit in from C and
+        # sends N's next bit out to C, and divstep shifts it into R, subtracts
+        # D if R is then >= D and leaves C = 1 if it did. The counter is
+        # decremented with mov, which keeps C. The four-instruction version of
+        # each step (rol R; cmp R,D; c.sub R,D) is in archive/opc7_syslib_generic.s.
         # ------------------------------------------------------------------
 udiv32:
         cmp     r8,r0
@@ -356,37 +356,21 @@ udiv_s:
         add     r0,r0          # C := 0, which the first rol of N takes in
 udiv_1:
         rol     r1,r1          # quotient bit in from C, next bit of N out to C
-        rol     r5,r5          # ..and into R
-        cmp     r5,r8          # C = 1 if R >= D (unsigned)
-        c.sub   r5,r8          # if so subtract, leaving C = 1 as the quotient bit
+        divstep r5,r8          # R := 2R + C, less D if >= D; C := the quotient bit
         rol     r1,r1
-        rol     r5,r5
-        cmp     r5,r8
-        c.sub   r5,r8
+        divstep r5,r8
         rol     r1,r1
-        rol     r5,r5
-        cmp     r5,r8
-        c.sub   r5,r8
+        divstep r5,r8
         rol     r1,r1
-        rol     r5,r5
-        cmp     r5,r8
-        c.sub   r5,r8
+        divstep r5,r8
         rol     r1,r1
-        rol     r5,r5
-        cmp     r5,r8
-        c.sub   r5,r8
+        divstep r5,r8
         rol     r1,r1
-        rol     r5,r5
-        cmp     r5,r8
-        c.sub   r5,r8
+        divstep r5,r8
         rol     r1,r1
-        rol     r5,r5
-        cmp     r5,r8
-        c.sub   r5,r8
+        divstep r5,r8
         rol     r1,r1
-        rol     r5,r5
-        cmp     r5,r8
-        c.sub   r5,r8
+        divstep r5,r8
         mov     r4,r4,-1       # next byte (mov keeps C)
         nz.lmov pc,udiv_1
         rol     r1,r1          # the last quotient bit
@@ -469,7 +453,8 @@ __xmod: ## a := a MOD b
         #
         # __mul
         #
-        # a := b * a, the low 32 bits of the product (rewritten 27/10/2026)
+        # a := b * a, the low 32 bits of the product (rewritten 27/10/2026,
+        # and with mulstep 13/11/2026)
         #
         # Entry
         # - R1 holds a, R2 holds b
@@ -483,26 +468,99 @@ __xmod: ## a := a MOD b
         #
         # The low 32 bits of a product are the same whether the operands are
         # taken as signed or unsigned, so only the multiplier needs its sign
-        # handling: a*b = -(ABS a * b) when a < 0. Using ABS a keeps the loop
-        # short for small negative multipliers. Each pass adds b << k for a
-        # set bit k of ABS a, which arrives in C from lsr; it stops when the
-        # bits left are all 0, so a small multiplier (often a constant in A)
-        # takes few passes. mov, add and lsr leave C for the following
-        # instruction as noted.
-__mul:
-        mov     r6,r1          # sign of a in R6
-        mi.not  r1,r1,-1       # ABS a
-        lsr     r5,r1          # the multiplier bits left, bit 0 in C
-        mov     r1,r0          # product := 0 (mov keeps C)
-        mov     r4,r2          # b, shifted left each pass (mov keeps C)
-mul_loop:
-        c.add   r1,r4          # add b << k if bit k is set
-        add     r4,r4
-        lsr     r5,r5          # next bit to C; Z set when none are left
-        nz.lmov pc,mul_loop
-        c.add   r1,r4          # the last bit
-        mov     r6,r6
-        mi.not  r1,r1,-1       # negate the product if a < 0
+        # handling: a*b = ABS a * -b when a < 0. Using ABS a lets small
+        # negative multipliers skip leading zero bytes too. The multiplier M
+        # is shifted left until its top byte is not zero (or 3 bytes have
+        # gone), then the product P is formed from M's top bit down: add M,M
+        # puts the next bit in C and mulstep does P := 2P + (C ? b : 0), 8 bits
+        # to a block, entering the 4 blocks according to the bytes left. The
+        # shift-and-add loop it replaced (no mulstep) is in
+        # archive/opc7_syslib_generic.s.
+__mul:                         # P r1, b r4, M r6, uses r5
+        mov     r6,r1          # M := a, S from a
+        mi.not  r6,r6,-1       # M := ABS a
+        mov     r4,r2          # b
+        mov     r1,r1          # S from a
+        mi.not  r4,r4,-1       # a < 0: b := -b
+        mov     r1,r0          # P := 0
+        bperm   r5,r6,0x4443   # top byte of M: Z if zero
+        nz.lmov pc,mul_32
+        bperm   r6,r6,0x2104   # M := M << 8
+        bperm   r5,r6,0x4443
+        nz.lmov pc,mul_24
+        bperm   r6,r6,0x2104
+        bperm   r5,r6,0x4443
+        nz.lmov pc,mul_16
+        bperm   r6,r6,0x2104
+        lmov    pc,mul_8
+mul_32:
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+mul_24:
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+mul_16:
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+mul_8:
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
+        add     r6,r6
+        mulstep r1,r4
         RTS     ()
 
         # -----------------------------------------------------------------
@@ -510,30 +568,98 @@ mul_loop:
         #
         # For code from bcplcgopc7.b, which keeps register variables in r5-r8:
         # these change only r1-r4 (and use r14 within the call).
-        #   __mul4   r1 := r2 * r1          uses r2, r3
+        #   __mul4   r1 := r2 * r1          uses r2-r4
         #   __div4   r1 := r2 / r1          uses r2-r4
         #   __mod4   r1 := r2 MOD r1        uses r2-r4
         #   __gbyt4  r1 := r2 % r1          uses r3, r4
         #   __pbyt4  r2 % r1 := r3          uses r1-r4
         # -----------------------------------------------------------------
-__mul4:
-        mov     r3,r1          # S from a
-        mi.not  r2,r2,-1       # a < 0: negate both (the product is the same)
-        mov     r3,r3
-        mi.not  r1,r1,-1
-        lsr     r3,r1          # the multiplier bits left, bit 0 in C
-        mov     r1,r0          # product := 0 (mov keeps C)
-mul4_loop:
-        c.add   r1,r2          # add b << k if bit k is set
-        add     r2,r2
-        lsr     r3,r3          # next bit to C; Z set when none are left
-        nz.lmov pc,mul4_loop
-        c.add   r1,r2          # the last bit
+__mul4:                        # as __mul: P r1, b r2, M r3, uses r4
+        mov     r3,r1          # M := a, S from a
+        mi.not  r3,r3,-1       # M := ABS a
+        mov     r1,r1          # S from a
+        mi.not  r2,r2,-1       # a < 0: b := -b (the product is then the same)
+        mov     r1,r0          # P := 0
+        bperm   r4,r3,0x4443   # top byte of M: Z if zero
+        nz.lmov pc,mul4_32
+        bperm   r3,r3,0x2104   # M := M << 8
+        bperm   r4,r3,0x4443
+        nz.lmov pc,mul4_24
+        bperm   r3,r3,0x2104
+        bperm   r4,r3,0x4443
+        nz.lmov pc,mul4_16
+        bperm   r3,r3,0x2104
+        lmov    pc,mul4_8
+mul4_32:
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+mul4_24:
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+mul4_16:
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+mul4_8:
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
+        add     r3,r3
+        mulstep r1,r2
         RTS     ()
 
-        # __div4 and __mod4: the unsigned divide of udiv32 done in r1-r4, with
-        # N (then the quotient) in r1, D in r2, the remainder in r3 and the byte
-        # count in r4; the link is pushed so that r13 can hold the sign.
 __div4:                        # r1 := r2 / r1
         PUSH    (r13)
         mov     r13,r1
@@ -559,37 +685,21 @@ div4_s:
         add     r0,r0          # C := 0, which the first rol of N takes in
 div4_1:
         rol     r1,r1          # quotient bit in from C, next bit of N out to C
-        rol     r3,r3          # ..and into R
-        cmp     r3,r2          # C = 1 if R >= D (unsigned)
-        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        divstep r3,r2
         rol     r1,r1          # quotient bit in from C, next bit of N out to C
-        rol     r3,r3          # ..and into R
-        cmp     r3,r2          # C = 1 if R >= D (unsigned)
-        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        divstep r3,r2
         rol     r1,r1          # quotient bit in from C, next bit of N out to C
-        rol     r3,r3          # ..and into R
-        cmp     r3,r2          # C = 1 if R >= D (unsigned)
-        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        divstep r3,r2
         rol     r1,r1          # quotient bit in from C, next bit of N out to C
-        rol     r3,r3          # ..and into R
-        cmp     r3,r2          # C = 1 if R >= D (unsigned)
-        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        divstep r3,r2
         rol     r1,r1          # quotient bit in from C, next bit of N out to C
-        rol     r3,r3          # ..and into R
-        cmp     r3,r2          # C = 1 if R >= D (unsigned)
-        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        divstep r3,r2
         rol     r1,r1          # quotient bit in from C, next bit of N out to C
-        rol     r3,r3          # ..and into R
-        cmp     r3,r2          # C = 1 if R >= D (unsigned)
-        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        divstep r3,r2
         rol     r1,r1          # quotient bit in from C, next bit of N out to C
-        rol     r3,r3          # ..and into R
-        cmp     r3,r2          # C = 1 if R >= D (unsigned)
-        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        divstep r3,r2
         rol     r1,r1          # quotient bit in from C, next bit of N out to C
-        rol     r3,r3          # ..and into R
-        cmp     r3,r2          # C = 1 if R >= D (unsigned)
-        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        divstep r3,r2
         mov     r4,r4,-1       # next byte (mov keeps C)
         nz.lmov pc,div4_1
         rol     r1,r1          # the last quotient bit
@@ -630,37 +740,21 @@ mod4_s:
         add     r0,r0          # C := 0, which the first rol of N takes in
 mod4_1:
         rol     r1,r1          # quotient bit in from C, next bit of N out to C
-        rol     r3,r3          # ..and into R
-        cmp     r3,r2          # C = 1 if R >= D (unsigned)
-        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        divstep r3,r2
         rol     r1,r1          # quotient bit in from C, next bit of N out to C
-        rol     r3,r3          # ..and into R
-        cmp     r3,r2          # C = 1 if R >= D (unsigned)
-        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        divstep r3,r2
         rol     r1,r1          # quotient bit in from C, next bit of N out to C
-        rol     r3,r3          # ..and into R
-        cmp     r3,r2          # C = 1 if R >= D (unsigned)
-        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        divstep r3,r2
         rol     r1,r1          # quotient bit in from C, next bit of N out to C
-        rol     r3,r3          # ..and into R
-        cmp     r3,r2          # C = 1 if R >= D (unsigned)
-        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        divstep r3,r2
         rol     r1,r1          # quotient bit in from C, next bit of N out to C
-        rol     r3,r3          # ..and into R
-        cmp     r3,r2          # C = 1 if R >= D (unsigned)
-        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        divstep r3,r2
         rol     r1,r1          # quotient bit in from C, next bit of N out to C
-        rol     r3,r3          # ..and into R
-        cmp     r3,r2          # C = 1 if R >= D (unsigned)
-        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        divstep r3,r2
         rol     r1,r1          # quotient bit in from C, next bit of N out to C
-        rol     r3,r3          # ..and into R
-        cmp     r3,r2          # C = 1 if R >= D (unsigned)
-        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        divstep r3,r2
         rol     r1,r1          # quotient bit in from C, next bit of N out to C
-        rol     r3,r3          # ..and into R
-        cmp     r3,r2          # C = 1 if R >= D (unsigned)
-        c.sub   r3,r2          # if so subtract, leaving C = 1 as the quotient bit
+        divstep r3,r2
         mov     r4,r4,-1       # next byte (mov keeps C)
         nz.lmov pc,mod4_1
         rol     r1,r1          # the last quotient bit

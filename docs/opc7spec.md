@@ -66,8 +66,9 @@ related to interrupt handling. A flag that an instruction does not set keeps its
 
   * SWI      - 4 bits used to identify a software interrupt. Writing a non-zero value here triggers a SWI.
   * EI       - used to enable or disable hardware interrupts
-  * Carry    - set or cleared only by arithmetic operations (the carry out of add, sub, cmp and scmp) and by the
-               shifts and rotates (the bit shifted out)
+  * Carry    - set or cleared only by arithmetic operations (the carry out of add, sub, cmp and scmp), by the
+               shifts and rotates (the bit shifted out) and by DIVSTEP (whether it subtracted); MULSTEP reads it
+               and leaves it alone
   * Zero     - set on every instruction that writes a result to a register, according to that result (writing R0
                sets it from the result too). Stores, OUT, writes to R15 and RTI leave it alone, and PUTPSR sets it directly
   * Sign     - set when the MSB of the result is a '1'; for SCMP, set when the first operand is less than the
@@ -88,6 +89,41 @@ Notes:
   * All effective data/address calculations are truncated to 32 bits and do not affect any of the processor flags
   * GETPSR ignores its immediate field: it reads the PSR as it is
   * add rd,rd can be used to synthesize an arithmetic shift left (asl) instruction
+  * The table does not yet show MULSTEP (opcode 15, 01111) and DIVSTEP (opcode 23, 10111): see Multiply and Divide
+    Steps below
+
+Multiply and Divide Steps
+-------------------------
+
+OPC7 has no multiply or divide instruction. Instead, two one-cycle instructions each do one bit of a shift-and-add
+multiply or a shift-and-subtract divide, the bit coming in through the carry flag, so that a multiply or divide is
+two instructions a bit:
+
+  | #  | Opcode | Mnemonic                | EA/ED Calc     | Function                                                         |
+  |----|--------|-------------------------|----------------|------------------------------------------------------------------|
+  | 15 | 01111  | [p.]mulstep rd,rs,imm   | EAD = rs + imm | rd <- {rd[30:0],0} + (C ? EAD : 0)                               |
+  | 23 | 10111  | [p.]divstep rd,rs,imm   | EAD = rs + imm | t = {rd,C} (33 bits); if t >= EAD: {C,rd} <- {1, t - EAD} else {C,rd} <- {0, t[31:0]} |
+
+Both set the zero and sign flags from the result. MULSTEP leaves carry and overflow alone; DIVSTEP sets carry to
+whether it subtracted (the next quotient bit) and leaves overflow alone. The comparison in DIVSTEP is of 33 bits, so
+that it also continues a division of a longer dividend.
+
+A multiply, low 32 bits of the product (r1 := r3 * r2), takes the multiplier's bits into carry from the top:
+
+        mov     r1, r0              # product := 0
+    loop32:                         # 32 times (or fewer, after skipping the multiplier's leading zero bytes)
+        add     r3, r3              # next multiplier bit to C
+        mulstep r1, r2              # product := 2 * product + (C ? r2 : 0)
+
+The low 32 bits of a product are the same for signed and unsigned operands. An unsigned divide (r1 := r1 / r2,
+r3 := the remainder) shifts the dividend's bits out of r1 into carry and the quotient bits in:
+
+        mov     r3, r0              # remainder := 0
+        add     r0, r0              # C := 0
+    loop32:                         # 32 times
+        rol     r1, r1              # quotient bit in from C, next dividend bit out to C
+        divstep r3, r2              # remainder := 2 * remainder + C, less r2 if that is >= r2; C := the quotient bit
+        rol     r1, r1              # (after the loop) the last quotient bit
 
 Predication
 -----------

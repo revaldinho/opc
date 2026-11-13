@@ -47,12 +47,18 @@
 //   instruction in FD by not fetching), and the CPU never uses din except in a reply cycle.
 // - iwait and dwait must not depend on the CPU's outputs in the same cycle: they come from the
 //   memory's own state (a cache can derive them from its registered request).
+// mulstep and divstep (added 13/11/2026) are ALU instructions for software multiply and divide,
+// one bit a step, as opc7cpu.v: mulstep rd := rd<<1 + (C ? op : 0); divstep t := {rd, C} (33 bits),
+// then rd := t - op and C := 1 if t >= op, else rd := t and C := 0 (op = rs + imm). rd<<1 is made on
+// the way from MEM to EX (rd's old top bit kept in ex_top_q for divstep); mulstep then uses the main
+// adder, choosing by C, and divstep has a subtractor of its own, so that the adder's carry-out
+// chooses only divstep's result.
 // clken stops the whole CPU, as before. hlt is high in the cycle a halt instruction completes, so
 // that a system can stop the CPU (by clken); it doesn't stop by itself.
 module opc7hpcpu(input[31:0] idin, input[31:0] din,input clk,input reset_b,input[1:0] int_b,input clken,input iwait,input dwait,output vda,output vio,output[31:0] dout,output[19:0] address,output rnw, output[19:0] iaddr, output ird, output hlt);
-  parameter MOV=5'h0,MOVT=5'h1,XOR=5'h2,AND=5'h3,OR=5'h4,NOT=5'h5,CMP=5'h6,SUB=5'h7,ADD=5'h8,BPERM=5'h9,ROR=5'hA,LSR=5'hB,JSR=5'hC,ASR=5'hD,ROL=5'hE;
-  parameter HLT=5'h10,RTI=5'h11,PPSR=5'h12,GPSR=5'h13,SCMP=5'h16,OUT=5'h18,IN=5'h19,STO=5'h1A,LD=5'h1B,LJSR=5'h1C,LMOV=5'h1D,LSTO=5'h1E,LLD=5'h1F;
-  parameter S_MOV=0,S_AND=1,S_OR=2,S_XOR=3,S_MOVT=4,S_ROL=5,S_ADD=6,S_GPSR=7,S_NOT=8,S_SHR=9,S_JSR=10;
+  parameter MOV=5'h0,MOVT=5'h1,XOR=5'h2,AND=5'h3,OR=5'h4,NOT=5'h5,CMP=5'h6,SUB=5'h7,ADD=5'h8,BPERM=5'h9,ROR=5'hA,LSR=5'hB,JSR=5'hC,ASR=5'hD,ROL=5'hE,MULSTEP=5'hF;
+  parameter HLT=5'h10,RTI=5'h11,PPSR=5'h12,GPSR=5'h13,SCMP=5'h16,DIVSTEP=5'h17,OUT=5'h18,IN=5'h19,STO=5'h1A,LD=5'h1B,LJSR=5'h1C,LMOV=5'h1D,LSTO=5'h1E,LLD=5'h1F;
+  parameter S_MOV=0,S_AND=1,S_OR=2,S_XOR=3,S_MOVT=4,S_ROL=5,S_ADD=6,S_GPSR=7,S_NOT=8,S_SHR=9,S_JSR=10,S_MULSTEP=11,S_DIVSTEP=12;
   parameter V=31,EI=3,S=2,C=1,Z=0,INT_VECTOR0=20'h2,INT_VECTOR1=20'h4;
   reg [19:0]  PC_q,PC_d,PCI_q,PCI_d,ea_pc_q,mem_pc_q,ex_pc_q,addr_d,ex_target,ex_next,ex_redir_pc;(* RAM_STYLE="DISTRIBUTED" *)
   reg [31:0]  PSR_d,PSR_q,RF_q[14:0],ea_or_q,mem_or_q,ex_or_q,mem_rfp_q,ex_rfp_q,rfp_d,op_d,result;
@@ -62,8 +68,10 @@ module opc7hpcpu(input[31:0] idin, input[31:0] din,input clk,input reset_b,input
   reg [31:0]  wb_val_q;
   reg         mem_neg_q,wb_q,mem_early_q,ex_early_q;
   reg         ea_long_q,ea_jmp_q,ea_pred_q,ea_st_q,ea_side_q,ea_mem_q,ea_neg_q,ea_isj_q,ea_red_q,mem_st_q,mem_side_q,mem_isj_q,mem_red_q,ex_st_q,ex_isj_q,ex_red_q;
-  reg [10:0]  ex_sel_q;
+  reg [12:0]  ex_sel_q;
   reg [32:0]  sum;
+  reg [33:0]  dstep;                             // divstep: {rd, C} - op, the borrow in bit 33
+  reg         ex_top_q;                          // divstep: rd's top bit (ex_rfp_q holds rd<<1)
   reg         ex_ppsr_q,ex_arith_q,ex_scmp_q,ex_dstf_q,ex_rti_q,ex_ror_q,ex_asr_q;
   reg [3:0]   ea_esrc_q,ea_edst_q,ea_lrs_q,ea_lrd_q;
   reg [2:0]   mem_p_q,ex_p_q;
@@ -84,7 +92,7 @@ module opc7hpcpu(input[31:0] idin, input[31:0] din,input clk,input reset_b,input
   wire        fd_long    = fd_ir[4:2]==3'b111;
   wire        fd_cmp     = fd_ir==CMP || fd_ir==SCMP;
   wire        fd_st      = is_store(fd_ir);
-  wire        fd_usedst  = fd_ir==AND || fd_ir==OR || fd_ir==XOR || fd_ir==ADD || fd_ir==SUB || fd_cmp || fd_ir==MOVT || fd_st;
+  wire        fd_usedst  = fd_ir==AND || fd_ir==OR || fd_ir==XOR || fd_ir==ADD || fd_ir==SUB || fd_ir==MULSTEP || fd_ir==DIVSTEP || fd_cmp || fd_ir==MOVT || fd_st;
   wire [3:0]  fd_rsrc    = ((|fd_src) && !fd_long && fd_src!=4'hF) ? fd_src : 4'h0;  // registers EA reads (0: none)
   wire [3:0]  fd_rdst    = (fd_usedst && fd_dst!=4'hF) ? fd_dst : 4'h0;
   wire        fd_pred    = idin[31:29]==3'b000;                                // unpredicated
@@ -125,9 +133,9 @@ module opc7hpcpu(input[31:0] idin, input[31:0] din,input clk,input reset_b,input
   wire        ea_act     = ea_go && ea_mem_q && (!ea_side_q || ea_side_ok);  // memory/IO access now
   // MEM: decode for EX
   wire        mem_addg   = mem_ir_q==ADD || mem_ir_q==SUB || mem_ir_q==CMP || mem_ir_q==SCMP;
-  wire [10:0] mem_oth    = {mem_ir_q==JSR||mem_ir_q==LJSR, mem_ir_q==ROR||mem_ir_q==ASR||mem_ir_q==LSR, mem_ir_q==NOT, mem_ir_q==GPSR, mem_addg,
+  wire [12:0] mem_oth    = {mem_ir_q==DIVSTEP, mem_ir_q==MULSTEP, mem_ir_q==JSR||mem_ir_q==LJSR, mem_ir_q==ROR||mem_ir_q==ASR||mem_ir_q==LSR, mem_ir_q==NOT, mem_ir_q==GPSR, mem_addg,
                             mem_ir_q==ROL, mem_ir_q==MOVT, mem_ir_q==XOR, mem_ir_q==OR, mem_ir_q==AND, 1'b0};
-  wire [10:0] mem_sel    = {mem_oth[10:1], !(|mem_oth)};                       // bit S_MOV: everything else
+  wire [12:0] mem_sel    = {mem_oth[12:1], !(|mem_oth)};                       // bit S_MOV: everything else
   // forwarding into MEM -> EX: the result in EX, else wb
   wire        ex_wrf     = ex_pass && !ex_st_q && ex_dst_q!=4'hF && |ex_dst_q;   // writes a register now
   wire        fs_ex      = |mem_rs_q && ex_wrf && ex_dst_q==mem_rs_q, fs_wb = |mem_rs_q && wb_q && wb_dst_q==mem_rs_q;
@@ -140,18 +148,21 @@ module opc7hpcpu(input[31:0] idin, input[31:0] din,input clk,input reset_b,input
   always @( * ) begin
     // ex_sel_q: one-hot, decoded on the way from MEM (the ALU and flags are the longest path in EX)
     sum    = ex_rfp_q + ex_or_q + ex_subnotadd_q;   // ex_or_q negated in EA if required for sub/cmp
+    dstep  = {1'b0, ex_top_q, ex_rfp_q[31:1], PSR_q[C]} - {2'b0, ex_or_q};   // ex_rfp_q[31:1]: rd[30:0]
     result = ({32{ex_sel_q[S_AND]}}   & (ex_rfp_q & ex_or_q)) |
              ({32{ex_sel_q[S_OR]}}    & (ex_rfp_q | ex_or_q)) |
              ({32{ex_sel_q[S_XOR]}}   & (ex_rfp_q ^ ex_or_q)) |
              ({32{ex_sel_q[S_MOVT]}}  & {ex_or_q[15:0], ex_rfp_q[15:0]}) |
              ({32{ex_sel_q[S_ROL]}}   & {ex_or_q[30:0], PSR_q[C]}) |
-             ({32{ex_sel_q[S_ADD]}}   & sum[31:0]) |
+             ({32{ex_sel_q[S_ADD] | (ex_sel_q[S_MULSTEP] & PSR_q[C])}} & sum[31:0]) |   // mulstep: rd<<1 + op
+             ({32{ex_sel_q[S_MULSTEP] & !PSR_q[C]}} & ex_rfp_q) |                      //   or rd<<1
+             ({32{ex_sel_q[S_DIVSTEP]}} & (dstep[33] ? {ex_rfp_q[31:1], PSR_q[C]} : dstep[31:0])) |
              ({32{ex_sel_q[S_GPSR]}}  & PSR_q) |
              ({32{ex_sel_q[S_NOT]}}   & ~ex_or_q) |
              ({32{ex_sel_q[S_SHR]}}   & {(ex_ror_q & PSR_q[C]) | (ex_asr_q & ex_or_q[31]), ex_or_q[31:1]}) |
              ({32{ex_sel_q[S_JSR]}}   & {12'b0, ex_pc_q}) |
              ({32{ex_sel_q[S_MOV]}}   & ex_or_q);
-    carry  = ex_sel_q[S_ADD] ? sum[32] : ex_sel_q[S_ROL] ? ex_or_q[31] : ex_sel_q[S_SHR] ? ex_or_q[0] : PSR_q[C];
+    carry  = ex_sel_q[S_DIVSTEP] ? !dstep[33] : ex_sel_q[S_ADD] ? sum[32] : ex_sel_q[S_ROL] ? ex_or_q[31] : ex_sel_q[S_SHR] ? ex_or_q[0] : PSR_q[C];
     overflow = ex_ppsr_q ? ex_or_q[31]: ex_arith_q ?((ex_rfp_q[31]&ex_or_q[31]&(~result[31]))|((~ex_rfp_q[31])&(~ex_or_q[31])&result[31])):PSR_q[V];
     {swiid,enable_int,sign,carry,zero} = ex_ppsr_q?ex_or_q[7:0]:(!ex_dstf_q)?{PSR_q[7:3],(result[31]^(ex_scmp_q&overflow)),carry,!(|result)}:PSR_q;
     ex_target = ex_rti_q ? PCI_q : (ex_dstf_q && !ex_st_q) ? result[19:0] : ex_or_q[19:0];
@@ -215,8 +226,9 @@ module opc7hpcpu(input[31:0] idin, input[31:0] din,input clk,input reset_b,input
       if (mem_q && !mem_hold)        // MEM -> EX: loads take the data
         {ex_ir_q, ex_dst_q, ex_pc_q, ex_or_q, ex_rfp_q, ex_p_q, ex_subnotadd_q, ex_early_q, ex_st_q, ex_isj_q, ex_red_q,
          ex_sel_q, ex_ppsr_q, ex_arith_q, ex_scmp_q, ex_dstf_q, ex_rti_q, ex_ror_q, ex_asr_q} <=
-          {mem_ir_q, mem_dst_q, mem_pc_q, mem_ld ? din : mem_op, mem_rfp, mem_p_q, mem_ir_q!=ADD, mem_early_q, mem_st_q, mem_isj_q, mem_red_q,
+          {mem_ir_q, mem_dst_q, mem_pc_q, mem_ld ? din : mem_op, (mem_ir_q==MULSTEP || mem_ir_q==DIVSTEP) ? {mem_rfp[30:0], 1'b0} : mem_rfp, mem_p_q, mem_ir_q!=ADD && mem_ir_q!=MULSTEP, mem_early_q, mem_st_q, mem_isj_q, mem_red_q,
            mem_sel, mem_ir_q==PPSR, mem_addg && mem_dst_q!=4'hF, mem_ir_q==SCMP, mem_dst_q==4'hF, mem_ir_q==RTI, mem_ir_q==ROR, mem_ir_q==ASR};
+      if (mem_q && !mem_hold) ex_top_q <= mem_rfp[31];
       {wb_q, wb_dst_q, wb_val_q} <= {ex_wrf, ex_dst_q, result};   // what EX writes, for the instruction two behind
       if (ex_pass && !ex_st_q) begin
 	 // consider following to ensure that 0's are always written to R0, and then some logic could be removed from the read path above

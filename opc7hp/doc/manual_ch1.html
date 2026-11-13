@@ -116,6 +116,9 @@
       <tr><td class="m">0B</td><td class="m">lsr rd, rs, imm</td><td>{rd, C} &larr; {0, EAD}</td><td>S C Z</td></tr>
       <tr><td class="m">0D</td><td class="m">asr rd, rs, imm</td><td>{rd, C} &larr; {EAD[31], EAD}</td><td>S C Z</td></tr>
       <tr><td class="m">0E</td><td class="m">rol rd, rs, imm</td><td>{C, rd} &larr; {EAD, C}</td><td>S C Z</td></tr>
+      <tr class="grp"><td colspan="4">Multiply and divide steps (one bit each)</td></tr>
+      <tr><td class="m">0F</td><td class="m">mulstep rd, rs, imm</td><td>rd &larr; {rd[30:0], 0} + (C ? EAD : 0)</td><td>S Z</td></tr>
+      <tr><td class="m">17</td><td class="m">divstep rd, rs, imm</td><td>t = {rd, C}; t &ge; EAD: {C, rd} &larr; {1, t &minus; EAD}, else {C, rd} &larr; {0, t[31:0]}</td><td>S C Z</td></tr>
       <tr class="grp"><td colspan="4">Memory and I/O</td></tr>
       <tr><td class="m">1B</td><td class="m">ld rd, rs, imm</td><td>rd &larr; mem[EAD]</td><td>S Z</td></tr>
       <tr><td class="m">1F</td><td class="m">lld rd, imm20</td><td>rd &larr; mem[imm20]</td><td>S Z</td></tr>
@@ -138,7 +141,8 @@
     <li>Flags not listed for an instruction keep their values. In particular, C and V change only where shown.</li>
     <li><code>add rd, rd</code> shifts left one place, with C taking the bit shifted out.</li>
     <li><b>bperm</b> builds each byte of the result from a 4-bit field of the selector, with byte 3 on the left. Bits 1 and 0 of a field pick a byte of rs, and bit 2 makes the byte zero. For example, <code>0x3210</code> leaves rs unchanged, <code>0x0123</code> reverses its bytes and <code>0x4441</code> moves byte 1 to byte 0 and clears the rest.</li>
-    <li>Unused opcodes are 0x0F, 0x14, 0x15 and 0x17.</li>
+    <li><b>mulstep</b> and <b>divstep</b> each do one bit of a software multiply or divide, the bit coming in through C. A 32-bit multiply is 32 &times; (<code>add m, m</code>; <code>mulstep p, b</code>), the multiplier's bits going into C from the top, and an unsigned divide is 32 &times; (<code>rol n, n</code>; <code>divstep r, d</code>) and a last <code>rol n, n</code>, the dividend's bits going out of n into C and the quotient bits in. <code>divstep</code> compares 33 bits, so it can also continue a longer division.</li>
+    <li>Unused opcodes are 0x14 and 0x15.</li>
   </ul>
 </section>
 

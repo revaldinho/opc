@@ -28,13 +28,13 @@
 #include <stdint.h>
 
 enum { MOV, MOVT, XOR, AND, OR, NOT, CMP, SUB, ADD, BPERM, ROR, LSR, JSR, ASR,
-       ROL, S0F, HALT, RTI, PUTPSR, GETPSR, S14, S15, SCMP, S17, OUT, IN, STO,
+       ROL, MULSTEP, HALT, RTI, PUTPSR, GETPSR, S14, S15, SCMP, DIVSTEP, OUT, IN, STO,
        LD, LJSR, LMOV, LSTO, LLD };
 
 static const char *mnemonics[32] = {
     "mov", "movt", "xor", "and", "or", "not", "cmp", "sub", "add", "bperm",
-    "ror", "lsr", "jsr", "asr", "rol", "s0F", "halt", "rti", "putpsr",
-    "getpsr", "s14", "s15", "scmp", "s17", "out", "in", "sto", "ld", "ljsr",
+    "ror", "lsr", "jsr", "asr", "rol", "mulstep", "halt", "rti", "putpsr",
+    "getpsr", "s14", "s15", "scmp", "divstep", "out", "in", "sto", "ld", "ljsr",
     "lmov", "lsto", "lld" };
 static const char *pred_str[8] = { "", "0.", "z.", "nz.", "c.", "nc.", "mi.", "pl." };
 
@@ -326,6 +326,15 @@ int main(int argc, char **argv) {
             regfile[dest] = res & 0xFFFFFFFF;
             break;
         }
+        case MULSTEP:                           /* rd := rd<<1 + (C ? op : 0); C kept (added 13/11/2026) */
+            regfile[dest] = ((regfile[dest] << 1) + (c ? ea_ed : 0)) & 0xFFFFFFFF;
+            break;
+        case DIVSTEP: {                         /* t := rd<<1 | C (33 bits); t >= op: rd := t - op, C := 1; else rd := t, C := 0 */
+            uint64_t t = (regfile[dest] << 1) | (uint64_t)c, d = ea_ed & 0xFFFFFFFF;
+            if (t >= d) { c = 1; regfile[dest] = (t - d) & 0xFFFFFFFF; }
+            else        { c = 0; regfile[dest] = t & 0xFFFFFFFF; }
+            break;
+        }
         case NOT:  regfile[dest] = (~ea_ed) & 0xFFFFFFFF; break;
         case MOVT: regfile[dest] = ((ea_ed << 16) & 0xFFFF0000) | (regfile[dest] & 0x0FFFF); break;
         case MOV: case LMOV: case LD: case IN: case LLD:
@@ -378,7 +387,7 @@ int main(int argc, char **argv) {
             iomem[ea_ed & 0xFFFF] = regfile[dest];
             print_memory_access("OUT", ea_ed, regfile[dest]);
             break;
-        default:                                /* s0F s14 s15 s17: no operation */
+        default:                                /* s14 s15: no operation */
             break;
         }
 

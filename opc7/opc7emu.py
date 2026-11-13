@@ -2,7 +2,7 @@ import sys, re, functools
 # -q: quiet mode, no per-instruction trace (memory and I/O accesses are still printed)
 trace = "-q" not in sys.argv
 sys.argv = [a for a in sys.argv if a != "-q"]
-mnemonics="mov movt xor and or not cmp sub add bperm ror lsr jsr asr rol s0F halt rti putpsr getpsr s14 s15 scmp s17 out in sto ld ljsr lmov lsto lld".split()
+mnemonics="mov movt xor and or not cmp sub add bperm ror lsr jsr asr rol mulstep halt rti putpsr getpsr s14 s15 scmp divstep out in sto ld ljsr lmov lsto lld".split()
 op = dict([(opcode,mnemonics.index(opcode)) for opcode in mnemonics])
 dis = dict([(mnemonics.index(opcode),opcode) for opcode in mnemonics])
 pred_dict = {0:"",1:"0.",2:"z.",3:"nz.",4:"c.",5:"nc.",6:"mi.",7:"pl."}
@@ -75,6 +75,11 @@ while True:
                 res = (regfile[dest] + ea_ed & 0x1FFFFFFFF)
                 v = 1 if  ((((~res)&ea_ed&regfile[dest])|((res)&(~ea_ed)&(~regfile[dest])))&0x80000000)!=0 else 0                
                 (c, regfile[dest])  = ( (res>>32) & 1, res & 0xFFFFFFFF)
+            elif opcode == op["mulstep"]:        # rd := rd<<1 + (C ? op : 0); C kept (added 13/11/2026)
+                regfile[dest] = ((regfile[dest] << 1) + (ea_ed if c else 0)) & 0xFFFFFFFF
+            elif opcode == op["divstep"]:        # t := rd<<1 | C (33 bits); t >= op: rd := t - op, C := 1; else rd := t, C := 0
+                t = (regfile[dest] << 1) | c
+                (c, regfile[dest]) = (1, (t - (ea_ed & 0xFFFFFFFF)) & 0xFFFFFFFF) if t >= (ea_ed & 0xFFFFFFFF) else (0, t & 0xFFFFFFFF)
             elif opcode == op["not"]:
                 regfile[dest] = (~ea_ed) & 0xFFFFFFFF
             elif opcode == op["movt"]:

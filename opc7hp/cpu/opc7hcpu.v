@@ -3,8 +3,8 @@
 // - FSM must go from FET to EAD due to predicate change
 // - EXEC/FET are no longer overlapped (to enable a more generic pipeline to be inserted)
 module opc7hcpu(input[31:0] idin, input[31:0] din,input clk,input reset_b,input[1:0] int_b,input clken,output vda,output vio,output[31:0] dout,output[19:0] address,output rnw, output[19:0] iaddr, output ird);
-  parameter MOV=5'h0,MOVT=5'h1,XOR=5'h2,AND=5'h3,OR=5'h4,NOT=5'h5,CMP=5'h6,SUB=5'h7,ADD=5'h8,BPERM=5'h9,ROR=5'hA,LSR=5'hB,JSR=5'hC,ASR=5'hD,ROL=5'hE;
-  parameter HLT=5'h10,RTI=5'h11,PPSR=5'h12,GPSR=5'h13,SCMP=5'h16,OUT=5'h18,IN=5'h19,STO=5'h1A,LD=5'h1B,LJSR=5'h1C,LMOV=5'h1D,LSTO=5'h1E,LLD=5'h1F;
+  parameter MOV=5'h0,MOVT=5'h1,XOR=5'h2,AND=5'h3,OR=5'h4,NOT=5'h5,CMP=5'h6,SUB=5'h7,ADD=5'h8,BPERM=5'h9,ROR=5'hA,LSR=5'hB,JSR=5'hC,ASR=5'hD,ROL=5'hE,MULSTEP=5'hF;
+  parameter HLT=5'h10,RTI=5'h11,PPSR=5'h12,GPSR=5'h13,SCMP=5'h16,DIVSTEP=5'h17,OUT=5'h18,IN=5'h19,STO=5'h1A,LD=5'h1B,LJSR=5'h1C,LMOV=5'h1D,LSTO=5'h1E,LLD=5'h1F;
   parameter FET=3'h0,EAD=3'h1,RDM=3'h2,EXEC=3'h3,WRM=3'h4,INT=3'h5,V=31,EI=3,S=2,C=1,Z=0,INT_VECTOR0=20'h2,INT_VECTOR1=20'h4;
   parameter P2=29,P1=30,P0=31;
   reg [19:0]  addr_d, PC_q,PC_d,PCI_q,PCI_d;(* RAM_STYLE="DISTRIBUTED" *)
@@ -20,6 +20,7 @@ module opc7hcpu(input[31:0] idin, input[31:0] din,input clk,input reset_b,input[
   wire [7:0]  bytes1     = {8{~OR_q[6] }} & ((OR_q[5])?  ((OR_q[4]) ?RF_sout[31:24] :RF_sout[23:16]):(OR_q[4]) ? RF_sout[15:8]:RF_sout[7:0]);
   wire [7:0]  bytes2     = {8{~OR_q[10]}} & ((OR_q[9])?  ((OR_q[8]) ?RF_sout[31:24] :RF_sout[23:16]):(OR_q[8]) ? RF_sout[15:8]:RF_sout[7:0]);
   wire [7:0]  bytes3     = {8{~OR_q[14]}} & ((OR_q[13])? ((OR_q[12])?RF_sout[31:24] :RF_sout[23:16]):(OR_q[12])? RF_sout[15:8]:RF_sout[7:0]);
+  wire [33:0] dstep      = {1'b0, RF_pipe_q, PSR_q[C]} - {2'b0, OR_q};     // DIVSTEP: {rd,C} - op, the borrow in bit 33
   wire [31:0] din_sxt    = (IR_q[4:2]==3'h7)? {{12{OR_q[19]}},OR_q[19:0]} : {{16{OR_q[15]}}, OR_q[15:0]};
   assign {rnw,dout,address} = {rnw_d, RF_pipe_d, addr_d};
   assign {ird,iaddr} = {vpa_d,PC_d};
@@ -33,6 +34,8 @@ module opc7hcpu(input[31:0] idin, input[31:0] din,input clk,input reset_b,input[
       NOT              :{result,carry} = {~OR_q,PSR_q[C]};
       ROR,ASR,LSR      :{result,carry} = {(IR_q==ROR)?PSR_q[C]:(IR_q==ASR)?OR_q[31]:1'b0,OR_q};
       JSR,LJSR         :{result,carry} = { 12'b0, PC_q, PSR_q[C]};
+      MULSTEP          :{carry,result} = {PSR_q[C], {RF_pipe_q[30:0],1'b0} + (OR_q & {32{PSR_q[C]}})}; // rd<<1 + (C ? op : 0)
+      DIVSTEP          :{carry,result} = (dstep[33]) ? {1'b0, RF_pipe_q[30:0], PSR_q[C]} : {1'b1, dstep[31:0]}; // {rd,C} less op if >= op
       default          :{carry,result} = {PSR_q[C],OR_q} ;
     endcase // case ( IR_q )
     overflow = (IR_q==PPSR)? OR_q[31]: ((IR_q==ADD||IR_q==SUB||IR_q==CMP||IR_q==SCMP)&&(dst_q!=4'hF))?((RF_pipe_q[31]&OR_q[31]&(~result[31]))|((~RF_pipe_q[31])&(~OR_q[31])&result[31])):PSR_q[V];
