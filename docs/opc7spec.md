@@ -89,8 +89,7 @@ Notes:
   * All effective data/address calculations are truncated to 32 bits and do not affect any of the processor flags
   * GETPSR ignores its immediate field: it reads the PSR as it is
   * add rd,rd can be used to synthesize an arithmetic shift left (asl) instruction
-  * The table does not yet show MULSTEP (opcode 15, 01111) and DIVSTEP (opcode 23, 10111): see Multiply and Divide
-    Steps below
+  * MULSTEP and DIVSTEP do one bit each of a software multiply or divide: see Multiply and Divide Steps below
 
 Multiply and Divide Steps
 -------------------------
