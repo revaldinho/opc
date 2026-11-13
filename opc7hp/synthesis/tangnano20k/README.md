@@ -10,8 +10,8 @@ The OPC7 system (`../../system`) on the Sipeed Tang Nano 20K (Gowin GW2AR-LV18QN
 | `tangnano20k.cst` | pins for the CPU-only test tops in `../tops` (the `../Makefile` figures) |
 | `results.txt` | resource and Fmax figures from `../Makefile` |
 
-The UART pins (69 FPGA TX, 70 FPGA RX) and button S1 (pin 88) follow Sipeed's examples and have not
-yet been checked on a board.
+The UART pins (69 FPGA TX, 70 FPGA RX) and button S1 (pin 88) follow Sipeed's examples and were
+checked on a board on 13/11/2026 (see Results below).
 
 ## First hardware test: hello and echo
 
@@ -22,7 +22,8 @@ Once on the Linux machine:
 openFPGALoader's udev rules are already installed. In a VM, connect the board's USB device to the guest.
 
 1. Find the board: `openFPGALoader --scan-usb` and `ls /dev/ttyUSB*`. The USB bridge shows two
-   serial ports; the UART is usually the second (`/dev/ttyUSB1`).
+   serial ports: the first is the JTAG channel (openFPGALoader takes it over while loading), the
+   second (`/dev/ttyUSB1`) is the UART.
 2. Open a terminal on it and leave it running (Ctrl-] quits):
 
        python3 -m serial.tools.miniterm --eol LF /dev/ttyUSB1 115200
@@ -46,3 +47,25 @@ A reset does not reload the RAM, so the program runs again from the RAM it left;
 | LED5 lights but no text | UART pins (try 69 and 70 swapped in `tn20k_sys.cst`) or the wrong serial port |
 | Garbled text | baud rate: the UART divides 54 MHz by 469 (115139 baud) |
 | Text but echo ignores typing | the RX pin (70) |
+
+## Results
+
+13/11/2026, both bitstreams built from commit 05983a4 (opc7hpcpu with mulstep and divstep, the
+current syslib) on a Tang Nano 20K, its USB bridge reporting itself as a Sipeed "USB Debugger"
+(FT2232, 0403:6010), through a USB hub to a Linux VM:
+
+- JTAG: openFPGALoader finds the GW2A(R)-18(C), idcode 0x81b, at 6 MHz.
+- hello: printed `Hello World!` straight after loading; each press of S1 printed it again and LED5
+  lit. That checks the PLL clock, the UART's TX pin (69) and baud rate, S1 (88) and the halt LED.
+- echo: after a reload, the banner, then `a`, `b`, `c` echoed as they were sent (about 0.15 s each,
+  sent by a script), Return as a new line and `.` as `Bye`. That checks the RX pin (70) and the
+  receive path (`rdch` through `__sys_rdch`).
+- Timing: the routed design meets 54 MHz with room to spare (85 MHz in nextpnr; the first, lower
+  figure in build_sys.sh's output is the estimate before routing).
+
+Notes:
+- The board's flash held a LiteX demo SoC: opening the port before loading showed its boot messages
+  and `litex>` prompt. Loading to SRAM leaves the flash alone, so the demo returns at power off.
+- Two programs reading the port at once (a terminal and a logger) each get some of the bytes.
+- Typing in minicom gave no echo, though the same characters sent by a script were echoed, so
+  python3 -m serial.tools.miniterm (step 2) is the terminal to use.
